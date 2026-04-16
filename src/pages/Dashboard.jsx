@@ -8,8 +8,8 @@ import Navbar from '../components/Navbar';
 import CustomerCard from '../components/CustomerCard';
 import BottomNav from '../components/BottomNav';
 
-// 📍 ຢ່າລືມເອົາ Webhook URL ມາວາງໃສ່ນີ້ເດີ້:
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwr9b0hJCC9_xRmNlanr115DClXJcAWHNnOlZg1cYwwVNlxJNHj1O2KYxZEZik3BpsFMQ/exec";
+// 📍 Webhook URL ຂອງເຈົ້າ
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwr9b0hJCC9xRmNlanr115DClXJcAWHNnOlZg1cYwwVNlxJNHj1O2KYxZEZik3BpsFMQ/exec";
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -93,15 +93,14 @@ export default function Dashboard() {
         return (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    // 📍 ຈຸດທີ່ແກ້ໄຂ: ເພີ່ມລະບົບກັ່ນຕອງໃຫ້ເຫັນສະເພາະສາຂາຕົວເອງ
+    // 📍 ກັ່ນຕອງຂໍ້ມູນຕາມສາຂາ
     const filteredCustomers = customers.filter(c => {
         const matchStatus = filterStatus === 'ທັງໝົດ' || c.status === filterStatus;
         const matchPriority = filterPriority === 'ທັງໝົດ' || (c.priority || 'ທົ່ວໄປ') === filterPriority;
         const searchLower = searchTerm.toLowerCase();
         const matchSearch = (c.name?.toLowerCase().includes(searchLower)) || (c.phone?.includes(searchLower)) || (c.address?.toLowerCase().includes(searchLower)) || (c.note?.toLowerCase().includes(searchLower));
 
-        // ຖ້າເປັນ 'Admin' ຈະເຫັນທັງໝົດ (ປ່ຽນຊື່ 'Admin' ເປັນຊື່ສາຂາສຳນັກງານໃຫຍ່ຂອງເຈົ້າໄດ້)
-        // ແຕ່ຖ້າເປັນສາຂາທົ່ວໄປ ຈະເຫັນສະເພາະລູກຄ້າທີ່ກົງກັບສາຂາຂອງຕົນເອງ
+        // Admin ເຫັນທັງໝົດ, ສາຂາທົ່ວໄປເຫັນແຕ່ຂອງສາຂາຕົນເອງ
         const matchBranch = userBranch === 'Admin' || c.branch === userBranch;
 
         return matchStatus && matchPriority && matchSearch && matchBranch;
@@ -201,8 +200,8 @@ export default function Dashboard() {
                                     <div className="flex flex-col">
                                         <span className="text-xs text-gray-400 font-bold">ພິກັດ GPS</span>
                                         {selectedCustomer.gps ? (
-                                            <a href={`https://maps.google.com/?q=${selectedCustomer.gps}`} target="_blank" rel="noreferrer" className="text-teal-600 underline font-medium">
-                                                {selectedCustomer.gps}
+                                            <a href={selectedCustomer.gps} target="_blank" rel="noreferrer" className="text-teal-600 underline font-medium">
+                                                ເປີດເບິ່ງແຜນທີ່
                                             </a>
                                         ) : (
                                             <span className="text-slate-700">-</span>

@@ -3,10 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, auth, storage } from '../firebase/config';
-import imageCompression from 'browser-image-compression'; // 📍 ເພີ່ມຕົວບີບອັດຮູບ
+import imageCompression from 'browser-image-compression';
 
-// 📍 ຢ່າລືມເອົາ Webhook URL ມາວາງໃສ່ນີ້ເດີ້:
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwr9b0hJCC9_xRmNlanr115DClXJcAWHNnOlZg1cYwwVNlxJNHj1O2KYxZEZik3BpsFMQ/exec";
+// 📍 Webhook URL ຂອງເຈົ້າ
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwr9b0hJCC9xRmNlanr115DClXJcAWHNnOlZg1cYwwVNlxJNHj1O2KYxZEZik3BpsFMQ/exec";
 
 export default function EditCustomer() {
     const { id } = useParams();
@@ -54,14 +54,9 @@ export default function EditCustomer() {
         fetchCustomer();
     }, [id]);
 
-    const handleGetLocation = () => {
-        if (navigator.geolocation) {
-            setGps('ກຳລັງຄົ້ນຫາພິກັດ...');
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setGps(`${pos.coords.latitude}, ${pos.coords.longitude}`),
-                () => { alert("ບໍ່ສາມາດດຶງສະຖານທີ່ໄດ້."); setGps(''); }
-            );
-        } else alert("ອຸປະກອນບໍ່ຮອງຮັບ GPS");
+    const handleOpenMaps = () => {
+        window.open('https://maps.google.com', '_blank');
+        alert('ກະລຸນາຄົ້ນຫາ ຫຼື ປັກໝຸດສະຖານທີ່ໃນແຜນທີ່ ແລ້ວກັອບປີ້ "ລິ້ງ (URL)" ມາວາງໃສ່ຊ່ອງພິກັດເດີ້ເຈົ້າ.');
     };
 
     const handleSaveEdit = async (e) => {
@@ -73,7 +68,6 @@ export default function EditCustomer() {
             let newImageUrl = imagePreview;
             let newPlaceImageUrl = placeImagePreview;
 
-            // 📍 ຕັ້ງຄ່າການບີບອັດ
             const compressOptions = {
                 maxSizeMB: 0.5,
                 maxWidthOrHeight: 1280,
@@ -81,12 +75,12 @@ export default function EditCustomer() {
             };
 
             if (imageFile) {
-                const compressedImage = await imageCompression(imageFile, compressOptions); // ບີບອັດ
+                const compressedImage = await imageCompression(imageFile, compressOptions);
                 const imageRef = ref(storage, `customers/${Date.now()}_profile_${compressedImage.name}`);
                 newImageUrl = await getDownloadURL((await uploadBytes(imageRef, compressedImage)).ref);
             }
             if (placeImageFile) {
-                const compressedPlace = await imageCompression(placeImageFile, compressOptions); // ບີບອັດ
+                const compressedPlace = await imageCompression(placeImageFile, compressOptions);
                 const placeRef = ref(storage, `places/${Date.now()}_place_${compressedPlace.name}`);
                 newPlaceImageUrl = await getDownloadURL((await uploadBytes(placeRef, compressedPlace)).ref);
             }
@@ -136,16 +130,30 @@ export default function EditCustomer() {
                             <option value="VIP">VIP (ລູກຄ້າສຳຄັນພິເສດ)</option>
                         </select>
                     </div>
+
                     <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ຊື່ ແລະ ນາມສະກຸນ</label><input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-teal-500" /></div>
-                    <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ເບີໂທລະສັບ</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">call</span><input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl pl-12 pr-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-teal-500" /></div></div>
-                    <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ທີ່ຢູ່ປັດຈຸບັນ</label><textarea rows="2" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-teal-500 resize-none"></textarea></div>
+
                     <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-gray-500 ml-1">ພິກັດສະຖານທີ່ (GPS)</label>
-                        <div className="flex gap-2">
-                            <input type="text" value={gps} onChange={(e) => setGps(e.target.value)} className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm outline-none" />
-                            <button type="button" onClick={handleGetLocation} className="bg-teal-100 text-teal-700 px-4 rounded-xl flex items-center justify-center active:bg-teal-200"><span className="material-symbols-outlined">my_location</span></button>
+                        <label className="text-xs font-bold text-gray-500 ml-1">ເບີໂທລະສັບ</label>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">call</span>
+                            <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl pl-12 pr-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-teal-500" />
                         </div>
                     </div>
+
+                    <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ທີ່ຢູ່ປັດຈຸບັນ</label><textarea rows="2" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-teal-500 resize-none"></textarea></div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-xs font-bold text-gray-500 ml-1">ລິ້ງແຜນທີ່ (Google Maps)</label>
+                        <div className="flex gap-2">
+                            <input type="url" value={gps} onChange={(e) => setGps(e.target.value)} placeholder="ວາງລິ້ງ Google Maps ໃສ່ນີ້..." className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-teal-500" />
+                            <button type="button" onClick={handleOpenMaps} className="bg-blue-50 text-blue-600 px-4 rounded-xl flex items-center justify-center border border-blue-100 hover:bg-blue-100 active:scale-95 transition-all">
+                                <span className="material-symbols-outlined">map</span>
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 ml-1">ກົດປຸ່ມແຜນທີ່ເພື່ອປັກໝຸດ ແລ້ວກັອບປີ້ລິ້ງມາວາງໃສ່ຊ່ອງນີ້</p>
+                    </div>
+
                     <div className="flex flex-col gap-2">
                         <label className="text-xs font-bold text-gray-500 ml-1">ຮູບສະຖານທີ່ / ເຮືອນ / ກິດຈະການ</label>
                         <div onClick={() => placePhotoRef.current.click()} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center justify-center text-gray-500 cursor-pointer active:bg-gray-100 min-h-[100px] relative overflow-hidden">
@@ -153,6 +161,7 @@ export default function EditCustomer() {
                             <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" ref={placePhotoRef} onChange={(e) => { setPlaceImageFile(e.target.files[0]); setPlaceImagePreview(URL.createObjectURL(e.target.files[0])); }} className="hidden" />
                         </div>
                     </div>
+
                     <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ໝາຍເຫດເພີ່ມເຕີມ</label><textarea rows="3" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-teal-500 resize-none"></textarea></div>
 
                     <button type="submit" disabled={isSubmitting} className={`mt-4 w-full text-white font-bold text-base rounded-xl py-4 shadow-lg active:scale-[0.98] transition-transform flex justify-center items-center gap-2 ${isSubmitting ? 'bg-gray-400' : 'bg-teal-600 shadow-teal-600/30'}`}>

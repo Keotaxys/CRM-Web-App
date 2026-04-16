@@ -30,7 +30,7 @@ export default function CustomerCard({ customer, user, onStatusChange, onDelete,
     return (
         <div className="bg-white rounded-[24px] flex flex-col shadow-sm border border-gray-100 relative overflow-hidden h-full">
 
-            {/* 📍 ສ່ວນຮູບພາບດ້ານເທິງ */}
+            {/* ຮູບພາບດ້ານເທິງ */}
             <div className="w-full h-36 bg-gray-100 relative cursor-pointer group" onClick={() => onClickDetail(customer)}>
                 <img
                     src={customer.imageUrl || customer.placeImageUrl || `https://ui-avatars.com/api/?name=${customer.name}&background=008080&color=fff&size=256`}
@@ -38,7 +38,7 @@ export default function CustomerCard({ customer, user, onStatusChange, onDelete,
                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 />
 
-                {/* ປຸ່ມລອຍ ແກ້ໄຂ/ລຶບ */}
+                {/* ປຸ່ມ ແກ້ໄຂ/ລຶບ */}
                 {user && (
                     <div className="absolute top-2 right-2 flex flex-col gap-2">
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/edit/${customer.id}`); }} className="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow flex items-center justify-center text-teal-600 hover:bg-teal-50 active:scale-90 transition-all">
@@ -52,13 +52,13 @@ export default function CustomerCard({ customer, user, onStatusChange, onDelete,
 
                 {/* ປຸ່ມແຜນທີ່ */}
                 {customer.gps && (
-                    <a href={`https://maps.google.com/?q=$?q=$${customer.gps}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow flex items-center justify-center text-blue-500 hover:bg-blue-50 active:scale-90 transition-all">
+                    <a href={customer.gps} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow flex items-center justify-center text-blue-500 hover:bg-blue-50 active:scale-90 transition-all">
                         <span className="material-symbols-outlined text-[18px]">location_on</span>
                     </a>
                 )}
             </div>
 
-            {/* 📍 ສ່ວນຂໍ້ມູນລາຍລະອຽດ */}
+            {/* ຂໍ້ມູນລາຍລະອຽດ */}
             <div className="p-4 flex flex-col flex-1 justify-between gap-3">
                 <div>
                     <h3 className="font-extrabold text-slate-800 text-[15px] leading-tight flex flex-col gap-1 cursor-pointer" onClick={() => onClickDetail(customer)}>
@@ -74,9 +74,8 @@ export default function CustomerCard({ customer, user, onStatusChange, onDelete,
                     </div>
                 </div>
 
-                {/* 📍 ສ່ວນລຸ່ມ: ສະຖານະ ແລະ ປຸ່ມໄອຄອນວົງມົນ */}
+                {/* ສະຖານະ ແລະ ປຸ່ມໄອຄອນວົງມົນ */}
                 <div className="flex items-center justify-between gap-2 mt-auto">
-
                     <div className="flex-1">
                         {user ? (
                             <select value={customer.status} onChange={(e) => onStatusChange(customer.id, e.target.value)} className={`w-full px-2 py-2 rounded-xl text-[11px] font-bold outline-none cursor-pointer text-center truncate ${getStatusColor(customer.status)}`}>
@@ -113,7 +112,6 @@ export default function CustomerCard({ customer, user, onStatusChange, onDelete,
                 </div>
 
             </div>
-
             {showCallMenu && <div className="fixed inset-0 z-10" onClick={() => setShowCallMenu(false)}></div>}
         </div>
     );

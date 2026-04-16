@@ -5,8 +5,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, auth, storage } from '../firebase/config';
 import imageCompression from 'browser-image-compression'; // 📍 ເພີ່ມຕົວບີບອັດຮູບ
 
-// 📍 ຢ່າລືມເອົາ Webhook URL ມາວາງໃສ່ນີ້ເດີ້:
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwr9b0hJCC9_xRmNlanr115DClXJcAWHNnOlZg1cYwwVNlxJNHj1O2KYxZEZik3BpsFMQ/exec";
+// 📍 Webhook URL ຂອງເຈົ້າ (ຮັກສາໄວ້ຄືເກົ່າ)
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwr9b0hJCC9xRmNlanr115DClXJcAWHNnOlZg1cYwwVNlxJNHj1O2KYxZEZik3BpsFMQ/exec";
 
 export default function AddCustomer() {
     const navigate = useNavigate();
@@ -27,14 +27,11 @@ export default function AddCustomer() {
     const [placeImagePreview, setPlaceImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleGetLocation = () => {
-        if (navigator.geolocation) {
-            setGps('ກຳລັງຄົ້ນຫາພິກັດ...');
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setGps(`${pos.coords.latitude}, ${pos.coords.longitude}`),
-                () => { alert("ບໍ່ສາມາດດຶງສະຖານທີ່ໄດ້."); setGps(''); }
-            );
-        }
+    // 📍 ປ່ຽນຟັງຊັນດຶງພິກັດ ໃຫ້ເປັນການເປີດ Google Maps ແທນ
+    const handleOpenMaps = () => {
+        // ເປີດ Google Maps ໃນແທັບໃໝ່
+        window.open('https://maps.google.com/', '_blank');
+        alert('ກະລຸນາຄົ້ນຫາ ຫຼື ປັກໝຸດສະຖານທີ່ໃນແຜນທີ່ ແລ້ວກັອບປີ້ "ລິ້ງ (URL)" ມາວາງໃສ່ຊ່ອງພິກັດເດີ້ເຈົ້າ.');
     };
 
     const handleSaveCustomer = async (e) => {
@@ -119,13 +116,30 @@ export default function AddCustomer() {
                     <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ຊື່ ແລະ ນາມສະກຸນ</label><input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-teal-500" /></div>
                     <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ເບີໂທລະສັບ</label><input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-teal-500" /></div>
                     <div className="flex flex-col gap-2"><label className="text-xs font-bold text-gray-500 ml-1">ທີ່ຢູ່ປັດຈຸບັນ</label><textarea rows="2" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none resize-none"></textarea></div>
+
+                    {/* 📍 ສ່ວນທີ່ແກ້ໄຂ: ຊ່ອງປ້ອນລິ້ງແຜນທີ່ Google Maps */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-gray-500 ml-1">ພິກັດສະຖານທີ່ (GPS)</label>
+                        <label className="text-xs font-bold text-gray-500 ml-1">ລິ້ງແຜນທີ່ (Google Maps)</label>
                         <div className="flex gap-2">
-                            <input type="text" value={gps} readOnly className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-sm" />
-                            <button type="button" onClick={handleGetLocation} className="bg-teal-100 text-teal-700 px-4 rounded-xl flex items-center justify-center"><span className="material-symbols-outlined">my_location</span></button>
+                            <input
+                                type="url"
+                                value={gps}
+                                onChange={(e) => setGps(e.target.value)}
+                                placeholder="ວາງລິ້ງ Google Maps ໃສ່ນີ້..."
+                                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-teal-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleOpenMaps}
+                                className="bg-blue-50 text-blue-600 px-4 rounded-xl flex items-center justify-center border border-blue-100 hover:bg-blue-100 active:scale-95 transition-all"
+                                title="ເປີດແຜນທີ່ເພື່ອປັກໝຸດ"
+                            >
+                                <span className="material-symbols-outlined">map</span>
+                            </button>
                         </div>
+                        <p className="text-[10px] text-gray-400 ml-1">ກົດປຸ່ມແຜນທີ່ເພື່ອປັກໝຸດ ແລ້ວກັອບປີ້ລິ້ງມາວາງໃສ່ຊ່ອງນີ້</p>
                     </div>
+
                     <div className="flex flex-col gap-2">
                         <label className="text-xs font-bold text-gray-500 ml-1">ຮູບສະຖານທີ່ / ເຮືອນ</label>
                         <div onClick={() => placePhotoRef.current.click()} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center justify-center text-gray-500 cursor-pointer min-h-[100px] relative overflow-hidden">
