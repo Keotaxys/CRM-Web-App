@@ -1,9 +1,11 @@
 import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { analyzeSnapshot, auditStorageObjects } from './migration/core.mjs';
-import { applyMigration } from './migration/apply.mjs';
+import { applyMigration, migrationFailureReport } from './migration/apply.mjs';
+import { assertMigrationApplyGuard } from './migration/applyGuard.mjs';
 
 function argsOf(argv) { const result = { apply: false }; for (let i=0;i<argv.length;i+=1) { const value=argv[i]; if(value==='--apply') result.apply=true; else if(value.startsWith('--')) result[value.slice(2)]=argv[++i]; } return result; }
-function assertApplyGuard(args) { if (!args.project || args.project !== args['confirm-project'] || process.env.ALLOW_PRODUCTION_MIGRATION !== args.project) throw new Error('Apply blocked: require matching --project, --confirm-project, and ALLOW_PRODUCTION_MIGRATION'); }
 
 async function adminServices(projectId) {
   const [{ initializeApp, applicationDefault }, { getFirestore, FieldValue }, { getAuth }, { getStorage }] = await Promise.all([import('firebase-admin/app'), import('firebase-admin/firestore'), import('firebase-admin/auth'), import('firebase-admin/storage')]);
@@ -32,16 +34,43 @@ async function remoteDrySnapshot(projectId){
   return {customers,users,authUsers,storageObjects};
 }
 
-const args=argsOf(process.argv.slice(2));
-const fixture=args.fixture ? JSON.parse(await readFile(args.fixture,'utf8')) : null;
-if (args.apply) assertApplyGuard(args);
-if (args.apply && fixture) throw new Error('Apply mode does not accept fixture input');
-if (!fixture && !args.project) throw new Error('Provide --fixture for local dry-run or --project for read-only live dry-run');
-const services=fixture||!args.apply ? null : await adminServices(args.project); const snapshot=fixture ?? (args.apply ? await liveSnapshot(services) : await remoteDrySnapshot(args.project));
-const orphanAudit=auditStorageObjects([...(snapshot.customers??[]),...(snapshot.users??[])],snapshot.storageObjects??[]);
-if(!fixture&&!args['include-orphan-paths']) delete orphanAudit.potentialOrphanPaths;
-const report={ mode:args.apply?'APPLY':'DRY_RUN', project:args.project??'fixture', ...analyzeSnapshot(snapshot), orphanAudit };
-if(args.apply&&report.migrationConflictCount>0) throw new Error('Apply blocked: resolve every migration conflict first');
-if(args.apply&&report.userDocumentsMissingAuth>0) throw new Error('Apply blocked: user documents without Firebase Auth accounts require review');
-if (args.apply) report.applyResult=await applyMigration(snapshot,services,{project:args.project});
-console.log(JSON.stringify(report,null,2));
+export async function main(argv = process.argv.slice(2), env = process.env) {
+  const args = argsOf(argv);
+  const fixture = args.fixture ? JSON.parse(await readFile(args.fixture, 'utf8')) : null;
+  let applyAuthorization = null;
+  if (args.apply) {
+    if (!args['claims-snapshot']) throw new Error('Apply blocked: require --claims-snapshot and matching --confirm-claims-digest');
+    const claimsArtifact = JSON.parse(await readFile(args['claims-snapshot'], 'utf8'));
+    applyAuthorization = assertMigrationApplyGuard({
+      apply: true,
+      project: args.project,
+      confirmProject: args['confirm-project'],
+      claimsSnapshot: args['claims-snapshot'],
+      confirmClaimsDigest: args['confirm-claims-digest'],
+    }, env, claimsArtifact);
+  }
+  if (args.apply && fixture) throw new Error('Apply mode does not accept fixture input');
+  if (!fixture && !args.project) throw new Error('Provide --fixture for local dry-run or --project for read-only live dry-run');
+  const services = fixture || !args.apply ? null : await adminServices(args.project);
+  const snapshot = fixture ?? (args.apply ? await liveSnapshot(services) : await remoteDrySnapshot(args.project));
+  const orphanAudit = auditStorageObjects([...(snapshot.customers ?? []), ...(snapshot.users ?? [])], snapshot.storageObjects ?? []);
+  if (!fixture && !args['include-orphan-paths']) delete orphanAudit.potentialOrphanPaths;
+  const report = { mode: args.apply ? 'APPLY' : 'DRY_RUN', project: args.project ?? 'fixture', ...analyzeSnapshot(snapshot), orphanAudit };
+  if (args.apply && report.migrationConflictCount > 0) throw new Error('Apply blocked: resolve every migration conflict first');
+  if (args.apply && report.userDocumentsMissingAuth > 0) throw new Error('Apply blocked: user documents without Firebase Auth accounts require review');
+  if (args.apply) {
+    report.preapplyClaimsSnapshotDigest = applyAuthorization.claimsSnapshotDigest;
+    report.applyResult = await applyMigration(snapshot, services, { project: args.project, claimsSnapshotDigest: applyAuthorization.claimsSnapshotDigest });
+  }
+  console.log(JSON.stringify(report, null, 2));
+  return report;
+}
+
+if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    const args = argsOf(process.argv.slice(2));
+    const failure = migrationFailureReport(error, args.project ?? null);
+    console.error(failure ? JSON.stringify(failure, null, 2) : error.message);
+    process.exitCode = 1;
+  });
+}

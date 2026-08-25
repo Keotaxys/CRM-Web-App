@@ -10,6 +10,26 @@ export class MigrationClaimsError extends Error {
   }
 }
 
+export function migrationFailureReport(error, project) {
+  if (!(error instanceof MigrationClaimsError)) return null;
+  const summary = error.details?.failureSummary ?? {};
+  const recovery = error.details?.recovery ?? {};
+  const evidence = error.details?.manualRecoveryEvidence;
+  const retryIdentifiers = evidence?.stage === 'firestore_batch'
+    ? evidence.failedBatch?.documentPaths
+    : evidence?.failures?.map(({ uid }) => uid);
+  return {
+    mode: 'APPLY_PARTIAL_FAILURE',
+    project,
+    stage: summary.stage ?? 'unknown',
+    failed: summary.failedCount ?? 0,
+    retryStatus: summary.retryStatus ?? 'operator_review_required',
+    ...(recovery.path ? { recoveryPath: recovery.path } : {}),
+    ...(recovery.status === 'write_failed' ? { recoveryWriteFailed: true } : {}),
+    ...(recovery.status === 'write_failed' && retryIdentifiers?.length ? { retryIdentifiers } : {}),
+  };
+}
+
 function timestampName(value) {
   return value.toISOString().replaceAll(':', '').replaceAll('.', '-');
 }
@@ -52,6 +72,18 @@ export async function applyMigration(snapshot, services, options = {}) {
   const claimPlans = [];
   const profileWriteByUid = new Map();
   let pendingProfilesCreated = 0;
+  const recoveryDirectory = options.directory ?? 'artifacts/private/migration-recovery';
+  const prepareRecovery = options.prepareRecovery ?? (() => mkdir(recoveryDirectory, { recursive: true }));
+  await prepareRecovery();
+  const writer = options.writeRecoveryArtifact ?? ((value) => writeMigrationRecoveryArtifact(value, options));
+  const recordRecovery = async (artifact) => {
+    try {
+      const saved = await writer(artifact);
+      return { status: 'written', path: saved.path };
+    } catch (error) {
+      return { status: 'write_failed', error: error instanceof Error ? error.message : String(error) };
+    }
+  };
 
   for (const customer of snapshot.customers ?? []) {
     const migration = migrateCustomer(customer);
@@ -80,12 +112,39 @@ export async function applyMigration(snapshot, services, options = {}) {
   }
 
   let batches = 0;
+  const committedDocumentPaths = [];
   for (let offset = 0; offset < mutations.length; offset += 400) {
     const batch = services.db.batch();
     const group = mutations.slice(offset, offset + 400);
     group.forEach(({ ref, patch }) => batch.set(ref, patch, { merge: true }));
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (error) {
+      const artifact = {
+        schemaVersion: 1,
+        sourceProject: options.project ?? null,
+        claimsSnapshotDigest: options.claimsSnapshotDigest ?? null,
+        createdAt: (options.now?.() ?? new Date()).toISOString(),
+        stage: 'firestore_batch',
+        committedBatchCount: batches,
+        committedDocumentPaths,
+        failedBatch: {
+          number: batches + 1,
+          documentPaths: group.map(({ ref }) => ref.path),
+          retryStatus: 'rerun_required',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      };
+      const recovery = await recordRecovery(artifact);
+      throw new MigrationClaimsError('Migration stopped after a Firestore batch failure; rerun is required', {
+        result: { firestoreWritesPlanned: mutations.length, firestoreWritesCommitted: committedDocumentPaths.length, committedBatchCount: batches },
+        failureSummary: { stage: 'firestore_batch', failedCount: group.length, retryStatus: 'rerun_required' },
+        recovery,
+        ...(recovery.status === 'write_failed' ? { manualRecoveryEvidence: artifact } : {}),
+      });
+    }
     group.forEach(({ uid }) => { if (uid) profileWriteByUid.set(uid, 'succeeded'); });
+    committedDocumentPaths.push(...group.map(({ ref }) => ref.path));
     batches += 1;
   }
 
@@ -119,12 +178,17 @@ export async function applyMigration(snapshot, services, options = {}) {
     const artifact = {
       schemaVersion: 1,
       sourceProject: options.project ?? null,
+      claimsSnapshotDigest: options.claimsSnapshotDigest ?? null,
       createdAt: (options.now?.() ?? new Date()).toISOString(),
       failures,
     };
-    const writer = options.writeRecoveryArtifact ?? ((value) => writeMigrationRecoveryArtifact(value, options));
-    const recovery = await writer(artifact);
-    throw new MigrationClaimsError('Migration profile writes completed but one or more Auth claim updates failed', { result, recovery });
+    const recovery = await recordRecovery(artifact);
+    throw new MigrationClaimsError('Migration profile writes completed but one or more Auth claim updates failed', {
+      result,
+      failureSummary: { stage: 'auth_claims', failedCount: failures.length, retryStatus: 'rerun_required' },
+      recovery,
+      ...(recovery.status === 'write_failed' ? { manualRecoveryEvidence: artifact } : {}),
+    });
   }
   return result;
 }
