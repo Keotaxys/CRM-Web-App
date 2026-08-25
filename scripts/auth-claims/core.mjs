@@ -74,8 +74,10 @@ export function assertRestoreApplyGuard(args, env = process.env) {
     && Boolean(args.project)
     && args.project === args.confirmProject
     && Boolean(args.input)
+    && typeof args.confirmDigest === 'string'
+    && args.confirmDigest === args.artifactDigest
     && env.ALLOW_PRODUCTION_MIGRATION === args.project;
-  if (!valid) throw new Error('Auth claims restore apply blocked: require --apply, --project, matching --confirm-project, --input, and ALLOW_PRODUCTION_MIGRATION');
+  if (!valid) throw new Error('Auth claims restore apply blocked: require --apply, --project, matching --confirm-project, --input, matching --confirm-digest, and ALLOW_PRODUCTION_MIGRATION');
 }
 
 export class AuthClaimsRestoreError extends Error {
@@ -90,6 +92,12 @@ export async function applyClaimsRestore(plan, auth) {
   const result = { attempted: plan.changes.length, succeeded: [], failed: [] };
   for (const change of plan.changes) {
     try {
+      const account = await auth.getUser(change.uid);
+      const current = canonicalize(account.customClaims ?? {});
+      if (JSON.stringify(current) !== JSON.stringify(canonicalize(change.before))) {
+        result.failed.push({ uid: change.uid, error: 'stale restore plan', retryStatus: 'fresh_plan_required' });
+        continue;
+      }
       await auth.setCustomUserClaims(change.uid, structuredClone(change.after));
       result.succeeded.push(change.uid);
     } catch (error) {
@@ -119,5 +127,13 @@ export async function restoreAuthClaims({ artifact, auth, project, apply = false
     plannedChanges: plan.changes,
     unchangedUsers: plan.unchanged,
   });
-  return { mode: 'APPLY', project, representedUsers: validated.users.length, applyResult: await applyClaimsRestore(plan, auth) };
+  try {
+    return { mode: 'APPLY', project, representedUsers: validated.users.length, applyResult: await applyClaimsRestore(plan, auth) };
+  } catch (error) {
+    if (!(error instanceof AuthClaimsRestoreError)) throw error;
+    throw new AuthClaimsRestoreError(error.message, {
+      ...error.details,
+      plan: { changes: structuredClone(plan.changes), unchanged: structuredClone(plan.unchanged) },
+    });
+  }
 }

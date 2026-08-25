@@ -75,13 +75,16 @@ describe('Auth claims restore', () => {
   });
 
   it('requires every apply guard and exact production environment confirmation', () => {
-    const valid = { apply: true, project: 'prod-project', confirmProject: 'prod-project', input: 'claims.json' };
+    const digest = 'a'.repeat(64);
+    const valid = { apply: true, project: 'prod-project', confirmProject: 'prod-project', input: 'claims.json', confirmDigest: digest, artifactDigest: digest };
     expect(() => assertRestoreApplyGuard(valid, { ALLOW_PRODUCTION_MIGRATION: 'prod-project' })).not.toThrow();
     for (const invalid of [
       { ...valid, apply: false },
       { ...valid, project: '' },
       { ...valid, confirmProject: 'wrong' },
       { ...valid, input: '' },
+      { ...valid, confirmDigest: '' },
+      { ...valid, confirmDigest: 'b'.repeat(64) },
     ]) expect(() => assertRestoreApplyGuard(invalid, { ALLOW_PRODUCTION_MIGRATION: 'prod-project' })).toThrow(/blocked/i);
     expect(() => assertRestoreApplyGuard(valid, { ALLOW_PRODUCTION_MIGRATION: 'wrong' })).toThrow(/blocked/i);
   });
@@ -117,9 +120,30 @@ describe('Auth claims restore', () => {
     expect(events).toEqual([{ type: 'plan', changes: ['a'] }, { type: 'mutation', uid: 'a' }]);
   });
 
+  it('fails closed without mutation when claims changed after planning', async () => {
+    const auth = {
+      getUser: vi.fn()
+        .mockResolvedValueOnce({ uid: 'a', customClaims: { old: true } })
+        .mockResolvedValueOnce({ uid: 'b', customClaims: { branchId: '010', role: 'staff' } })
+        .mockResolvedValueOnce({ uid: 'a', customClaims: { accountStatus: 'disabled', role: 'staff' } }),
+      setCustomUserClaims: vi.fn(),
+    };
+
+    let failure;
+    try { await restoreAuthClaims({ artifact: signedArtifact(), auth, project: 'demo-project', apply: true }); }
+    catch (error) { failure = error; }
+
+    expect(failure).toBeInstanceOf(AuthClaimsRestoreError);
+    expect(failure.details.failed).toEqual([{ uid: 'a', error: 'stale restore plan', retryStatus: 'fresh_plan_required' }]);
+    expect(auth.setCustomUserClaims).not.toHaveBeenCalled();
+  });
+
   it('reports every completed and failed UID when an apply partially fails', async () => {
     const plan = { changes: [{ uid: 'a', before: {}, after: { role: 'staff' } }, { uid: 'b', before: {}, after: { role: 'staff' } }], unchanged: [] };
-    const auth = { setCustomUserClaims: vi.fn(async (uid) => { if (uid === 'a') throw new Error('denied'); }) };
+    const auth = {
+      getUser: vi.fn(async (uid) => ({ uid, customClaims: {} })),
+      setCustomUserClaims: vi.fn(async (uid) => { if (uid === 'a') throw new Error('denied'); }),
+    };
 
     let failure;
     try { await applyClaimsRestore(plan, auth); } catch (error) { failure = error; }
