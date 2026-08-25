@@ -8,6 +8,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     globals: true,
-    exclude: ['tests/rules/**', 'functions/**', 'node_modules/**', 'dist/**'],
+    exclude: [
+      'tests/rules/**',
+      'functions/**',
+      'node_modules/**',
+      'dist/**',
+      'artifacts/**',
+    ],
   },
 })
