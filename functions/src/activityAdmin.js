@@ -1,13 +1,13 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { assertAdmin, assertBranchAccess, canEditActivity, canManageAssignees, canTrashRecord } from './authz.js';
-import { assertActiveCustomerRelationship, assertAssigneeIds, assertValidAssignees, isTrashExpired, trashExpiresAt, validateActivityInput } from './validators.js';
+import { assertActiveCustomerRelationship, assertAssigneeIds, assertValidAssignees, isTrashExpired, parseRequiredDate, trashExpiresAt, validateActivityInput } from './validators.js';
 
 const EDITABLE = new Set(['type','title','status','startAt','endAt','location','purpose','note','customerId','assignedStaffIds','visitPurpose','productServices','preVisitNotes','visitNotes','result','followUpRequired','followUpDate','nextAction']);
 const pick = (values = {}) => Object.fromEntries(Object.entries(values).filter(([key]) => EDITABLE.has(key)));
 const persistedValues = (values) => Object.fromEntries(Object.entries(values).map(([key, value]) => [key, ['startAt','endAt','followUpDate'].includes(key) && value ? Timestamp.fromDate(value?.toDate ? value.toDate() : new Date(value)) : value]));
 
-async function loadAssignees(db, ids) {
-  const snapshots = await db.getAll(...ids.map((uid) => db.doc(`users/${uid}`)));
+async function loadAssignees(transaction, db, ids) {
+  const snapshots = await transaction.getAll(...ids.map((uid) => db.doc(`users/${uid}`)));
   return snapshots.map((snapshot) => ({ uid: snapshot.id, ...(snapshot.exists ? snapshot.data() : {}) }));
 }
 
@@ -31,17 +31,17 @@ export async function upsertActivityOperation({ db }, actor, data) {
   if (existing && values.assignedStaffIds && !canManageAssignees(actor, existing)) throw new Error('Assignee change denied');
   validateActivityInput(candidate);
   assertAssigneeIds(candidate.assignedStaffIds);
-  const assignees = await loadAssignees(db, candidate.assignedStaffIds);
-  assertValidAssignees(candidate.assignedStaffIds, assignees, branchId);
   const now = FieldValue.serverTimestamp();
   const write = { ...persistedValues(values), branchId, type: candidate.type, status: candidate.status, assignedStaffIds: candidate.assignedStaffIds, recordState: candidate.recordState, updatedBy: actor.uid, updatedAt: now, ...(existing ? {} : { createdBy: actor.uid, createdAt: now, deletedBy: null, deletedAt: null }) };
-  if (candidate.customerId) {
-    await db.runTransaction(async (transaction) => {
+  await db.runTransaction(async (transaction) => {
+    const assignees = await loadAssignees(transaction, db, candidate.assignedStaffIds);
+    assertValidAssignees(candidate.assignedStaffIds, assignees, branchId);
+    if (candidate.customerId) {
       const customer = await transaction.get(db.doc(`customers/${candidate.customerId}`));
       assertActiveCustomerRelationship(customer.exists ? customer.data() : null, branchId);
-      transaction.set(activityRef, write, { merge: true });
-    });
-  } else await activityRef.set(write, { merge: true });
+    }
+    transaction.set(activityRef, write, { merge: true });
+  });
   return { id: activityRef.id };
 }
 
@@ -57,8 +57,9 @@ export async function trashActivityOperation({ db }, actor, data) {
 export async function completeFollowUpOperation({ db }, actor, data) {
   const ref = db.doc(`activities/${data?.id}`); const snapshot = await ref.get(); if (!snapshot.exists) throw new Error('Activity not found'); const activity = snapshot.data();
   if (!canEditActivity(actor, activity)) throw new Error('Follow-up update denied');
-  if (data?.next && (!data.next.nextAction?.trim() || Number.isNaN(new Date(data.next.followUpDate).getTime()))) throw new Error('Valid next action and follow-up date required');
-  const update = data?.next ? { followUpRequired: true, followUpDate: Timestamp.fromDate(new Date(data.next.followUpDate)), nextAction: data.next.nextAction.trim(), followUpCompletedAt: null, followUpCompletedBy: null } : { followUpCompletedAt: FieldValue.serverTimestamp(), followUpCompletedBy: actor.uid };
+  const nextDate = data?.next ? parseRequiredDate(data.next.followUpDate, 'Valid next action and follow-up date required') : null;
+  if (data?.next && !data.next.nextAction?.trim()) throw new Error('Valid next action and follow-up date required');
+  const update = data?.next ? { followUpRequired: true, followUpDate: Timestamp.fromDate(nextDate), nextAction: data.next.nextAction.trim(), followUpCompletedAt: null, followUpCompletedBy: null } : { followUpCompletedAt: FieldValue.serverTimestamp(), followUpCompletedBy: actor.uid };
   await ref.update({ ...update, updatedBy: actor.uid, updatedAt: FieldValue.serverTimestamp() }); return { id: ref.id };
 }
 

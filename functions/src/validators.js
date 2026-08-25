@@ -16,6 +16,12 @@ function asDate(value) {
   return typeof value === 'string' ? new Date(value) : new Date(Number.NaN);
 }
 
+export function parseRequiredDate(value, message = 'Valid date required') {
+  const parsed = asDate(value);
+  if (Number.isNaN(parsed.getTime())) throw new Error(message);
+  return parsed;
+}
+
 export function assertKnownRoleAndBranch(role, branchId) {
   if (!['admin','branch_manager','staff'].includes(role)) throw new Error('Invalid role');
   if (role !== 'admin' && !BRANCH_IDS.has(branchId)) throw new Error('Invalid branch');
