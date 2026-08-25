@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { analyzeSnapshot, auditStorageObjects, migrateCustomer, migrateUser } from './migration/core.mjs';
+import { analyzeSnapshot, auditStorageObjects } from './migration/core.mjs';
+import { applyMigration } from './migration/apply.mjs';
 
 function argsOf(argv) { const result = { apply: false }; for (let i=0;i<argv.length;i+=1) { const value=argv[i]; if(value==='--apply') result.apply=true; else if(value.startsWith('--')) result[value.slice(2)]=argv[++i]; } return result; }
 function assertApplyGuard(args) { if (!args.project || args.project !== args['confirm-project'] || process.env.ALLOW_PRODUCTION_MIGRATION !== args.project) throw new Error('Apply blocked: require matching --project, --confirm-project, and ALLOW_PRODUCTION_MIGRATION'); }
@@ -31,17 +32,6 @@ async function remoteDrySnapshot(projectId){
   return {customers,users,authUsers,storageObjects};
 }
 
-async function applyMigration(snapshot, services) {
-  let writes=0; const mutations=[];
-  for (const customer of snapshot.customers) { const migration=migrateCustomer(customer); if(!migration.conflicts.length && Object.keys(migration.patch).length) { mutations.push({ref:services.db.doc(`customers/${migration.id}`),patch:migration.patch}); writes+=1; } }
-  const claimUpdates=[];
-  for (const user of snapshot.users) { const migration=migrateUser(user); if(!migration.conflicts.length) { if(Object.keys(migration.patch).length) { mutations.push({ref:services.db.doc(`users/${migration.uid}`),patch:migration.patch}); writes+=1; } claimUpdates.push(async()=>{ const account=await services.auth.getUser(migration.uid); await services.auth.setCustomUserClaims(migration.uid,{...(account.customClaims??{}),role:migration.patch.role??user.role??'staff',branchId:migration.patch.branchId??user.branchId,accountStatus:migration.patch.accountStatus??user.accountStatus??'approved'}); }); } }
-  const profileIds=new Set(snapshot.users.map((user)=>user.uid));let pendingProfilesCreated=0;
-  for(const authUser of snapshot.authUsers??[]){if(!profileIds.has(authUser.uid)){mutations.push({ref:services.db.doc(`users/${authUser.uid}`),patch:{name:'',email:authUser.email??null,phone:'',photoURL:authUser.photoURL??'',photoStoragePath:'',role:null,branchId:null,accountStatus:'pending',createdAt:services.FieldValue.serverTimestamp(),updatedAt:services.FieldValue.serverTimestamp(),approvedAt:null,approvedBy:null}});claimUpdates.push(async()=>{const account=await services.auth.getUser(authUser.uid);await services.auth.setCustomUserClaims(authUser.uid,{...(account.customClaims??{}),role:null,branchId:null,accountStatus:'pending'});});writes+=1;pendingProfilesCreated+=1;}}
-  for(let offset=0;offset<mutations.length;offset+=400){const batch=services.db.batch();mutations.slice(offset,offset+400).forEach(({ref,patch})=>batch.set(ref,patch,{merge:true}));await batch.commit();}
-  for (const updateClaims of claimUpdates) await updateClaims(); return { firestoreWrites:writes,claimUpdates:claimUpdates.length,pendingProfilesCreated,batches:Math.ceil(mutations.length/400) };
-}
-
 const args=argsOf(process.argv.slice(2));
 const fixture=args.fixture ? JSON.parse(await readFile(args.fixture,'utf8')) : null;
 if (args.apply) assertApplyGuard(args);
@@ -53,5 +43,5 @@ if(!fixture&&!args['include-orphan-paths']) delete orphanAudit.potentialOrphanPa
 const report={ mode:args.apply?'APPLY':'DRY_RUN', project:args.project??'fixture', ...analyzeSnapshot(snapshot), orphanAudit };
 if(args.apply&&report.migrationConflictCount>0) throw new Error('Apply blocked: resolve every migration conflict first');
 if(args.apply&&report.userDocumentsMissingAuth>0) throw new Error('Apply blocked: user documents without Firebase Auth accounts require review');
-if (args.apply) report.applyResult=await applyMigration(snapshot,services);
+if (args.apply) report.applyResult=await applyMigration(snapshot,services,{project:args.project});
 console.log(JSON.stringify(report,null,2));

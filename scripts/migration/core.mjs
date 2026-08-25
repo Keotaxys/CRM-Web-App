@@ -15,6 +15,7 @@ const branches = [
 const byValue = new Map(branches.flatMap(([id, label]) => [[id, id], [label, id]]));
 const recordStates = new Set(['active', 'archived', 'trashed']);
 const accountStatuses = new Set(['pending', 'approved', 'disabled']);
+const roles = new Set(['admin', 'branch_manager', 'staff']);
 
 export function legacyBranchId(value) {
   return typeof value === 'string' ? byValue.get(value.trim()) ?? null : null;
@@ -37,6 +38,38 @@ export function migrateCustomer(customer) {
 export function migrateUser(user) {
   const patch = {};
   const conflicts = [];
+
+  const hasCanonicalStatus = Object.hasOwn(user, 'accountStatus');
+  const hasCanonicalRole = Object.hasOwn(user, 'role');
+  const hasCanonicalBranch = Object.hasOwn(user, 'branchId');
+  const hasCompleteCanonicalAccess = hasCanonicalStatus && hasCanonicalRole && hasCanonicalBranch;
+  if (hasCompleteCanonicalAccess) {
+    const validStatus = accountStatuses.has(user.accountStatus);
+    if (!validStatus) {
+      conflicts.push('invalid_account_status');
+      return { uid: user.uid, patch, conflicts };
+    }
+    if (user.role !== null && !roles.has(user.role)) {
+      conflicts.push('unverified_privileged_role');
+      return { uid: user.uid, patch, conflicts };
+    }
+    if (['staff', 'branch_manager'].includes(user.role) && !legacyBranchId(user.branchId)) {
+      conflicts.push('invalid_existing_branch');
+      return { uid: user.uid, patch, conflicts };
+    }
+    const validPending = user.accountStatus === 'pending' && user.role === null && user.branchId === null;
+    const validAdmin = ['approved', 'disabled'].includes(user.accountStatus) && user.role === 'admin' && user.branchId === null;
+    const validBranchAccount = ['approved', 'disabled'].includes(user.accountStatus)
+      && ['staff', 'branch_manager'].includes(user.role) && Boolean(legacyBranchId(user.branchId));
+    if (validPending || validAdmin || validBranchAccount) return { uid: user.uid, patch, conflicts };
+    conflicts.push('invalid_canonical_access_state');
+    return { uid: user.uid, patch, conflicts };
+  }
+
+  if (hasCanonicalStatus || user.role === null || user.branchId === null) {
+    conflicts.push('invalid_canonical_access_state');
+    return { uid: user.uid, patch, conflicts };
+  }
   if (user.branch === 'Admin' || user.role === 'admin') {
     conflicts.push('legacy_admin_requires_verified_uid');
     return { uid: user.uid, patch, conflicts };
@@ -45,7 +78,7 @@ export function migrateUser(user) {
     conflicts.push('invalid_existing_branch');
     return { uid: user.uid, patch, conflicts };
   }
-  if (user.role && user.role !== 'staff') {
+  if (user.role && (!roles.has(user.role) || user.role !== 'staff')) {
     conflicts.push('unverified_privileged_role');
     return { uid: user.uid, patch, conflicts };
   }
@@ -75,8 +108,8 @@ export function analyzeSnapshot(snapshot) {
       ...users.map((item) => item.branchId || legacyBranchId(item.branch)),
     ].filter(Boolean))].sort(),
     customersNeedingBranchId: customers.filter((item) => !item.branchId).length,
-    usersNeedingBranchId: users.filter((item) => !item.branchId).length,
-    usersNeedingAccessFields: users.filter((item) => !item.branchId || !item.role || !item.accountStatus).length,
+    usersNeedingBranchId: userMigrations.filter((item) => Object.hasOwn(item.patch, 'branchId')).length,
+    usersNeedingAccessFields: userMigrations.filter((item) => Object.keys(item.patch).length > 0).length,
     legacyGpsCount: customers.filter((item) => Boolean(item.gps)).length,
     legacyImageCount: customers.filter((item) => Boolean(item.imageUrl || item.placeImageUrl)).length,
     missingFieldCounts: {
@@ -91,6 +124,7 @@ export function analyzeSnapshot(snapshot) {
       invalidExistingBranch: [...customerMigrations, ...userMigrations].filter((item) => item.conflicts.includes('invalid_existing_branch')).length,
       invalidRecordState: customerMigrations.filter((item) => item.conflicts.includes('invalid_record_state')).length,
       invalidAccountStatus: userMigrations.filter((item) => item.conflicts.includes('invalid_account_status')).length,
+      invalidCanonicalAccessState: userMigrations.filter((item) => item.conflicts.includes('invalid_canonical_access_state')).length,
     },
     storageObjectCount: snapshot.storageObjects?.length ?? 0,
     migrationConflictCount: migrationConflicts.length,

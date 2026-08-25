@@ -11,11 +11,51 @@ describe('migration transforms', () => {
     expect(source).toEqual({ id: 'c1', name: 'Legacy', gps: 'https://maps/old', imageUrl: 'https://image', branch: '020 - ສາຂາ ຄຳມ່ວນ' });
   });
 
-  it('approves safely mapped legacy users as staff but flags legacy Admin for manual review', () => {
-    expect(migrateUser({ uid: 'u1', branch: '010 - ສຳນັກງານໃຫຍ່' }).patch).toEqual({ role: 'staff', branchId: '010', accountStatus: 'approved' });
+  it('migrates a legacy user once and treats the migrated user as clean on the second run', () => {
+    const legacy = { uid: 'u1', branch: '010 - ສຳນັກງານໃຫຍ່' };
+    const first = migrateUser(legacy);
+    expect(first).toEqual({ uid: 'u1', patch: { role: 'staff', branchId: '010', accountStatus: 'approved' }, conflicts: [] });
+    const second = migrateUser({ ...legacy, ...first.patch });
+    expect(second).toEqual({ uid: 'u1', patch: {}, conflicts: [] });
+  });
+
+  it('keeps canonical Pending, Disabled, Staff, Branch Manager, and Admin profiles idempotent', () => {
+    const canonicalUsers = [
+      { uid: 'pending', role: null, branchId: null, accountStatus: 'pending' },
+      { uid: 'disabled-staff', role: 'staff', branchId: '020', accountStatus: 'disabled' },
+      { uid: 'disabled-manager', role: 'branch_manager', branchId: '050', accountStatus: 'disabled' },
+      { uid: 'staff', role: 'staff', branchId: '060', accountStatus: 'approved' },
+      { uid: 'manager', role: 'branch_manager', branchId: '110', accountStatus: 'approved' },
+      { uid: 'admin', role: 'admin', branchId: null, accountStatus: 'approved' },
+      { uid: 'disabled-admin', role: 'admin', branchId: null, accountStatus: 'disabled' },
+    ];
+    for (const user of canonicalUsers) {
+      expect(migrateUser(user), user.uid).toEqual({ uid: user.uid, patch: {}, conflicts: [] });
+    }
+  });
+
+  it('keeps a bootstrapped canonical Admin clean without trusting legacy branch Admin', () => {
+    expect(migrateUser({ uid: 'verified-admin', branch: 'Admin', role: 'admin', branchId: null, accountStatus: 'approved' })).toEqual({ uid: 'verified-admin', patch: {}, conflicts: [] });
     const admin = migrateUser({ uid: 'u2', branch: 'Admin' });
     expect(admin.patch).toEqual({});
     expect(admin.conflicts).toContain('legacy_admin_requires_verified_uid');
+  });
+
+  it('fails closed for invalid role, branch, and account-status combinations', () => {
+    const invalidUsers = [
+      { uid: 'pending-with-role', role: 'staff', branchId: '010', accountStatus: 'pending' },
+      { uid: 'approved-no-role', role: null, branchId: null, accountStatus: 'approved' },
+      { uid: 'admin-with-branch', role: 'admin', branchId: '010', accountStatus: 'approved' },
+      { uid: 'staff-no-branch', role: 'staff', branchId: null, accountStatus: 'approved' },
+      { uid: 'manager-bad-branch', role: 'branch_manager', branchId: '999', accountStatus: 'disabled' },
+      { uid: 'unknown-role', role: 'superuser', branchId: '010', accountStatus: 'approved' },
+      { uid: 'unknown-status', role: 'staff', branchId: '010', accountStatus: 'mystery' },
+    ];
+    for (const user of invalidUsers) {
+      const result = migrateUser(user);
+      expect(result.patch, user.uid).toEqual({});
+      expect(result.conflicts.length, user.uid).toBeGreaterThan(0);
+    }
   });
 
   it('blocks invalid truthy canonical fields instead of trusting them', () => {
@@ -24,9 +64,9 @@ describe('migration transforms', () => {
     expect(migrateUser({ uid: 'u2', branchId: '010', role: 'staff', accountStatus: 'mystery' }).conflicts).toContain('invalid_account_status');
   });
 
-  it('counts every privileged-role conflict in the apply gate total', () => {
-    const report = analyzeSnapshot({ customers: [], users: [{ uid: 'u1', role: 'branch_manager', branchId: '010', accountStatus: 'approved' }] });
-    expect(report.conflictCounts.unverifiedPrivilegedRole).toBe(1);
+  it('counts invalid access states in the apply gate total', () => {
+    const report = analyzeSnapshot({ customers: [], users: [{ uid: 'u1', role: 'admin', branchId: '010', accountStatus: 'approved' }] });
+    expect(report.conflictCounts.invalidCanonicalAccessState).toBe(1);
     expect(report.migrationConflictCount).toBe(1);
   });
 
@@ -47,7 +87,17 @@ describe('migration transforms', () => {
   it('reports Auth/profile coverage without exposing UIDs', () => {
     const report=analyzeSnapshot({customers:[],users:[{uid:'profile-only'}],authUsers:[{uid:'auth-only'}]});
     expect(report).toMatchObject({authUserCount:1,authUsersMissingProfile:1,userDocumentsMissingAuth:1});
+    expect(report.userDocumentsMissingAuth).toBeGreaterThan(0);
     expect(JSON.stringify(report)).not.toContain('auth-only');
+  });
+
+  it('never changes Customer IDs or Firebase Auth UIDs', () => {
+    const customer = migrateCustomer({ id: 'customer-fixed-id', branch: '020 - ສາຂາ ຄຳມ່ວນ' });
+    const user = migrateUser({ uid: 'auth-fixed-uid', branch: '020 - ສາຂາ ຄຳມ່ວນ' });
+    expect(customer.id).toBe('customer-fixed-id');
+    expect(customer.patch).not.toHaveProperty('id');
+    expect(user.uid).toBe('auth-fixed-uid');
+    expect(user.patch).not.toHaveProperty('uid');
   });
 
   it('reports only unreferenced storage objects as potential orphans', () => {
