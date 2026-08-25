@@ -1,0 +1,8 @@
+{
+  "firestore": {
+    "rules": "artifacts/pre-upgrade-baseline-2026-08-25/firestore.rules"
+  },
+  "storage": {
+    "rules": "artifacts/pre-upgrade-baseline-2026-08-25/storage.rules"
+  }
+}
