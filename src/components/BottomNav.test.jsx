@@ -1,0 +1,2 @@
+import { render, screen } from '@testing-library/react'; import { MemoryRouter } from 'react-router-dom'; import { describe, expect, it } from 'vitest'; import BottomNav from './BottomNav';
+describe('BottomNav',()=>{it('keeps the five target mobile destinations',()=>{render(<MemoryRouter><BottomNav/></MemoryRouter>);expect(screen.getAllByRole('link')).toHaveLength(5);expect(screen.getByRole('link',{name:/ລູກຄ້າ/})).toHaveAttribute('href','/customers');expect(screen.getByRole('link',{name:/ປະຕິທິນ/})).toHaveAttribute('href','/calendar');});});

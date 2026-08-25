@@ -1,0 +1,27 @@
+// Source: storage.rules
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ຟັງຊັນກວດສອບວ່າໄດ້ Login ແລ້ວຫຼືຍັງ
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. ກົດລະບຽບສຳລັບໂຟນເດີເກັບຮູບ "ໂປຣໄຟລ໌" (profiles)
+    // - ຕ້ອງ Login ກ່ອນຈຶ່ງເບິ່ງຮູບໄດ້ ແລະ ອັບໂຫຼດຮູບທັບໄດ້ສະເພາະຮູບຂອງຕົນເອງ
+    match /profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 2. ກົດລະບຽບສຳລັບໂຟນເດີຮູບ "ລູກຄ້າ" ແລະ "ສະຖານທີ່"
+    // - ພະນັກງານທີ່ Login ແລ້ວເທົ່ານັ້ນຈຶ່ງຈະອັບໂຫຼດ ແລະ ເບິ່ງຮູບໄດ້
+    match /customers/{imageId} {
+      allow read, write: if isAuthenticated();
+    }
+    match /places/{imageId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

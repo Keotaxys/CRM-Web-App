@@ -1,16 +1,46 @@
-# React + Vite
+# CRM Web App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Incremental upgrade of the existing Firebase CRM. The project preserves existing customer document IDs, Firebase Auth UIDs, branch codes, customer statuses, photos, GPS links, customer cards, and mobile quick actions while adding controlled account approval, branch isolation, Activities, follow-up, calendar, Admin, Trash, Rules, Functions, and guarded migration tooling.
 
-Currently, two official plugins are available:
+## Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React/Vite SPA with centralized auth state and protected routes.
+- Firestore domains: `users`, `customers`, and `activities`; branch IDs reuse the 22 legacy codes in `src/branches/branches.js`.
+- Roles: `admin`, `branch_manager`, `staff`; states: `pending`, `approved`, `disabled`.
+- Sensitive mutations use callable Firebase Functions and Admin SDK.
+- Firestore and Storage Rules are deny-by-default and claim/profile/branch aware.
+- Customer images remain exactly two slots. Existing URLs remain readable; replacements use deterministic managed paths.
+- Migration is dry-run by default and never infers Admin from the legacy branch string.
 
-## React Compiler
+## Local commands
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```text
+npm install
+npm run dev
+npm run lint
+npm test
+npm run test:functions
+npm run test:rules
+npm run migrate:dry-run
+npm run build
+```
 
-## Expanding the ESLint configuration
+Rules tests require Java plus the Firebase Emulator Suite. Functions use Node.js 22 in Firebase; local pure tests also run on newer compatible Node versions.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Routes
+
+- `/` Home
+- `/customers`, `/customers/new`, `/customers/:id`, `/customers/:id/edit`
+- `/activities`, `/activities/new/:type`, `/activities/:id`, `/activities/:id/edit`
+- `/follow-up`, `/calendar`, `/profile`, `/admin`
+- Legacy aliases `/add` and `/edit/:id` remain supported.
+
+## Safety
+
+No command in the normal test/build workflow deploys or mutates production. Production migration apply requires all of:
+
+- `--apply`
+- matching `--project` and `--confirm-project`
+- `ALLOW_PRODUCTION_MIGRATION` equal to the same project
+
+Admin bootstrap additionally requires matching UID confirmation. See `docs/deployment/production-checklist.md` before any production action.

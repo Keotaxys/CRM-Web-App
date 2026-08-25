@@ -1,0 +1,35 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function approved() { return signedIn() && request.auth.token.accountStatus == 'approved'
+      && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.accountStatus == 'approved'; }
+    function admin() { return approved() && request.auth.token.role == 'admin'; }
+    function validImage() { return request.resource != null && request.resource.size <= 1000000 && request.resource.contentType.matches('image/(jpeg|png|webp)'); }
+    function customer(customerId) { return firestore.get(/databases/(default)/documents/customers/$(customerId)).data; }
+    function customerAccess(customerId) { return admin() || (approved() && customer(customerId).branchId == request.auth.token.branchId); }
+
+    match /customers/{customerId}/{slot} {
+      allow read: if customerAccess(customerId) && slot in ['customer-photo','place-photo'];
+      allow create, update: if customerAccess(customerId) && slot in ['customer-photo','place-photo'] && validImage();
+      allow delete: if false;
+    }
+
+    match /profiles/{uid}/avatar {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create, update: if signedIn() && request.auth.uid == uid && validImage();
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Compatibility reads for timestamp-named legacy objects. New writes are denied.
+    // Existing tokenized download URLs remain operational while orphan audit/remediation is pending.
+    match /customers/{legacyObject} { allow read: if approved(); allow write: if false; }
+    match /places/{legacyObject} { allow read: if approved(); allow write: if false; }
+    match /profiles/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create, update: if signedIn() && request.auth.uid == uid && validImage();
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

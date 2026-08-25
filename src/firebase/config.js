@@ -1,7 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore"; // ສຳລັບຖານຂໍ້ມູນລູກຄ້າ
 import { getAuth } from "firebase/auth";           // ສຳລັບລະບົບ Login ພະນັກງານ
-import { getStorage } from "firebase/storage"; // 📍 1. ເພີ່ມແຖວນີ້
+import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 
 // ⚠️ ເອົາໂຄ້ດ firebaseConfig ທີ່ເຈົ້າກັອບປີ້ມາຈາກເວັບ Firebase ມາວາງປ່ຽນແທນກ້ອນນີ້ທັງໝົດເລີຍເດີ້
 const firebaseConfig = {
@@ -18,4 +19,5 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const storage = getStorage(app); // 📍 2. ເພີ່ມແຖວນີ້
+export const storage = getStorage(app);
+export const functions = getFunctions(app, 'asia-southeast1');

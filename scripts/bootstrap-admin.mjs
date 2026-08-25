@@ -1,0 +1,6 @@
+function argsOf(argv) { const result={apply:false}; for(let i=0;i<argv.length;i+=1){if(argv[i]==='--apply')result.apply=true;else if(argv[i].startsWith('--'))result[argv[i].slice(2)]=argv[++i];} return result; }
+const args=argsOf(process.argv.slice(2)); const guardsMatch=args.apply&&args.project&&args.project===args['confirm-project']&&args.uid&&args.uid===args['confirm-uid']&&process.env.ALLOW_PRODUCTION_MIGRATION===args.project;
+if(!guardsMatch) throw new Error('Admin bootstrap blocked: require --apply, matching project/UID confirmations, and ALLOW_PRODUCTION_MIGRATION');
+const [{initializeApp,applicationDefault},{getAuth},{getFirestore,FieldValue}]=await Promise.all([import('firebase-admin/app'),import('firebase-admin/auth'),import('firebase-admin/firestore')]); const app=initializeApp({credential:applicationDefault(),projectId:args.project}); const auth=getAuth(app); const db=getFirestore(app);
+const account=await auth.getUser(args.uid); await auth.setCustomUserClaims(args.uid,{...(account.customClaims??{}),role:'admin',branchId:null,accountStatus:'approved'}); await db.doc(`users/${args.uid}`).set({role:'admin',branchId:null,accountStatus:'approved',approvedAt:FieldValue.serverTimestamp(),approvedBy:args.uid,updatedAt:FieldValue.serverTimestamp()},{merge:true});
+console.log(JSON.stringify({project:args.project,uidConfirmed:true,adminClaimSet:true}));

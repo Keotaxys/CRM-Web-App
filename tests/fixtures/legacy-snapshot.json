@@ -1,0 +1,12 @@
+{
+  "customers": [
+    { "id": "fixture-customer-1", "branch": "010 - ສຳນັກງານໃຫຍ່", "status": "ໃໝ່", "gps": "https://maps.example/legacy", "imageUrl": "https://firebasestorage.googleapis.com/v0/b/demo/o/customers%2Flegacy-face.jpg?alt=media&token=fixture" },
+    { "id": "fixture-customer-2", "branch": "019 - ສາຂາ ໂພນໂຮງ", "status": "ຕິດຕາມຕໍ່", "placeImageUrl": "https://firebasestorage.googleapis.com/v0/b/demo/o/places%2Flegacy-place.jpg?alt=media&token=fixture" },
+    { "id": "fixture-customer-conflict", "branch": "Unknown legacy branch" }
+  ],
+  "users": [
+    { "uid": "fixture-user-1", "branch": "010 - ສຳນັກງານໃຫຍ່" },
+    { "uid": "fixture-legacy-admin", "branch": "Admin" }
+  ],
+  "storageObjects": ["customers/legacy-face.jpg", "places/legacy-place.jpg", "places/potential-orphan.jpg"]
+}

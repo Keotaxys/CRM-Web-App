@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function approved() { return signedIn() && request.auth.token.accountStatus == 'approved'
+      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountStatus == 'approved'; }
+    function admin() { return approved() && request.auth.token.role == 'admin'; }
+    function manager() { return approved() && request.auth.token.role == 'branch_manager'; }
+    function staff() { return approved() && request.auth.token.role == 'staff'; }
+    function sameBranch(data) { return approved() && data.branchId != null && data.branchId == request.auth.token.branchId; }
+    function crmRead(data) { return admin() || sameBranch(data); }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || admin() || (approved() && resource.data.accountStatus == 'approved' && resource.data.branchId == request.auth.token.branchId));
+      allow list: if admin() || (approved() && resource.data.accountStatus == 'approved' && resource.data.branchId == request.auth.token.branchId);
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.accountStatus == 'pending'
+        && request.resource.data.role == null
+        && request.resource.data.branchId == null;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','photoURL','updatedAt']);
+      allow delete: if false;
+    }
+
+    match /customers/{customerId} {
+      allow read: if crmRead(resource.data);
+      allow create: if approved()
+        && (admin() || request.resource.data.branchId == request.auth.token.branchId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.recordState == 'active';
+      allow update: if admin() || (sameBranch(resource.data)
+        && request.resource.data.branchId == resource.data.branchId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name','phone','address','status','priority','note','gps','location',
+          'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
+          'recordState','archivedBy','archivedAt','deletedBy','deletedAt','purgeAfter','updatedBy','updatedAt'
+        ])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['recordState'])
+          || (staff() && resource.data.recordState == 'active' && request.resource.data.recordState == 'archived')
+          || (manager() && resource.data.recordState != 'trashed' && request.resource.data.recordState in ['archived','trashed'])
+        )
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['deletedBy','deletedAt','purgeAfter'])
+          || (manager() && request.resource.data.recordState == 'trashed'
+            && request.resource.data.deletedBy == request.auth.uid
+            && request.resource.data.deletedAt is timestamp
+            && request.resource.data.purgeAfter is timestamp))
+      );
+      allow delete: if false;
+    }
+
+    match /activities/{activityId} {
+      allow read: if crmRead(resource.data);
+      allow create, update, delete: if false;
+    }
+
+    match /branches/{branchId} {
+      allow read: if approved();
+      allow write: if false;
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}

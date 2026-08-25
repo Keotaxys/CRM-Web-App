@@ -1,0 +1,34 @@
+{
+  "capturedAt": "2026-08-25T00:35:54.224Z",
+  "projectId": "crm-web-app-97b91",
+  "projectNumber": "601560289578",
+  "state": "ACTIVE",
+  "resources": {
+    "hostingSite": "crm-web-app-97b91",
+    "storageBucket": "crm-web-app-97b91.firebasestorage.app"
+  },
+  "customerCount": 32,
+  "userCount": 12,
+  "idDigests": {
+    "customersSha256": "e47519fab4b1f0b3942c823b84a82763cf49221427edb69ae3c8fbeebe6f1364",
+    "userDocumentsSha256": "e8aadd89e2b06252d9d2b761154fd2d1cd25a122385ed24ad2dd534253a9be58"
+  },
+  "branchValues": [
+    "020 - ສາຂາ ຄຳມ່ວນ",
+    "050 - ສາຂາ ຫຼວງພະບາງ",
+    "060 - ສາຂາ ອຸດົມໄຊ",
+    "110 - ສາຂາ ບໍ່ແກ້ວ",
+    "130 - ສາຂາ ຊຽງຂວາງ",
+    "140 - ສາຂາ ວັງວຽງ"
+  ],
+  "storage": {
+    "bucket": "crm-web-app-97b91.firebasestorage.app",
+    "objectCount": 69,
+    "prefixCounts": {
+      "customers": 41,
+      "places": 24,
+      "profiles": 4
+    }
+  },
+  "note": "Read-only capture; no production mutation or deployment performed. ID digests allow post-migration preservation verification without exposing IDs."
+}

@@ -1,0 +1,25 @@
+// Source: firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ຟັງຊັນກວດສອບວ່າພະນັກງານໄດ້ Login ແລ້ວຫຼືຍັງ
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. ກົດລະບຽບສຳລັບຂໍ້ມູນ "ໂປຣໄຟລ໌ພະນັກງານ" (users)
+    // - ພະນັກງານທຸກຄົນທີ່ Login ສາມາດອ່ານຂໍ້ມູນກັນໄດ້ (ເພື່ອໃຫ້ແອັບດຶງສາຂາມາໂຊໄດ້)
+    // - ແຕ່ "ແກ້ໄຂໄດ້ສະເພາະເຈົ້າຂອງບັນຊີນັ້ນເທົ່ານັ້ນ"
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 2. ກົດລະບຽບສຳລັບ "ຂໍ້ມູນລູກຄ້າ" (customers)
+    // - ຕ້ອງເປັນພະນັກງານທີ່ Login ແລ້ວເທົ່ານັ້ນ ຈຶ່ງຈະອ່ານ, ເພີ່ມ, ແກ້ໄຂ ແລະ ລຶບໄດ້
+    match /customers/{customerId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
