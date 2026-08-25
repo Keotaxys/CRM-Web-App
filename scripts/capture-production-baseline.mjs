@@ -62,13 +62,16 @@ const [project, firestoreRules, storageRules, customerCount, userCount, customer
 ]);
 const storageBucket = project.resources?.storageBucket ?? `${projectId}.firebasestorage.app`;
 const [inventory,authRows] = await Promise.all([storageInventory(storageBucket),authInventory()]);
-const outputDirectory = `artifacts/pre-upgrade-baseline-${new Date().toISOString().slice(0,10)}`;
+const capturedAt = new Date();
+const captureName = capturedAt.toISOString().replaceAll(':', '').replaceAll('.', '-');
+const outputDirectory = `artifacts/private/production-baselines/predeploy-${captureName}`;
 await mkdir(outputDirectory, { recursive: true });
 for (const [kind, ruleData] of [['firestore',firestoreRules],['storage',storageRules]]) {
   const content = ruleData.files.map((file) => `// Source: ${file.name}\n${file.content}`).join('\n');
-  await writeFile(`${outputDirectory}/${kind}.rules`, content, 'utf8');
-  await writeFile(`${outputDirectory}/${kind}-release.json`, JSON.stringify(ruleData.release,null,2), 'utf8');
+  await writeFile(`${outputDirectory}/${kind}.rules`, content, { encoding: 'utf8', flag: 'wx' });
+  await writeFile(`${outputDirectory}/${kind}-release.json`, JSON.stringify(ruleData.release,null,2), { encoding: 'utf8', flag: 'wx' });
 }
-const baseline = { capturedAt:new Date().toISOString(),projectId,projectNumber:project.projectNumber,state:project.state,resources:{hostingSite:project.resources?.hostingSite,locationId:project.resources?.locationId,storageBucket},customerCount,userCount,authUserCount:authRows.length,idDigests:{customersSha256:idDigest(customerRows),userDocumentsSha256:idDigest(userRows),authUidsSha256:idDigest(authRows)},branchValues:[...new Set([...customerRows.flatMap((row)=>row.values),...userRows.flatMap((row)=>row.values)])].sort(),storage:inventory,note:'Read-only capture; no production mutation or deployment performed. ID digests allow post-migration preservation verification without exposing IDs.' };
-await writeFile(`${outputDirectory}/inventory.json`, JSON.stringify(baseline,null,2), 'utf8');
+await writeFile(`${outputDirectory}/firebase.rollback.json`, `${JSON.stringify({ firestore: { rules: 'firestore.rules' }, storage: { rules: 'storage.rules' } }, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+const baseline = { capturedAt:capturedAt.toISOString(),projectId,projectNumber:project.projectNumber,state:project.state,resources:{hostingSite:project.resources?.hostingSite,locationId:project.resources?.locationId,storageBucket},customerCount,userCount,authUserCount:authRows.length,idDigests:{customersSha256:idDigest(customerRows),userDocumentsSha256:idDigest(userRows),authUidsSha256:idDigest(authRows)},branchValues:[...new Set([...customerRows.flatMap((row)=>row.values),...userRows.flatMap((row)=>row.values)])].sort(),storage:inventory,note:'Read-only capture; no production mutation or deployment performed. ID digests allow post-migration preservation verification without exposing IDs.' };
+await writeFile(`${outputDirectory}/inventory.json`, JSON.stringify(baseline,null,2), { encoding: 'utf8', flag: 'wx' });
 console.log(JSON.stringify({ outputDirectory, customerCount, userDocumentCount:userCount, authUserCount:authRows.length, branchValueCount:baseline.branchValues.length, storageObjectCount:inventory.objectCount, ruleSetsCaptured:2 },null,2));
