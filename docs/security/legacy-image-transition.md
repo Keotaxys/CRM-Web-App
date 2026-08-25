@@ -85,15 +85,19 @@ For every verified legacy reference:
 
 ## Recommended staged path
 
-Use Option A only as a time-bounded compatibility state. Build and review Option B's mapping as evidence, then execute Option C as a controlled copy-first migration in small batches. Do not tighten compatibility Rules or delete source objects until every mapped Customer reference, checksum, branch authorization test, UI render, and rollback record passes.
+Option C is the selected target. Keep Option A only as the temporary compatibility state until the guarded copy-first plan is reviewed and executed. The private plan artifact provides Option B-like object-to-Customer evidence without making a separate mapping collection a production dependency.
+
+Use `scripts/migrate-legacy-images.mjs` in dry-run mode to create the reviewed Customer/slot map and SHA-256 digest. Apply is guarded by matching project, copy-only confirmation, plan digest, input artifact, and `ALLOW_PRODUCTION_MIGRATION`. Each slot is copied create-only, then checksum/size/MIME and the current Customer reference are revalidated before the managed Firestore path is written. A rerun reuses an identical destination, retries a failed Firestore reference write, and never deletes the legacy source or clears the legacy URL.
+
+Do not tighten compatibility Rules or retire source objects until every Customer reference, checksum, branch authorization test, UI render, and rollback record passes. Retain sources for at least 30 days after the final successful batch when the recommended independent Storage backup has also been verified.
 
 The migration must maintain zero data loss: no source deletion before verified copy, verified Firestore reference, acceptance check, and recoverable rollback evidence.
 
 ## Decision gate
 
-**USER SECURITY DECISION REQUIRED**
+**OPTION C SELECTED — HUMAN EXECUTION APPROVAL REQUIRED**
 
-Production must explicitly choose the accepted compatibility window, mapping design, batch size, token-revocation policy, and final legacy-object retirement criteria. This document authorizes no object copy, metadata change, token rotation, reference write, Rules deployment, or deletion.
+Production must still approve the independent Storage recovery location, release window, batch size, designated acceptance records/accounts, and eventual retirement event. The managed destination deliberately omits legacy Firebase download-token metadata; the legacy source and its bearer URL remain during the retention window. This document authorizes no object copy, metadata change, reference write, Rules deployment, token cleanup, or deletion.
 
 References:
 

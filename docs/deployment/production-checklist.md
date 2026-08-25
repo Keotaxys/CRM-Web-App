@@ -1,6 +1,6 @@
 # CRM integrated upgrade — controlled production checklist
 
-This checklist is a runbook, not authorization. Every production write, API/billing change, secret update, deployment, migration apply, or rollback requires explicit approval and a named operator. The Step 7B remediation does not execute any of them.
+This checklist is a release overview, not authorization. The executable command-by-command procedure is in `docs/deployment/production-runbook.md`. Every production write, API/billing change, secret update, deployment, migration apply, object copy, or rollback requires explicit approval and a named operator.
 
 ## Release identity and mandatory evidence
 
@@ -21,34 +21,38 @@ Do not proceed unless the Firestore export is restorable and the chosen Storage 
 
 ## Controlled deployment order
 
-1. Freeze deployments and all production claim-changing operations. Record the reviewed commit and capture a fresh production baseline, preservation digests, Hosting release, Rules releases/sources, current CORS, Functions inventory, and index inventory. Keep the claim-change freeze through migration/Admin claim verification; for any later claims restore, establish a new dedicated freeze window.
-2. Create a recoverable Firestore export and verify that the operation succeeded at the recorded location.
-3. Snapshot Auth Custom Claims with `node scripts/snapshot-auth-claims.mjs --project crm-web-app-97b91 --out artifacts/private/predeploy-auth-claims.json`; retain the JSON and `.sha256` sidecar privately.
-4. Confirm the documented Storage recovery strategy is active and restorable. Do not treat the list of 15 potential legacy orphans as deletion authorization.
-5. With separate production approval, enable/verify the required Functions, Cloud Build, Artifact Registry, Secret Manager, and supporting APIs and Blaze billing.
-6. Capture the existing Functions inventory before the first Functions deployment.
-7. Capture prior CORS, apply the reviewed `storage.cors.json` to `gs://crm-web-app-97b91.firebasestorage.app`, then test authenticated `getBlob()`, Web SDK upload, avatar cleanup, and anonymous denial in supported browsers. Stop and restore prior CORS if acceptance fails.
-8. Set `LEGACY_WEBHOOK_URL` to a verified non-production stub, never the real endpoint for this first trusted-layer test.
-9. Deploy the Functions from the reviewed commit to `asia-southeast1`.
-10. Test authentication, authorization, activity/customer operations, timeout/failure handling, and webhook payload compatibility against the stub without destructive production operations.
-11. With separate approval, set `LEGACY_WEBHOOK_URL` to the verified production endpoint.
-12. Re-deploy only `syncLegacyCustomer` so that its production secret version becomes active, then run a deliberately controlled smoke test.
-13. Run `node scripts/migrate.mjs --project crm-web-app-97b91` and require zero migration conflicts and no Firestore user document without a matching Auth UID.
-14. With explicit migration approval, bind the apply to the verified pre-apply claims artifact/digest, set `ALLOW_PRODUCTION_MIGRATION=crm-web-app-97b91`, and run the guarded command below. Retain the aggregate report and any private Firestore-batch or claim-remediation artifact.
-15. Re-run the dry-run and preservation checks. Require zero false conflicts, unchanged Customer IDs/Auth UIDs/branch codes, expected Pending profiles, and resolved Auth claim updates.
-16. Confirm the intended first Admin UID out of band, then run the guarded bootstrap. Never infer Admin from legacy `branch == "Admin"`.
-17. Force that Admin to refresh the ID token/re-authenticate and verify the canonical Firestore profile and server claims agree before proceeding.
-18. Deploy `firestore.indexes.json`.
-19. Wait until every required composite index reports `READY`; affected query features may fail until builds complete.
-20. Deploy Storage Rules and immediately run the managed-image actor matrix plus the documented legacy-compatibility checks.
-21. Deploy Firestore Rules and immediately run the full logged-out/Pending/Disabled/Staff/Manager/Admin actor matrix.
-22. Deploy Hosting only after schema, claims, Functions, CORS, indexes, and Rules have passed their gates.
-23. Force migrated users to refresh tokens or re-login so claim and profile state are synchronized.
-24. Run the full actor, mobile, and browser acceptance matrix: customer images/GPS/actions, all Activity types, follow-up/calendar, Admin, trash/restore, same/cross-branch access, and managed-image upload/read behavior.
-25. Capture post-deployment counts, ID/branch digests, Rules releases, Functions inventory, Hosting version, index states, CORS, and Storage aggregate; compare with the pre-deployment evidence.
-26. Monitor callable, Auth, Rules-denial, Storage, and webhook failures through the agreed observation window.
+1. Freeze every CRM/claim/image/manual-console write and record the fixed release identity.
+2. Capture a fresh post-freeze baseline, current Rules sources/releases, CORS, Hosting release, and index state.
+3. Create and verify the dedicated Singapore backup bucket.
+4. Complete and verify the Firestore export.
+5. Snapshot Auth Custom Claims and verify/store its SHA-256 artifact privately.
+6. Complete the independent copy of the live Storage bucket; do not delete any potential orphan.
+7. Enable the six required disabled APIs and verify already-enabled Pub/Sub/Storage/Service Usage.
+8. Capture the full preexisting Functions/Cloud Run inventory before deployment.
+9. Capture prior CORS, apply reviewed CORS, and verify the exact bucket configuration.
+10. Configure `LEGACY_WEBHOOK_URL` to a controlled non-production stub.
+11. Deploy the 16 Functions and perform health plus unauthenticated-rejection checks only.
+12. Run the production migration dry-run and require zero conflicts/unmatched Firestore users.
+13. Run the digest-bound guarded migration apply under the freeze.
+14. Re-run dry-run and preservation evidence; require idempotent zero-conflict state.
+15. Confirm the intended first Admin UID out of band and run guarded bootstrap.
+16. Force Admin token refresh and verify canonical profile/claims agreement.
+17. Use the verified Admin to run positive trusted-layer and webhook-stub tests, including `reason`, 2xx, error, and timeout behavior.
+18. Only after stub acceptance, configure the verified production secret and redeploy only `syncLegacyCustomer`; do not call the real endpoint without a separate business-approved event.
+19. Deploy `firestore.indexes.json` and wait for every required index to reach `READY`.
+20. Run the reviewed legacy-image copy migration dry-run and verify its digest/conflict summary.
+21. Run Option C guarded copy-first apply; verify checksum/MIME/reference evidence and retain every legacy source.
+22. Deploy Storage Rules and run managed/legacy image security checks.
+23. Deploy Firestore Rules and run the full actor matrix.
+24. Capture the current live Hosting rollback point/channel.
+25. Deploy Hosting last.
+26. Force migrated users to refresh tokens or re-login.
+27. Run the complete actor, feature, browser, mobile, and cross-branch acceptance matrix.
+28. Capture post-deployment counts/digests/configuration and monitor through the agreed window.
+29. End the freeze only after the release owner accepts all evidence.
+30. Retire legacy sources only in a separate release at least 30 days later; the 15 potential orphans remain out of scope.
 
-This order prevents the new frontend from arriving before its schema and trusted layer, prevents new Rules from rejecting legacy documents during migration, ensures index-dependent queries are usable before Hosting, and avoids bootstrapping Admin into a schema the migration has not yet canonicalized. Migration does not depend on the callable Functions, but deploying and testing the trusted layer first keeps the final client release gate cohesive.
+This order prevents frontend/schema/Rules races and recognizes one material runtime dependency: before migration and Admin bootstrap, no account can safely pass both canonical-profile and approved-claim checks, so the first positive webhook-stub invocation must occur after verified Admin token refresh. Functions may be deployed earlier, but only negative/health checks are valid at that point.
 
 ## Guarded production commands
 
