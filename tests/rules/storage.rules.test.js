@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { doc, setDoc } from 'firebase/firestore';
-import { getBytes, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 
 let env;
 const authStorage = (uid, role, branchId, accountStatus = 'approved') => env.authenticatedContext(uid, { role, branchId, accountStatus }).storage();
@@ -14,6 +14,7 @@ beforeAll(async () => { env = await initializeTestEnvironment({ projectId: 'demo
   await setDoc(doc(context.firestore(), 'users/p'), { branchId: '010', role: 'staff', accountStatus: 'pending' });
   await setDoc(doc(context.firestore(), 'users/d'), { branchId: '010', role: 'staff', accountStatus: 'disabled' });
   await uploadBytes(ref(context.storage(), 'customers/a/customer-photo'), new Uint8Array([1,2,3]), { contentType: 'image/jpeg' });
+  await uploadBytes(ref(context.storage(), 'customers/legacy.jpg'), new Uint8Array([1,2,3]), { contentType: 'image/jpeg' });
 }); });
 afterAll(async () => env?.cleanup());
 
@@ -40,5 +41,15 @@ describe('Storage branch and file policy', () => {
   it('allows avatar writes only to the owner', async () => {
     await assertSucceeds(uploadBytes(ref(authStorage('a','staff','010'), 'profiles/a/avatar'), new Uint8Array([1]), { contentType: 'image/png' }));
     await assertFails(uploadBytes(ref(authStorage('b','staff','010'), 'profiles/a/avatar'), new Uint8Array([1]), { contentType: 'image/png' }));
+    await assertFails(deleteObject(ref(authStorage('b','staff','019'), 'profiles/a/avatar')));
+    await assertSucceeds(deleteObject(ref(authStorage('a','staff','010'), 'profiles/a/avatar')));
+  });
+  it('keeps managed customer deletion trusted-only', async () => {
+    await assertFails(deleteObject(ref(authStorage('a','staff','010'), 'customers/a/customer-photo')));
+  });
+  it('retains the documented approved-user legacy compatibility read only', async () => {
+    await assertSucceeds(getBytes(ref(authStorage('b','staff','019'), 'customers/legacy.jpg')));
+    await assertFails(getBytes(ref(authStorage('p','staff','010','pending'), 'customers/legacy.jpg')));
+    await assertFails(uploadBytes(ref(authStorage('a','staff','010'), 'customers/new-legacy.jpg'), new Uint8Array([1]), { contentType: 'image/jpeg' }));
   });
 });
