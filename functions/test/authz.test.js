@@ -25,4 +25,6 @@ test('disabled profile invalidates a still-cached approved token', () => {
   const actor={uid:'u1',role:'staff',branchId:'010',accountStatus:'approved'};
   assert.equal(profileMatchesActor(actor,{role:'staff',branchId:'010',accountStatus:'disabled'}),false);
   assert.equal(profileMatchesActor(actor,{role:'staff',branchId:'010',accountStatus:'approved'}),true);
+  assert.equal(profileMatchesActor(actor,{role:'staff',branchId:'019',accountStatus:'approved'}),false);
+  assert.equal(profileMatchesActor({...actor,role:'admin',branchId:null},{role:'admin',branchId:'010',accountStatus:'approved'}),false);
 });

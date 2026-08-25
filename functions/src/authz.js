@@ -13,7 +13,8 @@ export function assertAdmin(actor) {
 }
 
 export function profileMatchesActor(actor, profile) {
-  return profile?.accountStatus === 'approved' && profile.role === actor?.role && (actor.role === 'admin' || profile.branchId === actor.branchId);
+  return profile?.accountStatus === 'approved' && profile.role === actor?.role
+    && profile.branchId === (actor.role === 'admin' ? null : actor.branchId);
 }
 
 export function canAccessBranch(actor, branchId) {

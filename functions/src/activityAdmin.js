@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { assertAdmin, assertBranchAccess, canEditActivity, canManageAssignees, canTrashRecord } from './authz.js';
-import { assertValidAssignees, isTrashExpired, trashExpiresAt, validateActivityInput } from './validators.js';
+import { assertActiveCustomerRelationship, assertAssigneeIds, assertValidAssignees, isTrashExpired, trashExpiresAt, validateActivityInput } from './validators.js';
 
 const EDITABLE = new Set(['type','title','status','startAt','endAt','location','purpose','note','customerId','assignedStaffIds','visitPurpose','productServices','preVisitNotes','visitNotes','result','followUpRequired','followUpDate','nextAction']);
 const pick = (values = {}) => Object.fromEntries(Object.entries(values).filter(([key]) => EDITABLE.has(key)));
@@ -30,14 +30,18 @@ export async function upsertActivityOperation({ db }, actor, data) {
   if (existing && !canEditActivity(actor, existing)) throw new Error('Activity edit denied');
   if (existing && values.assignedStaffIds && !canManageAssignees(actor, existing)) throw new Error('Assignee change denied');
   validateActivityInput(candidate);
+  assertAssigneeIds(candidate.assignedStaffIds);
   const assignees = await loadAssignees(db, candidate.assignedStaffIds);
-  assertValidAssignees(candidate.assignedStaffIds, assignees, branchId, actor.role === 'admin');
-  if (candidate.customerId) {
-    const customer = await db.doc(`customers/${candidate.customerId}`).get();
-    if (!customer.exists || customer.data().branchId !== branchId) throw new Error('Customer must belong to activity branch');
-  }
+  assertValidAssignees(candidate.assignedStaffIds, assignees, branchId);
   const now = FieldValue.serverTimestamp();
-  await activityRef.set({ ...persistedValues(values), branchId, type: candidate.type, status: candidate.status, assignedStaffIds: candidate.assignedStaffIds, recordState: candidate.recordState, updatedBy: actor.uid, updatedAt: now, ...(existing ? {} : { createdBy: actor.uid, createdAt: now, deletedBy: null, deletedAt: null }) }, { merge: true });
+  const write = { ...persistedValues(values), branchId, type: candidate.type, status: candidate.status, assignedStaffIds: candidate.assignedStaffIds, recordState: candidate.recordState, updatedBy: actor.uid, updatedAt: now, ...(existing ? {} : { createdBy: actor.uid, createdAt: now, deletedBy: null, deletedAt: null }) };
+  if (candidate.customerId) {
+    await db.runTransaction(async (transaction) => {
+      const customer = await transaction.get(db.doc(`customers/${candidate.customerId}`));
+      assertActiveCustomerRelationship(customer.exists ? customer.data() : null, branchId);
+      transaction.set(activityRef, write, { merge: true });
+    });
+  } else await activityRef.set(write, { merge: true });
   return { id: activityRef.id };
 }
 

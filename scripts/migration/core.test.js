@@ -18,6 +18,18 @@ describe('migration transforms', () => {
     expect(admin.conflicts).toContain('legacy_admin_requires_verified_uid');
   });
 
+  it('blocks invalid truthy canonical fields instead of trusting them', () => {
+    expect(migrateCustomer({ id: 'c1', branchId: '999', recordState: 'live' }).conflicts).toEqual(expect.arrayContaining(['invalid_existing_branch', 'invalid_record_state']));
+    expect(migrateUser({ uid: 'u1', branchId: '999', role: 'staff', accountStatus: 'approved' }).conflicts).toContain('invalid_existing_branch');
+    expect(migrateUser({ uid: 'u2', branchId: '010', role: 'staff', accountStatus: 'mystery' }).conflicts).toContain('invalid_account_status');
+  });
+
+  it('counts every privileged-role conflict in the apply gate total', () => {
+    const report = analyzeSnapshot({ customers: [], users: [{ uid: 'u1', role: 'branch_manager', branchId: '010', accountStatus: 'approved' }] });
+    expect(report.conflictCounts.unverifiedPrivilegedRole).toBe(1);
+    expect(report.migrationConflictCount).toBe(1);
+  });
+
   it('produces aggregate coverage without customer PII', () => {
     const report = analyzeSnapshot({
       customers: [
@@ -30,6 +42,12 @@ describe('migration transforms', () => {
     expect(report).toMatchObject({ customerCount: 2, userCount: 1, customersNeedingBranchId: 2, usersNeedingAccessFields: 1, legacyGpsCount: 1, legacyImageCount: 1 });
     expect(JSON.stringify(report)).not.toContain('Legacy');
     expect(report.conflictCounts.unknownCustomerBranch).toBe(1);
+  });
+
+  it('reports Auth/profile coverage without exposing UIDs', () => {
+    const report=analyzeSnapshot({customers:[],users:[{uid:'profile-only'}],authUsers:[{uid:'auth-only'}]});
+    expect(report).toMatchObject({authUserCount:1,authUsersMissingProfile:1,userDocumentsMissingAuth:1});
+    expect(JSON.stringify(report)).not.toContain('auth-only');
   });
 
   it('reports only unreferenced storage objects as potential orphans', () => {

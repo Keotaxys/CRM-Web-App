@@ -1,7 +1,8 @@
 export function deriveAuthState(user, profile, claims = {}) {
   if (!user) return 'anonymous';
   if (profile?.accountStatus === 'disabled' || claims?.accountStatus === 'disabled') return 'disabled';
-  if (profile?.accountStatus === 'approved' && claims?.accountStatus === 'approved') return 'approved';
+  if (profile?.accountStatus === 'approved' && claims?.accountStatus === 'approved'
+    && profile.role === claims.role && profile.branchId === (claims.role === 'admin' ? null : claims.branchId)) return 'approved';
   return 'pending';
 }
 
@@ -11,6 +12,7 @@ export function pendingProfilePayload(user, values = {}, timestamp = new Date())
     email: user.email ?? null,
     phone: values.phone?.trim() ?? '',
     photoURL: values.photoURL ?? user.photoURL ?? '',
+    photoStoragePath: values.photoStoragePath ?? '',
     role: null,
     branchId: null,
     accountStatus: 'pending',
@@ -26,6 +28,7 @@ export function personalProfilePayload(values, timestamp) {
     name: values.name?.trim() ?? '',
     phone: values.phone?.trim() ?? '',
     photoURL: values.photoURL ?? '',
+    photoStoragePath: values.photoStoragePath ?? '',
     updatedAt: timestamp,
   };
 }

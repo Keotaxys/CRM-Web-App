@@ -9,7 +9,7 @@ Incremental upgrade of the existing Firebase CRM. The project preserves existing
 - Roles: `admin`, `branch_manager`, `staff`; states: `pending`, `approved`, `disabled`.
 - Sensitive mutations use callable Firebase Functions and Admin SDK.
 - Firestore and Storage Rules are deny-by-default and claim/profile/branch aware.
-- Customer images remain exactly two slots. Existing URLs remain readable; replacements use deterministic managed paths.
+- Customer images remain exactly two slots. Existing tokenized URLs remain compatibility-only fallbacks; replacements persist deterministic paths and are fetched through the authenticated Storage SDK (no new bearer download URLs).
 - Migration is dry-run by default and never infers Admin from the legacy branch string.
 
 ## Local commands
@@ -44,3 +44,5 @@ No command in the normal test/build workflow deploys or mutates production. Prod
 - `ALLOW_PRODUCTION_MIGRATION` equal to the same project
 
 Admin bootstrap additionally requires matching UID confirmation. See `docs/deployment/production-checklist.md` before any production action.
+
+Customer transfer and permanent deletion fail closed while related Activities exist. An operator must resolve those Activities first so no cross-branch or dangling customer references are created.

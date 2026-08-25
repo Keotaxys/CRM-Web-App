@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { CUSTOMER_STATUSES } from '../shared/constants';
 import { customerQuickActions } from '../shared/quickActions';
+import ManagedImage from './ManagedImage';
 
 const statusClass = { 'ໃໝ່': 'status-new', 'ຕິດຕາມຕໍ່': 'status-follow', 'ດຳເນີນການແລ້ວ': 'status-progress', 'ຈັດສົ່ງແລ້ວ': 'status-done' };
 
@@ -8,7 +9,7 @@ export default function CustomerCard({ customer, onStatusChange }) {
   const actions = customerQuickActions(customer);
   return <article className="customer-card">
     <Link to={`/customers/${customer.id}`} className="customer-image-wrap">
-      {customer.imageUrl ? <img src={customer.imageUrl} alt={customer.name}/> : <div className="image-placeholder"><span className="material-symbols-outlined">person</span></div>}
+      <ManagedImage storagePath={customer.imageStoragePath} legacyUrl={customer.imageUrl} alt={customer.name} fallback={<div className="image-placeholder"><span className="material-symbols-outlined">person</span></div>}/>
       {customer.priority !== 'ທົ່ວໄປ' && <span className={`priority priority-${customer.priority === 'VIP' ? 'vip' : 'urgent'}`}>{customer.priority}</span>}
     </Link>
     <div className="p-4"><Link to={`/customers/${customer.id}`}><h2 className="font-extrabold truncate">{customer.name}</h2><p className="muted text-xs mt-1 truncate">{customer.phone}</p></Link>

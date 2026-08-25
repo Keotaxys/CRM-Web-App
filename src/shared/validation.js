@@ -21,7 +21,7 @@ export function validateActivity(activity) {
   if (Number.isNaN(endAt.getTime()) || (!errors.startAt && endAt < startAt)) errors.endAt = 'End time must be after start time';
 
   const assignees = activity?.assignedStaffIds;
-  if (!Array.isArray(assignees) || new Set(assignees).size !== assignees?.length || assignees.some((id) => !id)) {
+  if (!Array.isArray(assignees) || assignees.length === 0 || assignees.length > 25 || new Set(assignees).size !== assignees?.length || assignees.some((id) => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(id))) {
     errors.assignedStaffIds = 'Assignees must be unique user IDs';
   }
 
@@ -32,14 +32,14 @@ export function validateActivity(activity) {
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-export function validateAssignees(assignedStaffIds, users, branchId, allowCrossBranch = false) {
+export function validateAssignees(assignedStaffIds, users, branchId) {
   if (!Array.isArray(assignedStaffIds) || new Set(assignedStaffIds).size !== assignedStaffIds.length) {
     return { valid: false, invalidIds: assignedStaffIds ?? [] };
   }
   const userById = new Map(users.map((user) => [user.uid, user]));
   const invalidIds = assignedStaffIds.filter((uid) => {
     const user = userById.get(uid);
-    return !user || user.accountStatus !== 'approved' || (!allowCrossBranch && user.branchId !== branchId);
+    return !user || user.accountStatus !== 'approved' || user.branchId !== branchId;
   });
   return { valid: invalidIds.length === 0, invalidIds };
 }

@@ -10,8 +10,10 @@ export function branchLabel(branchId) {
 }
 
 function asDate(value) {
+  if (value === null || value === undefined || value === '') return new Date(Number.NaN);
   if (value?.toDate) return value.toDate();
-  return value instanceof Date ? value : new Date(value);
+  if (value instanceof Date) return value;
+  return typeof value === 'string' ? new Date(value) : new Date(Number.NaN);
 }
 
 export function assertKnownRoleAndBranch(role, branchId) {
@@ -19,12 +21,17 @@ export function assertKnownRoleAndBranch(role, branchId) {
   if (role !== 'admin' && !BRANCH_IDS.has(branchId)) throw new Error('Invalid branch');
 }
 
-export function assertValidAssignees(ids, users, branchId, allowCrossBranch = false) {
-  if (!Array.isArray(ids) || ids.length === 0 || new Set(ids).size !== ids.length) throw new Error('Invalid assignee list');
+export function assertAssigneeIds(ids) {
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 25 || new Set(ids).size !== ids.length
+    || ids.some((uid) => typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid))) throw new Error('Invalid assignee list');
+}
+
+export function assertValidAssignees(ids, users, branchId) {
+  assertAssigneeIds(ids);
   const byId = new Map(users.map((user) => [user.uid, user]));
   const invalid = ids.filter((uid) => {
     const user = byId.get(uid);
-    return !user || user.accountStatus !== 'approved' || (!allowCrossBranch && user.branchId !== branchId);
+    return !user || user.accountStatus !== 'approved' || user.branchId !== branchId;
   });
   if (invalid.length) throw new Error('Invalid assignee branch or account state');
 }
@@ -38,7 +45,19 @@ export function validateActivityInput(activity) {
   const startAt = asDate(activity.startAt); const endAt = asDate(activity.endAt);
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt < startAt) throw new Error('Invalid activity time range');
   if (!Array.isArray(activity.assignedStaffIds)) throw new Error('Assignee list required');
+  if (activity.followUpRequired === true) {
+    const followUpDate = asDate(activity.followUpDate);
+    if (activity.type !== 'customer_visit' || Number.isNaN(followUpDate.getTime()) || !activity.nextAction?.trim()) {
+      throw new Error('Customer Visit follow-up requires a valid date and next action');
+    }
+  }
   return true;
+}
+
+export function assertActiveCustomerRelationship(customer, branchId) {
+  if (!customer || customer.recordState !== 'active' || customer.branchId !== branchId) {
+    throw new Error('Customer must be active and belong to activity branch');
+  }
 }
 
 export function isTrashExpired(deletedAt, now = new Date()) {

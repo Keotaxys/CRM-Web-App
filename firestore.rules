@@ -2,13 +2,46 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function approved() { return signedIn() && request.auth.token.accountStatus == 'approved'
-      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountStatus == 'approved'; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function approved() { return signedIn()
+      && request.auth.token.accountStatus == 'approved'
+      && profile().accountStatus == 'approved'
+      && profile().role == request.auth.token.role
+      && profile().branchId == request.auth.token.branchId; }
     function admin() { return approved() && request.auth.token.role == 'admin'; }
     function manager() { return approved() && request.auth.token.role == 'branch_manager'; }
     function staff() { return approved() && request.auth.token.role == 'staff'; }
     function sameBranch(data) { return approved() && data.branchId != null && data.branchId == request.auth.token.branchId; }
     function crmRead(data) { return admin() || sameBranch(data); }
+    function knownBranch(branchId) { return branchId in ['010','019','020','030','040','050','060','070','080','090','110','120','130','140','150','160','170','180','190','200','210','220']; }
+    function validCustomerImagePaths(customerId) {
+      return (request.resource.data.get('imageStoragePath', null) == null || request.resource.data.imageStoragePath == 'customers/' + customerId + '/customer-photo')
+        && (request.resource.data.get('placeImageStoragePath', null) == null || request.resource.data.placeImageStoragePath == 'customers/' + customerId + '/place-photo');
+    }
+    function validCustomerCreate(customerId) {
+      return request.resource.data.keys().hasAll([
+          'name','phone','address','status','priority','branchId','branch','note','gps','location',
+          'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
+          'recordState','createdBy','createdAt','updatedBy','updatedAt','archivedBy','archivedAt','deletedBy','deletedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'name','phone','address','status','priority','branchId','branch','note','gps','location',
+          'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
+          'recordState','createdBy','createdAt','updatedBy','updatedAt','archivedBy','archivedAt','deletedBy','deletedAt'
+        ])
+        && knownBranch(request.resource.data.branchId)
+        && request.resource.data.status in ['ໃໝ່','ຕິດຕາມຕໍ່','ດຳເນີນການແລ້ວ','ຈັດສົ່ງແລ້ວ']
+        && (!request.resource.data.keys().hasAll(['priority']) || request.resource.data.priority in ['ທົ່ວໄປ','ດ່ວນ','VIP'])
+        && validCustomerImagePaths(customerId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.statusTimestamps[request.resource.data.status] == request.time
+        && request.resource.data.recordState == 'active'
+        && request.resource.data.archivedBy == null && request.resource.data.archivedAt == null
+        && request.resource.data.deletedBy == null && request.resource.data.deletedAt == null;
+    }
 
     match /users/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || admin() || (approved() && resource.data.accountStatus == 'approved' && resource.data.branchId == request.auth.token.branchId));
@@ -16,38 +49,32 @@ service cloud.firestore {
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.accountStatus == 'pending'
         && request.resource.data.role == null
-        && request.resource.data.branchId == null;
+        && request.resource.data.branchId == null
+        && request.resource.data.keys().hasOnly(['name','email','phone','photoURL','photoStoragePath','role','branchId','accountStatus','createdAt','updatedAt','approvedAt','approvedBy']);
       allow update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','photoURL','updatedAt']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','photoURL','photoStoragePath','updatedAt']);
       allow delete: if false;
     }
 
     match /customers/{customerId} {
       allow read: if crmRead(resource.data);
-      allow create: if approved()
-        && (admin() || request.resource.data.branchId == request.auth.token.branchId)
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.recordState == 'active';
-      allow update: if admin() || (sameBranch(resource.data)
+      allow create: if approved() && validCustomerCreate(customerId)
+        && (admin() || request.resource.data.branchId == request.auth.token.branchId);
+      allow update: if crmRead(resource.data)
         && request.resource.data.branchId == resource.data.branchId
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.status in ['ໃໝ່','ຕິດຕາມຕໍ່','ດຳເນີນການແລ້ວ','ຈັດສົ່ງແລ້ວ']
+        && (!request.resource.data.keys().hasAll(['priority']) || request.resource.data.priority in ['ທົ່ວໄປ','ດ່ວນ','VIP'])
+        && validCustomerImagePaths(customerId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'name','phone','address','status','priority','note','gps','location',
           'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
-          'recordState','archivedBy','archivedAt','deletedBy','deletedAt','purgeAfter','updatedBy','updatedAt'
+          'updatedBy','updatedAt'
         ])
-        && (
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['recordState'])
-          || (staff() && resource.data.recordState == 'active' && request.resource.data.recordState == 'archived')
-          || (manager() && resource.data.recordState != 'trashed' && request.resource.data.recordState in ['archived','trashed'])
-        )
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['deletedBy','deletedAt','purgeAfter'])
-          || (manager() && request.resource.data.recordState == 'trashed'
-            && request.resource.data.deletedBy == request.auth.uid
-            && request.resource.data.deletedAt is timestamp
-            && request.resource.data.purgeAfter is timestamp))
-      );
+        && request.resource.data.recordState == resource.data.recordState;
       allow delete: if false;
     }
 

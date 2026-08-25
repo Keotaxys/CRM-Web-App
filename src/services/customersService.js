@@ -1,7 +1,7 @@
-import {
-  collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where,
-} from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { db } from '../firebase/config';
+import { functions } from '../firebase/config';
 import { customerCreatePayload, customerUpdatePayload, normalizeCustomer } from '../customers/customerModel';
 import { customerQueryScope } from './queryScope';
 
@@ -45,11 +45,12 @@ export function updateCustomer(id, values, identity) {
   return updateDoc(doc(db, 'customers', id), customerUpdatePayload(values, actorFromIdentity(identity), serverTimestamp()));
 }
 
-export function archiveCustomer(id, identity) {
-  const actor = actorFromIdentity(identity);
-  return updateDoc(doc(db, 'customers', id), {
-    recordState: 'archived', archivedBy: actor.uid, archivedAt: serverTimestamp(), updatedBy: actor.uid, updatedAt: serverTimestamp(),
-  });
+export function archiveCustomer(id) {
+  return httpsCallable(functions, 'archiveCustomer')({ id });
+}
+
+export function abortCustomerUploads(id) {
+  return httpsCallable(functions, 'abortCustomerUploads')({ id });
 }
 
 export function changeCustomerStatus(id, status, identity) {

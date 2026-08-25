@@ -51,11 +51,17 @@ async function storageInventory(bucket) {
   return { bucket, objectCount: total, prefixCounts };
 }
 
+async function authInventory() {
+  const rows=[];let pageToken='';
+  do { const params=new URLSearchParams({maxResults:'1000'});if(pageToken)params.set('nextPageToken',pageToken);const page=await api(`https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:batchGet?${params}`);rows.push(...(page.users??[]).map((user)=>({id:user.localId})));pageToken=page.nextPageToken??''; } while(pageToken);
+  return rows;
+}
+
 const [project, firestoreRules, storageRules, customerCount, userCount, customerRows, userRows] = await Promise.all([
   api(`https://firebase.googleapis.com/v1beta1/projects/${projectId}`), rules('cloud.firestore'), rules('firebase.storage'), countCollection('customers'), countCollection('users'), branchValues('customers'), branchValues('users'),
 ]);
 const storageBucket = project.resources?.storageBucket ?? `${projectId}.firebasestorage.app`;
-const inventory = await storageInventory(storageBucket);
+const [inventory,authRows] = await Promise.all([storageInventory(storageBucket),authInventory()]);
 const outputDirectory = `artifacts/pre-upgrade-baseline-${new Date().toISOString().slice(0,10)}`;
 await mkdir(outputDirectory, { recursive: true });
 for (const [kind, ruleData] of [['firestore',firestoreRules],['storage',storageRules]]) {
@@ -63,6 +69,6 @@ for (const [kind, ruleData] of [['firestore',firestoreRules],['storage',storageR
   await writeFile(`${outputDirectory}/${kind}.rules`, content, 'utf8');
   await writeFile(`${outputDirectory}/${kind}-release.json`, JSON.stringify(ruleData.release,null,2), 'utf8');
 }
-const baseline = { capturedAt:new Date().toISOString(),projectId,projectNumber:project.projectNumber,state:project.state,resources:{hostingSite:project.resources?.hostingSite,locationId:project.resources?.locationId,storageBucket},customerCount,userCount,idDigests:{customersSha256:idDigest(customerRows),userDocumentsSha256:idDigest(userRows)},branchValues:[...new Set([...customerRows.flatMap((row)=>row.values),...userRows.flatMap((row)=>row.values)])].sort(),storage:inventory,note:'Read-only capture; no production mutation or deployment performed. ID digests allow post-migration preservation verification without exposing IDs.' };
+const baseline = { capturedAt:new Date().toISOString(),projectId,projectNumber:project.projectNumber,state:project.state,resources:{hostingSite:project.resources?.hostingSite,locationId:project.resources?.locationId,storageBucket},customerCount,userCount,authUserCount:authRows.length,idDigests:{customersSha256:idDigest(customerRows),userDocumentsSha256:idDigest(userRows),authUidsSha256:idDigest(authRows)},branchValues:[...new Set([...customerRows.flatMap((row)=>row.values),...userRows.flatMap((row)=>row.values)])].sort(),storage:inventory,note:'Read-only capture; no production mutation or deployment performed. ID digests allow post-migration preservation verification without exposing IDs.' };
 await writeFile(`${outputDirectory}/inventory.json`, JSON.stringify(baseline,null,2), 'utf8');
-console.log(JSON.stringify({ outputDirectory, customerCount, userCount, branchValueCount:baseline.branchValues.length, storageObjectCount:inventory.objectCount, ruleSetsCaptured:2 },null,2));
+console.log(JSON.stringify({ outputDirectory, customerCount, userDocumentCount:userCount, authUserCount:authRows.length, branchValueCount:baseline.branchValues.length, storageObjectCount:inventory.objectCount, ruleSetsCaptured:2 },null,2));

@@ -6,7 +6,7 @@ import { getBytes, ref, uploadBytes } from 'firebase/storage';
 
 let env;
 const authStorage = (uid, role, branchId, accountStatus = 'approved') => env.authenticatedContext(uid, { role, branchId, accountStatus }).storage();
-beforeAll(async () => { env = await initializeTestEnvironment({ projectId: 'demo-crm-storage-rules', firestore: { rules: readFileSync('firestore.rules', 'utf8') }, storage: { rules: readFileSync('storage.rules', 'utf8') } }); await env.withSecurityRulesDisabled(async (context) => {
+beforeAll(async () => { env = await initializeTestEnvironment({ projectId: 'demo-crm-rules', firestore: { rules: readFileSync('firestore.rules', 'utf8') }, storage: { rules: readFileSync('storage.rules', 'utf8') } }); await env.withSecurityRulesDisabled(async (context) => {
   await setDoc(doc(context.firestore(), 'customers/a'), { branchId: '010' });
   await setDoc(doc(context.firestore(), 'users/a'), { branchId: '010', role: 'staff', accountStatus: 'approved' });
   await setDoc(doc(context.firestore(), 'users/b'), { branchId: '019', role: 'staff', accountStatus: 'approved' });
@@ -20,6 +20,7 @@ describe('Storage branch and file policy', () => {
     await assertSucceeds(getBytes(ref(authStorage('a','staff','010'), 'customers/a/customer-photo')));
     await assertFails(getBytes(ref(authStorage('b','staff','019'), 'customers/a/customer-photo')));
     await assertFails(getBytes(ref(authStorage('p','staff','010','pending'), 'customers/a/customer-photo')));
+    await assertFails(getBytes(ref(authStorage('a','staff','019'), 'customers/a/customer-photo')));
   });
   it('accepts only two managed image slots, image MIME, and <=1MB', async () => {
     const storage = authStorage('a','staff','010');

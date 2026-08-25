@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
-  onAuthStateChanged,
+  onIdTokenChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -40,7 +40,7 @@ export default function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => onAuthStateChanged(auth, (currentUser) => {
+  useEffect(() => onIdTokenChanged(auth, (currentUser) => {
     setLoading(true);
     loadIdentity(currentUser).catch((error) => {
       console.error('Unable to load account access state', error);
@@ -67,7 +67,11 @@ export default function AuthProvider({ children }) {
     return credential.user;
   }, [ensurePendingProfile]);
 
-  const login = useCallback((email, password) => signInWithEmailAndPassword(auth, email, password), []);
+  const login = useCallback(async (email, password) => {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    await ensurePendingProfile(credential.user);
+    return credential.user;
+  }, [ensurePendingProfile]);
   const loginWithGoogle = useCallback(async () => {
     const credential = await signInWithPopup(auth, new GoogleAuthProvider());
     await ensurePendingProfile(credential.user, { name: credential.user.displayName, photoURL: credential.user.photoURL });

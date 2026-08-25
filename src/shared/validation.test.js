@@ -30,15 +30,14 @@ describe('activity validation', () => {
 });
 
 describe('trusted assignee validation', () => {
-  it('accepts only approved users in the record branch unless Admin explicitly crosses branches', () => {
+  it('accepts only approved users in the record branch', () => {
     const users = [
       { uid: 'a', branchId: '010', accountStatus: 'approved' },
       { uid: 'b', branchId: '020', accountStatus: 'approved' },
       { uid: 'c', branchId: '010', accountStatus: 'disabled' },
     ];
-    expect(validateAssignees(['a'], users, '010', false).valid).toBe(true);
-    expect(validateAssignees(['b'], users, '010', false).valid).toBe(false);
-    expect(validateAssignees(['c'], users, '010', false).valid).toBe(false);
-    expect(validateAssignees(['b'], users, '010', true).valid).toBe(true);
+    expect(validateAssignees(['a'], users, '010').valid).toBe(true);
+    expect(validateAssignees(['b'], users, '010').valid).toBe(false);
+    expect(validateAssignees(['c'], users, '010').valid).toBe(false);
   });
 });

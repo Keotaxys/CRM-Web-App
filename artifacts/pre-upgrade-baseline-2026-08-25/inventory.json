@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-08-25T00:35:54.224Z",
+  "capturedAt": "2026-08-25T00:46:29.060Z",
   "projectId": "crm-web-app-97b91",
   "projectNumber": "601560289578",
   "state": "ACTIVE",
@@ -9,9 +9,11 @@
   },
   "customerCount": 32,
   "userCount": 12,
+  "authUserCount": 15,
   "idDigests": {
     "customersSha256": "e47519fab4b1f0b3942c823b84a82763cf49221427edb69ae3c8fbeebe6f1364",
-    "userDocumentsSha256": "e8aadd89e2b06252d9d2b761154fd2d1cd25a122385ed24ad2dd534253a9be58"
+    "userDocumentsSha256": "e8aadd89e2b06252d9d2b761154fd2d1cd25a122385ed24ad2dd534253a9be58",
+    "authUidsSha256": "5bdf761e6f6b3090022a69a7b10dd286f9c4af3e67a06413bd3b45f3f19e9b98"
   },
   "branchValues": [
     "020 - ສາຂາ ຄຳມ່ວນ",

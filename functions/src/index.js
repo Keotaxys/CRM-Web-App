@@ -8,12 +8,12 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { actorFromRequest, assertAdmin, profileMatchesActor } from './authz.js';
 import { approveUserOperation, disableUserOperation, updateUserAccessOperation } from './userAdmin.js';
 import { cleanupExpiredActivities, completeFollowUpOperation, permanentlyDeleteActivityOperation, restoreActivityOperation, trashActivityOperation, upsertActivityOperation } from './activityAdmin.js';
-import { cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
+import { abortCustomerUploadsOperation, archiveCustomerOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
 import { syncLegacyCustomerOperation } from './legacyWebhook.js';
 
 initializeApp();
 setGlobalOptions({ region: 'asia-southeast1', maxInstances: 10 });
-const services = { db: getFirestore(), auth: getAuth(), bucket: getStorage().bucket() };
+const services = { db: getFirestore(), auth: getAuth(), get bucket() { return getStorage().bucket(); } };
 const legacyWebhookUrl = defineSecret('LEGACY_WEBHOOK_URL');
 
 function callable(operation, options = {}) {
@@ -42,6 +42,8 @@ export const completeFollowUp = callable(completeFollowUpOperation);
 export const restoreActivity = callable(restoreActivityOperation);
 export const permanentlyDeleteActivity = callable(permanentlyDeleteActivityOperation);
 export const trashCustomer = callable(trashCustomerOperation);
+export const archiveCustomer = callable(archiveCustomerOperation);
+export const abortCustomerUploads = callable(abortCustomerUploadsOperation);
 export const transferCustomer = callable(transferCustomerOperation);
 export const restoreCustomer = callable(restoreCustomerOperation);
 export const permanentlyDeleteCustomer = callable(permanentlyDeleteCustomerOperation);

@@ -8,5 +8,10 @@
     { "uid": "fixture-user-1", "branch": "010 - ສຳນັກງານໃຫຍ່" },
     { "uid": "fixture-legacy-admin", "branch": "Admin" }
   ],
+  "authUsers": [
+    { "uid": "fixture-user-1" },
+    { "uid": "fixture-legacy-admin" },
+    { "uid": "fixture-auth-without-profile" }
+  ],
   "storageObjects": ["customers/legacy-face.jpg", "places/legacy-place.jpg", "places/potential-orphan.jpg"]
 }

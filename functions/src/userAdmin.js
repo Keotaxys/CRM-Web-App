@@ -8,7 +8,8 @@ async function setAccess({ db, auth }, actor, data, approving) {
   assertKnownRoleAndBranch(data.role, data.branchId);
   const target = await auth.getUser(data.uid);
   const claims = { ...(target.customClaims ?? {}), role: data.role, branchId: data.role === 'admin' ? null : data.branchId, accountStatus: 'approved' };
-  await auth.setCustomUserClaims(data.uid, claims);
+  // Write the profile first. Until claims are refreshed, the deliberate mismatch
+  // makes both Rules engines fail closed.
   await db.doc(`users/${data.uid}`).set({
     role: data.role,
     branchId: data.role === 'admin' ? null : data.branchId,
@@ -16,6 +17,7 @@ async function setAccess({ db, auth }, actor, data, approving) {
     updatedAt: FieldValue.serverTimestamp(),
     ...(approving ? { approvedAt: FieldValue.serverTimestamp(), approvedBy: actor.uid } : {}),
   }, { merge: true });
+  await auth.setCustomUserClaims(data.uid, claims);
   return { uid: data.uid, accountStatus: 'approved' };
 }
 
@@ -26,8 +28,8 @@ export async function disableUserOperation({ db, auth }, actor, data) {
   assertAdmin(actor);
   if (!data?.uid || data.uid === actor.uid) throw new Error('Admin cannot disable this account');
   const target = await auth.getUser(data.uid);
+  await db.doc(`users/${data.uid}`).set({ accountStatus: 'disabled', updatedAt: FieldValue.serverTimestamp(), disabledAt: FieldValue.serverTimestamp(), disabledBy: actor.uid }, { merge: true });
   await auth.setCustomUserClaims(data.uid, { ...(target.customClaims ?? {}), accountStatus: 'disabled' });
   await auth.revokeRefreshTokens(data.uid);
-  await db.doc(`users/${data.uid}`).set({ accountStatus: 'disabled', updatedAt: FieldValue.serverTimestamp(), disabledAt: FieldValue.serverTimestamp(), disabledBy: actor.uid }, { merge: true });
   return { uid: data.uid, accountStatus: 'disabled' };
 }

@@ -13,6 +13,8 @@ const branches = [
 ];
 
 const byValue = new Map(branches.flatMap(([id, label]) => [[id, id], [label, id]]));
+const recordStates = new Set(['active', 'archived', 'trashed']);
+const accountStatuses = new Set(['pending', 'approved', 'disabled']);
 
 export function legacyBranchId(value) {
   return typeof value === 'string' ? byValue.get(value.trim()) ?? null : null;
@@ -21,12 +23,14 @@ export function legacyBranchId(value) {
 export function migrateCustomer(customer) {
   const patch = {};
   const conflicts = [];
-  if (!customer.branchId) {
+  if (customer.branchId && !legacyBranchId(customer.branchId)) conflicts.push('invalid_existing_branch');
+  else if (!customer.branchId) {
     const branchId = legacyBranchId(customer.branch);
     if (branchId) patch.branchId = branchId;
     else conflicts.push('unknown_branch');
   }
   if (!customer.recordState) patch.recordState = 'active';
+  else if (!recordStates.has(customer.recordState)) conflicts.push('invalid_record_state');
   return { id: customer.id, patch, conflicts };
 }
 
@@ -35,6 +39,10 @@ export function migrateUser(user) {
   const conflicts = [];
   if (user.branch === 'Admin' || user.role === 'admin') {
     conflicts.push('legacy_admin_requires_verified_uid');
+    return { uid: user.uid, patch, conflicts };
+  }
+  if (user.branchId && !legacyBranchId(user.branchId)) {
+    conflicts.push('invalid_existing_branch');
     return { uid: user.uid, patch, conflicts };
   }
   if (user.role && user.role !== 'staff') {
@@ -49,6 +57,7 @@ export function migrateUser(user) {
   if (!user.role) patch.role = 'staff';
   if (!user.branchId) patch.branchId = branchId;
   if (!user.accountStatus) patch.accountStatus = 'approved';
+  else if (!accountStatuses.has(user.accountStatus)) conflicts.push('invalid_account_status');
   return { uid: user.uid, patch, conflicts };
 }
 
@@ -57,7 +66,8 @@ export function analyzeSnapshot(snapshot) {
   const users = snapshot.users ?? [];
   const customerMigrations = customers.map(migrateCustomer);
   const userMigrations = users.map(migrateUser);
-  return {
+  const migrationConflicts = [...customerMigrations, ...userMigrations].flatMap((item) => item.conflicts);
+  const report = {
     customerCount: customers.length,
     userCount: users.length,
     existingBranchCodes: [...new Set([
@@ -77,9 +87,21 @@ export function analyzeSnapshot(snapshot) {
       unknownCustomerBranch: customerMigrations.filter((item) => item.conflicts.includes('unknown_branch')).length,
       unknownUserBranch: userMigrations.filter((item) => item.conflicts.includes('unknown_branch')).length,
       legacyAdmin: userMigrations.filter((item) => item.conflicts.includes('legacy_admin_requires_verified_uid')).length,
+      unverifiedPrivilegedRole: userMigrations.filter((item) => item.conflicts.includes('unverified_privileged_role')).length,
+      invalidExistingBranch: [...customerMigrations, ...userMigrations].filter((item) => item.conflicts.includes('invalid_existing_branch')).length,
+      invalidRecordState: customerMigrations.filter((item) => item.conflicts.includes('invalid_record_state')).length,
+      invalidAccountStatus: userMigrations.filter((item) => item.conflicts.includes('invalid_account_status')).length,
     },
     storageObjectCount: snapshot.storageObjects?.length ?? 0,
+    migrationConflictCount: migrationConflicts.length,
   };
+  if (Array.isArray(snapshot.authUsers)) {
+    const authIds=new Set(snapshot.authUsers.map((item)=>item.uid));const userIds=new Set(users.map((item)=>item.uid));
+    report.authUserCount=snapshot.authUsers.length;
+    report.authUsersMissingProfile=snapshot.authUsers.filter((item)=>!userIds.has(item.uid)).length;
+    report.userDocumentsMissingAuth=users.filter((item)=>!authIds.has(item.uid)).length;
+  }
+  return report;
 }
 
 function storagePathFromUrl(value) {

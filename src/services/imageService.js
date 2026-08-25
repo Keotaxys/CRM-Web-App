@@ -1,5 +1,5 @@
 import imageCompression from 'browser-image-compression';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../firebase/config';
 
 export const IMAGE_MAX_BYTES = 1_000_000;
@@ -32,5 +32,11 @@ export async function uploadManagedImage(path, file) {
   const compressed = await compressImage(file);
   const objectRef = ref(storage, path);
   const snapshot = await uploadBytes(objectRef, compressed, { contentType: compressed.type });
-  return { url: await getDownloadURL(snapshot.ref), path: snapshot.ref.fullPath };
+  // Persist only the object path. Download-token URLs are bearer credentials and
+  // would allow anyone holding the URL to bypass Storage Rules.
+  return { path: snapshot.ref.fullPath };
+}
+
+export function deleteManagedImage(path) {
+  return deleteObject(ref(storage, path));
 }

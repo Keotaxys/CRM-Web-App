@@ -3,6 +3,9 @@
   "project": "crm-web-app-97b91",
   "customerCount": 32,
   "userCount": 12,
+  "authUserCount": 15,
+  "authUsersMissingProfile": 3,
+  "userDocumentsMissingAuth": 0,
   "existingBranchCodes": ["020", "050", "060", "110", "130", "140"],
   "customersNeedingBranchId": 32,
   "usersNeedingBranchId": 12,
@@ -10,8 +13,9 @@
   "legacyGpsCount": 1,
   "legacyImageCount": 32,
   "missingFieldCounts": { "customerStatus": 0, "customerCreatedAt": 0 },
-  "conflictCounts": { "unknownCustomerBranch": 0, "unknownUserBranch": 0, "legacyAdmin": 0 },
+  "conflictCounts": { "unknownCustomerBranch": 0, "unknownUserBranch": 0, "legacyAdmin": 0, "unverifiedPrivilegedRole": 0, "invalidExistingBranch": 0, "invalidRecordState": 0, "invalidAccountStatus": 0 },
+  "migrationConflictCount": 0,
   "storageObjectCount": 69,
   "orphanAudit": { "objectCount": 69, "referencedObjectCount": 54, "potentialOrphanCount": 15 },
-  "note": "Aggregate-only read-only production dry-run. No migration apply, deployment, Auth mutation, or Storage deletion occurred."
+  "note": "Aggregate-only read-only production dry-run. Three Auth-only accounts require Pending profiles and later identity review. No migration apply, deployment, Auth mutation, or Storage deletion occurred."
 }

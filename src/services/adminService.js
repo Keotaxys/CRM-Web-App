@@ -13,6 +13,7 @@ export const restoreCustomer = (id) => invoke('restoreCustomer', { id });
 export const permanentlyDeleteCustomer = (id) => invoke('permanentlyDeleteCustomer', { id });
 export const restoreActivity = (id) => invoke('restoreActivity', { id });
 export const permanentlyDeleteActivity = (id) => invoke('permanentlyDeleteActivity', { id });
+export const cleanupExpiredTrash = () => invoke('cleanupExpiredTrash', {});
 
 export function subscribeUsers(onData, onError, accountStatus = null) {
   const constraints = accountStatus ? [where('accountStatus', '==', accountStatus)] : [];
