@@ -5,7 +5,7 @@ import { useAuth } from '../auth/useAuth';
 export default function Navbar({ title, showBack = false }) {
   const navigate = useNavigate();
   const { claims, logout } = useAuth();
-  const branch = claims.role === 'admin' ? 'Admin · ທຸກສາຂາ' : branchName(claims.branchId);
+  const branch = claims.role === 'admin' ? 'ຜູ້ບໍລິຫານ · ທຸກສາຂາ' : branchName(claims.branchId);
   return <header className="app-header">
     <div className="flex items-center gap-3 min-w-0">
       {showBack ? <button aria-label="Back" className="icon-button" onClick={() => navigate(-1)}>←</button> : <div className="brand-mark">CRM</div>}

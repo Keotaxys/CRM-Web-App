@@ -29,7 +29,7 @@ export default function Login() {
       {registering && <label>ຊື່<input required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })}/></label>}
       <label>ອີເມວ<input type="email" required value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value })}/></label>
       <label>ລະຫັດຜ່ານ<input type="password" minLength="6" required value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value })}/></label>
-      <button className="btn-primary" disabled={busy}>{busy ? 'ກຳລັງປະມວນຜົນ...' : registering ? 'ສ້າງບັນຊີ Pending' : 'ເຂົ້າສູ່ລະບົບ'}</button>
+      <button className="btn-primary" disabled={busy}>{busy ? 'ກຳລັງປະມວນຜົນ...' : registering ? 'ສ້າງບັນຊີລໍຖ້າອະນຸມັດ' : 'ເຂົ້າສູ່ລະບົບ'}</button>
     </form>
     <button className="btn-secondary w-full mt-3" disabled={busy} onClick={() => loginWithGoogle().then(() => navigate('/')).catch(() => setError('Google Sign-In ບໍ່ສຳເລັດ'))}>Google Sign-In</button>
     <button className="btn-ghost w-full mt-3" onClick={() => { setRegistering(!registering); setError(''); }}>{registering ? 'ກັບໄປເຂົ້າລະບົບ' : 'ສ້າງບັນຊີໃໝ່'}</button>
