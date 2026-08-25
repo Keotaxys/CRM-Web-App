@@ -4,7 +4,16 @@ This checklist is a release overview, not authorization. The executable command-
 
 ## Release identity and mandatory evidence
 
-Record the project ID, Git commit, operator, UTC start time, and change ticket. Freeze other deployments and retain these items together in a private, access-controlled release folder:
+Release identity has two distinct commits:
+
+- **Reviewed release-content commit:** `f942f75c71718c6a3c5c500b75ee48f226edf54d`.
+- **Deployment runbook HEAD:** the current approved documentation-only descendant of that release-content commit. Record its exact `git rev-parse HEAD` value in the release record after approval; do not hard-code it into the tracked runbook and create an impossible self-reference.
+
+The earlier `412509def0bb7e0f891caf0177c8d18da1ac5599` commit is retained only as the historical starting remediation HEAD. It is not the required current release HEAD.
+
+Before the freeze, require `git merge-base --is-ancestor f942f75c71718c6a3c5c500b75ee48f226edf54d HEAD` to succeed and verify that the committed delta after the release-content commit is limited to the approved production runbook/checklist documentation.
+
+Record the project ID, reviewed release-content commit, approved deployment runbook HEAD, operator, UTC start time, and change ticket. Freeze other deployments and retain these items together in a private, access-controlled release folder:
 
 - Firestore export location and successful operation metadata.
 - Auth Custom Claims snapshot JSON and SHA-256 sidecar. Firestore export does not include Firebase Auth Custom Claims.
@@ -21,7 +30,7 @@ Do not proceed unless the Firestore export is restorable and the chosen Storage 
 
 ## Controlled deployment order
 
-1. Freeze every CRM/claim/image/manual-console write and record the fixed release identity.
+1. Freeze every CRM/claim/image/manual-console write and record both the reviewed release-content commit and the approved deployment runbook HEAD.
 2. Capture a fresh post-freeze baseline, current Rules sources/releases, CORS, Hosting release, and index state.
 3. Create and verify the dedicated Singapore backup bucket.
 4. Complete and verify the Firestore export.

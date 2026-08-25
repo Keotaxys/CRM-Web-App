@@ -1,13 +1,15 @@
 # CRM Web App production operator runbook
 
-This runbook prepares a controlled deployment of commit `412509def0bb7e0f891caf0177c8d18da1ac5599` to Firebase project `crm-web-app-97b91`. It is not deployment authorization.
+This runbook prepares a controlled deployment of the reviewed release content at commit `f942f75c71718c6a3c5c500b75ee48f226edf54d` to Firebase project `crm-web-app-97b91`. It is not deployment authorization.
 
-## Fixed release identity
+## Approved release identity
 
 | Item | Required value |
 |---|---|
 | Git branch | `codex/predeploy-remediation` |
-| Git commit | `412509def0bb7e0f891caf0177c8d18da1ac5599` |
+| Reviewed release-content commit | `f942f75c71718c6a3c5c500b75ee48f226edf54d` |
+| Deployment runbook HEAD | The current approved documentation-only descendant of the release-content commit; record its exact `git rev-parse HEAD` value in the release record |
+| Starting remediation HEAD (historical only) | `412509def0bb7e0f891caf0177c8d18da1ac5599`; this is not the required current release HEAD |
 | Firebase project | `crm-web-app-97b91` |
 | Project number | `601560289578` |
 | Firebase CLI principal | `keota.mar@gmail.com` |
@@ -16,6 +18,8 @@ This runbook prepares a controlled deployment of commit `412509def0bb7e0f891caf0
 | Functions runtime/region | Node.js 22 / `asia-southeast1` |
 | Hosting site | `crm-web-app-97b91` |
 | Recommended backup bucket | `gs://crm-web-app-97b91-prod-backups-601560289578` in `asia-southeast1` |
+
+The deployment runbook HEAD is intentionally not hard-coded in this tracked file: doing so would make every documentation-only correction invalidate its own required hash. At approval time, record the current runbook HEAD externally and require it to contain the reviewed release-content commit as an ancestor. The committed delta after that release-content commit must be limited to the approved production runbook/checklist documentation.
 
 The backup bucket name and its cost/retention configuration require human approval. If that globally unique name is unavailable, stop and record an approved replacement throughout this runbook before creating anything.
 
@@ -45,18 +49,24 @@ Freeze phases are: announce and record start → operator confirmation → fresh
 **SAFE READ-ONLY**
 
 ```powershell
+$releaseContentCommit='f942f75c71718c6a3c5c500b75ee48f226edf54d'
 git status --short
 git branch --show-current
-git rev-parse HEAD
+$deploymentRunbookHead=git rev-parse HEAD
+git merge-base --is-ancestor $releaseContentCommit HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Reviewed release-content commit is not an ancestor of HEAD.' }
+git diff --quiet "$releaseContentCommit..HEAD" -- . ':(exclude)docs/deployment/production-runbook.md' ':(exclude)docs/deployment/production-checklist.md'
+if ($LASTEXITCODE -ne 0) { throw 'HEAD contains non-documentation changes after the reviewed release-content commit.' }
+Write-Output "DEPLOYMENT_RUNBOOK_HEAD=$deploymentRunbookHead"
 firebase login:list
 firebase use
 ```
 
-Expected: clean tree, the fixed branch/commit above, `keota.mar@gmail.com`, and `crm-web-app-97b91`.
+Expected: clean tree; fixed branch; successful ancestor and content-delta checks; an externally approved `DEPLOYMENT_RUNBOOK_HEAD`; `keota.mar@gmail.com`; and `crm-web-app-97b91`.
 
 Rollback point: none; no change occurred.
 
-Stop if any value differs, if more than one operator is actively changing production, or if the freeze acknowledgement is incomplete.
+Stop if any value differs, the runbook HEAD is not the approved documentation-fix commit, the reviewed release-content commit is not an ancestor, any non-approved-document path changed after the release-content commit, more than one operator is actively changing production, or the freeze acknowledgement is incomplete.
 
 ## 2. Re-run local release verification
 
@@ -77,7 +87,7 @@ Expected: lint 0; unit/script tests 0; Functions tests 0; Rules emulator 0; buil
 
 Rollback point: delete only the local regenerated `dist/` if necessary; production is unchanged.
 
-Stop on any non-zero exit, changed Git state, or a build whose source commit is not the fixed commit.
+Stop on any non-zero exit, changed Git state, or a build whose application/configuration source differs from the reviewed release-content commit.
 
 ## 3. Capture the post-freeze production baseline
 
@@ -194,18 +204,24 @@ Firestore export does not contain Firebase Auth Custom Claims. The artifact is U
 
 ### Path A — Google Cloud Shell (preferred)
 
-Use the reviewed source at the fixed commit. Cloud Shell must be logged into `keota.mar@gmail.com` and have ADC available.
+Use the approved deployment runbook HEAD, whose application/configuration content is verified against the reviewed release-content commit. Cloud Shell must be logged into `keota.mar@gmail.com` and have ADC available.
 
 **SAFE READ-ONLY**
 
 ```bash
+RELEASE_CONTENT_COMMIT='f942f75c71718c6a3c5c500b75ee48f226edf54d'
 gcloud auth list
 gcloud config get-value project
 gcloud auth application-default print-access-token >/dev/null
-git rev-parse HEAD
+DEPLOYMENT_RUNBOOK_HEAD=$(git rev-parse HEAD)
+git merge-base --is-ancestor "$RELEASE_CONTENT_COMMIT" HEAD
+git diff --quiet "$RELEASE_CONTENT_COMMIT..HEAD" -- . \
+  ':(exclude)docs/deployment/production-runbook.md' \
+  ':(exclude)docs/deployment/production-checklist.md'
+printf 'DEPLOYMENT_RUNBOOK_HEAD=%s\n' "$DEPLOYMENT_RUNBOOK_HEAD"
 ```
 
-Expected: intended account, project `crm-web-app-97b91`, working ADC, and fixed commit. Do not print tokens.
+Expected: intended account, project `crm-web-app-97b91`, working ADC, approved deployment runbook HEAD, and successful release-content ancestor/content-delta checks. Do not print tokens.
 
 **SAFE READ-ONLY (production) / SAFE LOCAL EVIDENCE WRITE**
 
@@ -221,7 +237,7 @@ Expected: 15 represented users, source project `crm-web-app-97b91`, a JSON artif
 
 ### Path B — local ADC
 
-Install Google Cloud CLI later, authenticate ADC as the intended operator, verify `gcloud auth application-default print-access-token` without displaying its value, then run the same Node command from the fixed commit. Firebase CLI login alone is not ADC.
+Install Google Cloud CLI later, authenticate ADC as the intended operator, verify `gcloud auth application-default print-access-token` without displaying its value, then run the same Node command from the approved deployment runbook HEAD after the same release-content ancestor/content-delta checks. Firebase CLI login alone is not ADC.
 
 **REQUIRES HUMAN APPROVAL — BACKUP-BUCKET WRITE**
 
@@ -667,7 +683,7 @@ Stop and restore only the affected prior Rules source on any actor-matrix failur
 
 ## 18. Capture Hosting rollback point and deploy Hosting last
 
-The build source is `dist/` from the fixed commit and `firebase.json` SPA rewrite. Capture a local digest and the current live release. Create a release-specific rollback channel that points to the current live version before deploying.
+The build source is `dist/` produced from the approved deployment runbook HEAD, whose application/configuration content matches the reviewed release-content commit, together with the `firebase.json` SPA rewrite. Capture a local digest and the current live release. Create a release-specific rollback channel that points to the current live version before deploying.
 
 **SAFE LOCAL-ONLY**
 
