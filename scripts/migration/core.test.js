@@ -41,6 +41,17 @@ describe('migration transforms', () => {
     expect(admin.conflicts).toContain('legacy_admin_requires_verified_uid');
   });
 
+  it('reports a clean dry-run after migration followed by verified Admin bootstrap', () => {
+    const legacy = { uid: 'verified-admin', branch: '020 - ສາຂາ ຄຳມ່ວນ' };
+    const migrated = { ...legacy, ...migrateUser(legacy).patch };
+    const bootstrapped = { ...migrated, role: 'admin', branchId: null, accountStatus: 'approved' };
+    const report = analyzeSnapshot({ customers: [], users: [bootstrapped], authUsers: [{ uid: bootstrapped.uid }] });
+
+    expect(report.usersNeedingAccessFields).toBe(0);
+    expect(report.migrationConflictCount).toBe(0);
+    expect(report.userDocumentsMissingAuth).toBe(0);
+  });
+
   it('fails closed for invalid role, branch, and account-status combinations', () => {
     const invalidUsers = [
       { uid: 'pending-with-role', role: 'staff', branchId: '010', accountStatus: 'pending' },

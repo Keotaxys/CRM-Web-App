@@ -99,6 +99,24 @@ describe('Auth claims restore', () => {
     expect(auth.setCustomUserClaims).toHaveBeenCalledExactlyOnceWith('a', {});
   });
 
+  it('publishes the complete plan before the first claim mutation', async () => {
+    const events = [];
+    const auth = {
+      getUser: vi.fn(async (uid) => ({ uid, customClaims: uid === 'a' ? { old: true } : { branchId: '010', role: 'staff' } })),
+      setCustomUserClaims: vi.fn(async (uid) => { events.push({ type: 'mutation', uid }); }),
+    };
+
+    await restoreAuthClaims({
+      artifact: signedArtifact(),
+      auth,
+      project: 'demo-project',
+      apply: true,
+      onPlan: async (plan) => { events.push({ type: 'plan', changes: plan.plannedChanges.map(({ uid }) => uid) }); },
+    });
+
+    expect(events).toEqual([{ type: 'plan', changes: ['a'] }, { type: 'mutation', uid: 'a' }]);
+  });
+
   it('reports every completed and failed UID when an apply partially fails', async () => {
     const plan = { changes: [{ uid: 'a', before: {}, after: { role: 'staff' } }, { uid: 'b', before: {}, after: { role: 'staff' } }], unchanged: [] };
     const auth = { setCustomUserClaims: vi.fn(async (uid) => { if (uid === 'a') throw new Error('denied'); }) };
