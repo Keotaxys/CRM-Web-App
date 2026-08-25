@@ -21,7 +21,7 @@ Do not proceed unless the Firestore export is restorable and the chosen Storage 
 
 ## Controlled deployment order
 
-1. Freeze deployments. Record the reviewed commit and capture a fresh production baseline, preservation digests, Hosting release, Rules releases/sources, current CORS, Functions inventory, and index inventory.
+1. Freeze deployments and all production claim-changing operations. Record the reviewed commit and capture a fresh production baseline, preservation digests, Hosting release, Rules releases/sources, current CORS, Functions inventory, and index inventory. Keep the claim-change freeze through migration/Admin claim verification; for any later claims restore, establish a new dedicated freeze window.
 2. Create a recoverable Firestore export and verify that the operation succeeded at the recorded location.
 3. Snapshot Auth Custom Claims with `node scripts/snapshot-auth-claims.mjs --project crm-web-app-97b91 --out artifacts/private/predeploy-auth-claims.json`; retain the JSON and `.sha256` sidecar privately.
 4. Confirm the documented Storage recovery strategy is active and restorable. Do not treat the list of 15 potential legacy orphans as deletion authorization.
@@ -89,10 +89,10 @@ node scripts/restore-auth-claims.mjs --project crm-web-app-97b91 --input artifac
 
 # Apply only under an approved Auth-claims rollback
 $env:ALLOW_PRODUCTION_MIGRATION='crm-web-app-97b91'
-node scripts/restore-auth-claims.mjs --apply --project crm-web-app-97b91 --confirm-project crm-web-app-97b91 --input artifacts/private/predeploy-auth-claims.json --confirm-digest <SHA-256-FROM-VERIFIED-SNAPSHOT>
+node scripts/restore-auth-claims.mjs --apply --project crm-web-app-97b91 --confirm-project crm-web-app-97b91 --confirm-claims-freeze crm-web-app-97b91 --input artifacts/private/predeploy-auth-claims.json --confirm-digest <SHA-256-FROM-VERIFIED-SNAPSHOT>
 ```
 
-Its apply mode additionally requires `--apply`, matching `--confirm-project`, `--confirm-digest <SHA-256-FROM-VERIFIED-SNAPSHOT>`, and `ALLOW_PRODUCTION_MIGRATION=crm-web-app-97b91`. The tool re-reads each user's claims immediately before mutation and refuses a stale plan; produce and review a fresh dry-run instead of overwriting concurrent access changes. Do not apply it unless an approved rollback requires exact claim restoration.
+Its apply mode additionally requires `--apply`, matching `--confirm-project`, matching `--confirm-claims-freeze`, `--confirm-digest <SHA-256-FROM-VERIFIED-SNAPSHOT>`, and `ALLOW_PRODUCTION_MIGRATION=crm-web-app-97b91`. Firebase Auth does not provide a compare-and-swap operation for Custom Claims: the tool's immediate re-read rejects changes that occurred after planning, but a narrow read/write race still exists. Therefore `--confirm-claims-freeze` is an operator assertion that all console, script, and callable claim-changing activity is paused for the complete plan/apply/verification window. If the freeze cannot be enforced, do not apply. Produce and review a fresh dry-run after any stale-plan failure.
 
 The snapshot, restore, migration apply, and Admin bootstrap scripts use Google Application Default Credentials. Run them only from an approved operator environment such as Cloud Shell or a workstation with ADC configured for the intended production principal; Firebase CLI login by itself is not ADC.
 

@@ -76,13 +76,15 @@ describe('Auth claims restore', () => {
 
   it('requires every apply guard and exact production environment confirmation', () => {
     const digest = 'a'.repeat(64);
-    const valid = { apply: true, project: 'prod-project', confirmProject: 'prod-project', input: 'claims.json', confirmDigest: digest, artifactDigest: digest };
+    const valid = { apply: true, project: 'prod-project', confirmProject: 'prod-project', confirmClaimsFreeze: 'prod-project', input: 'claims.json', confirmDigest: digest, artifactDigest: digest };
     expect(() => assertRestoreApplyGuard(valid, { ALLOW_PRODUCTION_MIGRATION: 'prod-project' })).not.toThrow();
     for (const invalid of [
       { ...valid, apply: false },
       { ...valid, project: '' },
       { ...valid, confirmProject: 'wrong' },
       { ...valid, input: '' },
+      { ...valid, confirmClaimsFreeze: '' },
+      { ...valid, confirmClaimsFreeze: 'wrong' },
       { ...valid, confirmDigest: '' },
       { ...valid, confirmDigest: 'b'.repeat(64) },
     ]) expect(() => assertRestoreApplyGuard(invalid, { ALLOW_PRODUCTION_MIGRATION: 'prod-project' })).toThrow(/blocked/i);

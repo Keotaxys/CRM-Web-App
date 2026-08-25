@@ -73,11 +73,12 @@ export function assertRestoreApplyGuard(args, env = process.env) {
   const valid = args?.apply === true
     && Boolean(args.project)
     && args.project === args.confirmProject
+    && args.confirmClaimsFreeze === args.project
     && Boolean(args.input)
     && typeof args.confirmDigest === 'string'
     && args.confirmDigest === args.artifactDigest
     && env.ALLOW_PRODUCTION_MIGRATION === args.project;
-  if (!valid) throw new Error('Auth claims restore apply blocked: require --apply, --project, matching --confirm-project, --input, matching --confirm-digest, and ALLOW_PRODUCTION_MIGRATION');
+  if (!valid) throw new Error('Auth claims restore apply blocked: require --apply, --project, matching --confirm-project/--confirm-claims-freeze, --input, matching --confirm-digest, and ALLOW_PRODUCTION_MIGRATION');
 }
 
 export class AuthClaimsRestoreError extends Error {

@@ -14,6 +14,21 @@ function artifactFor(project = 'demo-project') {
 }
 
 describe('restore Auth claims CLI recovery', () => {
+  it('blocks apply without the explicit production claim-change freeze confirmation', async () => {
+    const artifact = artifactFor();
+    const openAuth = vi.fn();
+
+    await expect(main([
+      '--apply', '--project', 'demo-project', '--confirm-project', 'demo-project',
+      '--input', 'claims.json', '--confirm-digest', artifact.digest.value,
+    ], { ALLOW_PRODUCTION_MIGRATION: 'demo-project' }, {
+      readArtifact: vi.fn(async () => artifact),
+      authForProject: openAuth,
+    })).rejects.toThrow(/blocked/i);
+
+    expect(openAuth).not.toHaveBeenCalled();
+  });
+
   it('persists a private recovery artifact and prints only its aggregate path after partial apply failure', async () => {
     const artifact = artifactFor();
     const auth = {
@@ -27,7 +42,7 @@ describe('restore Auth claims CLI recovery', () => {
 
     await expect(main([
       '--apply', '--project', 'demo-project', '--confirm-project', 'demo-project',
-      '--input', 'claims.json', '--confirm-digest', artifact.digest.value,
+      '--confirm-claims-freeze', 'demo-project', '--input', 'claims.json', '--confirm-digest', artifact.digest.value,
     ], { ALLOW_PRODUCTION_MIGRATION: 'demo-project' }, {
       readArtifact: vi.fn(async () => artifact),
       authForProject: vi.fn(async () => ({ auth, close })),

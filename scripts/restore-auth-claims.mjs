@@ -50,6 +50,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, depe
       apply: true,
       project: args.project,
       confirmProject: args['confirm-project'],
+      confirmClaimsFreeze: args['confirm-claims-freeze'],
       input: args.input,
       confirmDigest: args['confirm-digest'],
       artifactDigest: validated.digest.value,
