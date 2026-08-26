@@ -5,7 +5,7 @@ const choices = [
   ['/customers/new', 'person_add', 'ລູກຄ້າ'],
   ['/activities/new/appointment', 'event', 'ນັດໝາຍ'],
   ['/activities/new/event', 'campaign', 'ກິດຈະກຳ'],
-  ['/activities/new/customer_visit', 'handshake', 'ການຢ້ຽມລູກຄ້າ'],
+  ['/activities/new/customer_visit', 'handshake', 'ນັດພົບລູກຄ້າ'],
 ];
 
 export default function QuickCreate() {

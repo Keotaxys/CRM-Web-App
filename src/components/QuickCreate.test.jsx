@@ -22,7 +22,7 @@ describe('QuickCreate', () => {
     ['ລູກຄ້າ', '/customers/new'],
     ['ນັດໝາຍ', '/activities/new/appointment'],
     ['ກິດຈະກຳ', '/activities/new/event'],
-    ['ການຢ້ຽມລູກຄ້າ', '/activities/new/customer_visit'],
+    ['ນັດພົບລູກຄ້າ', '/activities/new/customer_visit'],
   ])('closes before navigating from %s', async (choice, expectedPath) => {
     const user = userEvent.setup();
     const { container } = renderQuickCreate();

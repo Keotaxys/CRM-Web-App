@@ -5,11 +5,13 @@ describe('Lao UI labels for internal CRM values', () => {
   it('translates activity types and statuses without changing stored values', () => {
     expect(constants.activityTypeLabel?.('appointment')).toBe('ນັດໝາຍ');
     expect(constants.activityTypeLabel?.('event')).toBe('ກິດຈະກຳ');
-    expect(constants.activityTypeLabel?.('customer_visit')).toBe('ການຢ້ຽມລູກຄ້າ');
+    expect(constants.activityTypeLabel?.('customer_visit')).toBe('ນັດພົບລູກຄ້າ');
     expect(constants.activityStatusLabel?.('planned')).toBe('ວາງແຜນ');
+    expect(constants.activityStatusLabel?.('in_progress')).toBe('ກຳລັງດຳເນີນ');
     expect(constants.activityStatusLabel?.('completed')).toBe('ສຳເລັດແລ້ວ');
     expect(constants.ACTIVITY_TYPES.CUSTOMER_VISIT).toBe('customer_visit');
     expect(constants.ACTIVITY_STATUSES).toContain('planned');
+    expect(constants.ACTIVITY_STATUSES).toContain('in_progress');
   });
 
   it('translates access and follow-up states for display', () => {

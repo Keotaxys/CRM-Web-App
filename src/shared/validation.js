@@ -26,7 +26,7 @@ export function validateActivity(activity) {
   }
 
   if (activity?.type === ACTIVITY_TYPES.CUSTOMER_VISIT && !activity?.customerId) {
-    errors.customerId = 'ການຢ້ຽມລູກຄ້າຕ້ອງເລືອກລູກຄ້າ';
+    errors.customerId = 'ນັດພົບລູກຄ້າຕ້ອງເລືອກລູກຄ້າ';
   }
 
   return { valid: Object.keys(errors).length === 0, errors };

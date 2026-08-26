@@ -27,7 +27,7 @@ export const ACTIVITY_STATUSES = Object.freeze([
 const ACTIVITY_TYPE_LABELS = Object.freeze({
   appointment: 'ນັດໝາຍ',
   event: 'ກິດຈະກຳ',
-  customer_visit: 'ການຢ້ຽມລູກຄ້າ',
+  customer_visit: 'ນັດພົບລູກຄ້າ',
 });
 
 const ACTIVITY_STATUS_LABELS = Object.freeze({
