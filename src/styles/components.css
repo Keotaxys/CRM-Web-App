@@ -1,0 +1,71 @@
+.ui-button,
+.ui-icon-button {
+  align-items: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  justify-content: center;
+  min-height: var(--touch-target);
+  text-decoration: none;
+  transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+}
+
+.ui-button:focus-visible,
+.ui-icon-button:focus-visible,
+.ui-input:focus-visible,
+.ui-textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.ui-button:active:not(:disabled),
+.ui-icon-button:active {
+  transform: scale(.98);
+}
+
+.ui-button--sm { min-height: var(--touch-target); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 14px; }
+.ui-button--md { min-height: var(--touch-target); padding: 10px 16px; border-radius: var(--radius-md); font-size: 15px; }
+.ui-button--primary { color: var(--color-white); background: var(--teal-700); box-shadow: var(--shadow-sm); }
+.ui-button--primary:hover:not(:disabled) { background: var(--teal-600); }
+.ui-button--secondary { color: var(--teal-700); background: var(--teal-50); border-color: var(--teal-100); }
+.ui-button--neutral { color: var(--ink-800); background: var(--color-white); border-color: var(--gray-200); }
+.ui-button--warning,
+.ui-button--danger { color: var(--orange-700); background: var(--orange-50); border-color: var(--orange-100); }
+.ui-button--warning:hover:not(:disabled),
+.ui-button--danger:hover:not(:disabled) { color: var(--color-white); background: var(--orange-600); border-color: var(--orange-600); }
+
+.ui-icon-button { width: var(--touch-target); min-width: var(--touch-target); min-height: var(--touch-target); padding: 0; border-radius: 50%; }
+.ui-icon-button--sm { width: var(--touch-target); min-width: var(--touch-target); }
+.ui-icon-button--md { width: var(--touch-target); min-width: var(--touch-target); }
+.ui-icon-button--neutral { color: var(--ink-800); background: var(--color-white); border-color: var(--gray-200); }
+.ui-icon-button--teal { color: var(--teal-700); background: var(--teal-50); border-color: var(--teal-100); }
+.ui-icon-button--orange { color: var(--orange-700); background: var(--orange-50); border-color: var(--orange-100); }
+
+.ui-field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.ui-field__label { color: var(--ink-800); font-size: 14px; font-weight: 800; line-height: 1.45; }
+.ui-input,
+.ui-textarea { width: 100%; min-height: var(--touch-target); padding: 10px 12px; color: var(--ink-950); border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--color-white); outline: none; transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard); }
+.ui-input:focus-visible,
+.ui-textarea:focus-visible { border-color: var(--teal-500); }
+.ui-input[aria-invalid='true'],
+.ui-textarea[aria-invalid='true'] { border-color: var(--orange-600); }
+.ui-textarea { min-height: 96px; resize: vertical; }
+.ui-field__hint { margin: 0; color: var(--gray-600); font-size: 13px; line-height: 1.5; }
+.ui-field__error { margin: 0; color: var(--orange-700); font-size: 13px; font-weight: 700; line-height: 1.5; }
+
+.ui-glass-card { border: 1px solid var(--gray-200); border-radius: var(--radius-lg); background: var(--color-white); box-shadow: var(--shadow-card); }
+.ui-glass-card--raised { box-shadow: var(--shadow-float); }
+@supports (backdrop-filter: blur(1px)) {
+  .ui-glass-card { background: var(--surface-glass); backdrop-filter: blur(var(--blur-glass)); }
+}
+
+.ui-status-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; border-radius: var(--radius-pill); color: var(--ink-800); background: var(--gray-100); font-size: 12px; font-weight: 800; line-height: 1.35; }
+.ui-status-badge[data-status='in_progress'] { color: var(--teal-700); background: var(--teal-100); }
+.ui-status-badge[data-status='cancelled'] { color: var(--orange-700); background: var(--orange-100); }
