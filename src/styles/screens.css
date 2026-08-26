@@ -1,5 +1,21 @@
 /* Screen-specific CRM layouts are added by their owning feature tasks. */
 
+.filter-panel { margin-bottom: var(--space-4); padding: var(--space-4); }
+.calendar-groups { display: grid; gap: var(--space-4); }
+.calendar-day { padding: var(--space-4); }
+.calendar-date { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.calendar-add-action { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: var(--radius-md); background: var(--color-teal-600); color: white; font-size: 1.5rem; line-height: 1; }
+.calendar-item { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3); border-top: 1px solid var(--color-gray-200); }
+.calendar-item strong { min-width: 0; overflow-wrap: anywhere; }
+.calendar-item small { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+
+@media (max-width: 430px) {
+  .filter-panel .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .calendar-day { padding: var(--space-3); }
+  .calendar-item { grid-template-columns: 1fr; gap: var(--space-1); }
+  .calendar-item small { grid-column: 1; }
+}
+
 @media (max-width: 430px) {
   .ui-select-popover--sheet { inset: auto 8px 0; width: auto; max-height: calc(100dvh - 16px); padding-bottom: env(safe-area-inset-bottom); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
   .ui-select-popover--sheet .ui-select__listbox { max-height: min(320px, calc(100dvh - 48px)); padding: var(--space-2); }
