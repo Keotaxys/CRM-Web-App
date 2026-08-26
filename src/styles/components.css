@@ -52,6 +52,7 @@
 
 .contact-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .contact-actions--large .ui-icon-button { width: auto; min-width: var(--touch-target); padding-inline: var(--space-3); border-radius: var(--radius-md); gap: var(--space-2); }
+.contact-action--call .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
 .contact-action__whatsapp-icon { width: 22px; height: 22px; fill: currentColor; flex: none; }
 
 .ui-field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
