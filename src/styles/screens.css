@@ -8,6 +8,8 @@
 .calendar-item { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3); border-top: 1px solid var(--color-gray-200); }
 .calendar-item strong { min-width: 0; overflow-wrap: anywhere; }
 .calendar-item small { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.linked-customer-card { padding: var(--space-4); border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--surface-muted); }
+.linked-customer-card h2 { margin: 0 0 var(--space-2); color: var(--ink-800); font-size: 15px; }
 
 @media (max-width: 430px) {
   .filter-panel .form-grid { grid-template-columns: minmax(0, 1fr); }

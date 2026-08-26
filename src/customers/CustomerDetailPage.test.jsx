@@ -28,6 +28,8 @@ describe('CustomerDetailPage transfer', () => {
     render(<MemoryRouter initialEntries={['/customers/c1']}><Routes><Route path="/customers/:id" element={<CustomerDetailPage />} /></Routes></MemoryRouter>);
 
     await screen.findByText('ຮູບລູກຄ້າ');
+    expect(screen.getByRole('link', { name: 'ໂທຫາລູກຄ້າ' })).toHaveAttribute('href', 'tel:02055551234');
+    expect(screen.getByRole('link', { name: 'ຕິດຕໍ່ຜ່ານ WhatsApp' })).toHaveAttribute('href', 'https://wa.me/8562055551234');
     await user.click(screen.getByRole('combobox', { name: 'Transfer branch' }));
     await user.click(screen.getByRole('option', { name: /019/ }));
     await user.click(screen.getByRole('button', { name: 'Transfer customer' }));
