@@ -33,12 +33,26 @@ describe('Admin disabled-user lifecycle', () => {
 
     await user.click(screen.getByRole('button', { name: 'ປິດໃຊ້ງານ' }));
     const [role, branch] = screen.getAllByRole('combobox');
-    await user.selectOptions(role, 'branch_manager');
-    await user.selectOptions(branch, '020');
+    await user.click(role);
+    await user.click(screen.getByRole('option', { name: 'ຫົວໜ້າສາຂາ' }));
+    await user.click(branch);
+    await user.click(screen.getByRole('option', { name: /020/ }));
     await user.click(screen.getByRole('button', { name: 'ເປີດໃຊ້ງານຄືນ' }));
 
     await waitFor(() => expect(serviceMocks.reactivateUser).toHaveBeenCalledWith('disabled-user', 'branch_manager', '020'));
     expect(serviceMocks.updateUserAccess).not.toHaveBeenCalled();
+  });
+
+  it('keeps the branch selector disabled when the Admin role is selected', async () => {
+    const user = userEvent.setup();
+    render(<AdminPage />);
+
+    await user.click(screen.getByRole('button', { name: 'ປິດໃຊ້ງານ' }));
+    const [role, branch] = screen.getAllByRole('combobox');
+    await user.click(role);
+    await user.click(screen.getByRole('option', { name: 'ຜູ້ບໍລິຫານລະບົບ' }));
+
+    expect(branch).toBeDisabled();
   });
 
   it('shows branch and trash management actions in Lao', async () => {

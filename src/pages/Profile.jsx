@@ -7,6 +7,9 @@ import { updatePersonalProfile } from '../services/profileService';
 import ManagedImage from '../components/ManagedImage';
 import { roleLabel } from '../shared/constants';
 import CameraUpload from '../components/CameraUpload';
+import Button from '../components/ui/Button';
+import GlassCard from '../components/ui/GlassCard';
+import Input from '../components/ui/Input';
 
 export default function Profile() {
   const identity = useAuth();
@@ -22,13 +25,13 @@ export default function Profile() {
       await identity.refreshProfile(); setMessage('ບັນທຶກໂປຣໄຟລ໌ແລ້ວ');
     } catch (error) { console.error(error); if(abandonedPath)deleteManagedImage(abandonedPath).catch((cleanupError)=>console.error('Avatar cleanup failed',cleanupError)); setMessage('ບັນທຶກບໍ່ສຳເລັດ'); } finally { setBusy(false); }
   };
-  return <><Navbar title="ໂປຣໄຟລ໌"/><main className="page-content narrow"><section className="panel">
+  return <><Navbar title="ໂປຣໄຟລ໌"/><main className="page-content narrow"><GlassCard as="section">
     <form className="form-stack" onSubmit={save}><div className="avatar"><ManagedImage storagePath={values.photoStoragePath} legacyUrl={values.photoURL} alt="ຮູບໂປຣໄຟລ໌" fallback={values.name?.[0] || 'ຜ'}/></div>
       <CameraUpload label="ຮູບໂປຣໄຟລ໌" actionLabel="ເລືອກຮູບໂປຣໄຟລ໌" changeActionLabel="ປ່ຽນຮູບໂປຣໄຟລ໌" file={avatar} onChange={setAvatar}/>
-      <label>ຊື່<input required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })}/></label>
-      <label>ເບີໂທ<input value={values.phone} onChange={(event) => setValues({ ...values, phone: event.target.value })}/></label>
+      <Input id="profile-name" label="ຊື່" required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })}/>
+      <Input id="profile-phone" label="ເບີໂທ" value={values.phone} onChange={(event) => setValues({ ...values, phone: event.target.value })}/>
       <div className="read-only-field"><span>ບົດບາດ</span><strong>{roleLabel(identity.claims.role)}</strong></div><div className="read-only-field"><span>ສາຂາ</span><strong>{identity.claims.branchId || 'ທຸກສາຂາ'}</strong></div>
-      {message && <p className="status-message">{message}</p>}<button className="btn-primary" disabled={busy}>ບັນທຶກ</button>
+      {message && <p className="status-message">{message}</p>}<Button type="submit" busy={busy}>ບັນທຶກ</Button>
       {identity.claims.role === 'admin' && <a className="btn-secondary text-center" href="/admin">ສູນບໍລິຫານລະບົບ</a>}
-    </form></section></main></>;
+    </form></GlassCard></main></>;
 }

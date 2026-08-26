@@ -17,7 +17,7 @@ export default function CameraUpload({ label, actionLabel, changeActionLabel = a
     />
     <button
       type="button"
-      className="camera-upload-button"
+      className="camera-upload-button ui-button ui-button--secondary ui-button--md"
       aria-label={file ? changeActionLabel : actionLabel}
       aria-describedby={file ? fileNameId : undefined}
       onClick={() => inputRef.current?.click()}

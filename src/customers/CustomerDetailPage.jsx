@@ -10,7 +10,11 @@ import { canTrashCustomer } from '../shared/permissions';
 import { formatDateTime } from '../shared/dateTime';
 import { activityStatusLabel, activityTypeLabel } from '../shared/constants';
 import ManagedImage from '../components/ManagedImage';
+import Button from '../components/ui/Button';
+import CustomSelect from '../components/ui/CustomSelect';
 import { BRANCHES, branchName } from '../branches/branches';
+
+const transferBranchOptions = (branchId) => BRANCHES.filter((branch) => branch.id !== branchId).map((branch) => ({ value: branch.id, label: branch.label }));
 
 export default function CustomerDetailPage() {
   const { id } = useParams(); const navigate = useNavigate(); const identity = useAuth(); const [customer, setCustomer] = useState(null); const [activities, setActivities] = useState([]); const [error, setError] = useState(''); const [actionError, setActionError] = useState(''); const [targetBranch, setTargetBranch] = useState('');
@@ -32,7 +36,7 @@ export default function CustomerDetailPage() {
       <div className="detail-list"><p><span>ເບີໂທ</span><strong>{customer.phone}</strong></p><p><span>ທີ່ຢູ່</span><strong>{customer.address || '—'}</strong></p><p><span>ສະຖານະ</span><strong>{customer.status}</strong></p><p><span>ຄວາມສຳຄັນ</span><strong>{customer.priority}</strong></p><p><span>ໝາຍເຫດ</span><strong>{customer.note || '—'}</strong></p></div>
       <div className="quick-actions large">{actions.call && <a href={actions.call}>ໂທ</a>}{actions.whatsapp && <a href={actions.whatsapp} target="_blank" rel="noreferrer">WhatsApp</a>}{actions.map && <a href={actions.map} target="_blank" rel="noreferrer">ແຜນທີ່</a>}</div>
       <div className="flex flex-wrap gap-2 mt-4"><Link className="btn-primary" to={`/customers/${id}/edit`}>ແກ້ໄຂ</Link><Link className="btn-secondary" to={`/activities/new/customer_visit?customerId=${id}`}>ສ້າງນັດພົບລູກຄ້າ</Link><button className="btn-ghost" onClick={archive}>ເກັບເຂົ້າຄັງ</button>{canTrashCustomer(actor, customer) && <button className="btn-danger" onClick={trash}>ຍ້າຍໄປຖັງຂີ້ເຫຍື້ອ</button>}</div>
-      {identity.claims.role === 'admin' && <div className="form-grid mt-4"><label>Transfer branch<select value={targetBranch} onChange={(event) => setTargetBranch(event.target.value)}><option value="">— Select —</option>{BRANCHES.filter((branch) => branch.id !== customer.branchId).map((branch) => <option key={branch.id} value={branch.id}>{branch.label}</option>)}</select></label><button className="btn-secondary" type="button" disabled={!targetBranch} onClick={transfer}>Transfer customer</button></div>}
+      {identity.claims.role === 'admin' && <div className="form-grid mt-4"><CustomSelect id="transfer-branch" label="Transfer branch" value={targetBranch} onChange={setTargetBranch} options={transferBranchOptions(customer.branchId)} placeholder="— Select —"/><Button variant="secondary" type="button" disabled={!targetBranch} onClick={transfer}>Transfer customer</Button></div>}
     </section>
     <section className="panel"><div className="section-heading"><h2>ກິດຈະກຳ & ປະຫວັດນັດພົບ</h2><span>{activities.length}</span></div>{activities.length ? <div className="activity-list compact">{activities.map((activity) => <Link to={`/activities/${activity.id}`} key={activity.id} className="activity-row"><div><strong>{activity.title}</strong><p>{activityTypeLabel(activity.type)} · {formatDateTime(activity.startAt)}</p></div><span className={`activity-status ${activity.status}`}>{activityStatusLabel(activity.status)}</span></Link>)}</div> : <p className="muted py-6 text-center">ຍັງບໍ່ມີກິດຈະກຳ</p>}</section>
   </main></>;

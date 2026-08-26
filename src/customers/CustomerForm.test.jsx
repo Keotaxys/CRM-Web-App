@@ -21,7 +21,26 @@ describe('CustomerForm image and branch policy', () => {
     const { rerender } = render(<CustomerForm onSubmit={vi.fn()} />);
     expect(screen.queryByText('ສາຂາ')).not.toBeInTheDocument();
     rerender(<CustomerForm onSubmit={vi.fn()} admin />);
-    expect(screen.getByText('ສາຂາ')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'ສາຂາ' })).toBeInTheDocument();
+  });
+
+  it('submits the exact selected status, priority, and branch values', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CustomerForm onSubmit={onSubmit} admin />);
+
+    const [branch, status, priority] = screen.getAllByRole('combobox');
+    await user.click(branch);
+    await user.click(screen.getByRole('option', { name: /020/ }));
+    await user.click(status);
+    await user.click(screen.getByRole('option', { name: 'ຕິດຕາມຕໍ່' }));
+    await user.click(priority);
+    await user.click(screen.getByRole('option', { name: 'VIP' }));
+    await user.type(screen.getByRole('textbox', { name: 'ຊື່ລູກຄ້າ' }), 'Test Customer');
+    await user.type(screen.getByRole('textbox', { name: 'ເບີໂທ' }), '02055551234');
+    await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ branchId: '020', status: 'ຕິດຕາມຕໍ່', priority: 'VIP' }), expect.any(Object));
   });
 });
 
