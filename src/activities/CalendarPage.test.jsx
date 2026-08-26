@@ -16,7 +16,7 @@ describe('CalendarPage shared filters and agenda', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     serviceMocks.subscribeActivities.mockImplementation((_, onData) => { onData([
-      { id: 'previous-day', type: 'appointment', status: 'in_progress', title: 'Boundary Previous', startAt: '2026-08-25T16:30:00.000Z', assignedStaffIds: ['u1'] },
+      { id: 'boundary-next-day', type: 'appointment', status: 'in_progress', title: 'Boundary Next Day', startAt: '2026-08-25T17:30:00.000Z', assignedStaffIds: ['u1'] },
       { id: 'later', type: 'event', status: 'planned', title: 'Later', startAt: '2026-08-26T04:00:00.000Z', assignedStaffIds: ['u2'] },
       { id: 'earlier', type: 'appointment', status: 'in_progress', title: 'Earlier', startAt: '2026-08-26T02:00:00.000Z', assignedStaffIds: ['u1'] },
     ]); return vi.fn(); });
@@ -27,9 +27,11 @@ describe('CalendarPage shared filters and agenda', () => {
     render(<MemoryRouter><CalendarPage /></MemoryRouter>);
 
     const addLinks = screen.getAllByRole('link', { name: '＋' });
-    expect(addLinks[0]).toHaveAttribute('href', '/activities/new/appointment?date=2026-08-25');
-    expect(addLinks[1]).toHaveAttribute('href', '/activities/new/appointment?date=2026-08-26');
-    expect(screen.getByText('Boundary Previous').closest('.calendar-day')).not.toContain(screen.getByText('Earlier'));
+    expect(addLinks).toHaveLength(1);
+    expect(addLinks[0]).toHaveAttribute('href', '/activities/new/appointment?date=2026-08-26');
+    const boundaryDay = screen.getByText('Boundary Next Day').closest('.calendar-day');
+    expect(boundaryDay).toHaveTextContent('26');
+    expect(boundaryDay).toContain(screen.getByText('Earlier'));
     expect(screen.getByText('Earlier').compareDocumentPosition(screen.getByText('Later')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('Earlier').closest('.calendar-item')).toHaveTextContent('ນັດໝາຍ');
     expect(screen.getByText('Earlier').closest('.calendar-item').querySelector('[data-status="in_progress"]')).not.toBeNull();
@@ -73,7 +75,7 @@ describe('CalendarPage shared filters and agenda', () => {
     await user.click(staff);
     await user.type(staff, 'Two');
     await user.click(screen.getByRole('option', { name: 'Two' }));
-    expect(screen.queryByText('Boundary Previous')).not.toBeInTheDocument();
+    expect(screen.queryByText('Boundary Next Day')).not.toBeInTheDocument();
     expect(screen.queryByText('Later')).not.toBeInTheDocument();
 
     await user.click(scope);
@@ -81,11 +83,16 @@ describe('CalendarPage shared filters and agenda', () => {
     expect(screen.getByText('Later')).toBeInTheDocument();
     const status = screen.getByRole('combobox', { name: 'ສະຖານະໃນປະຕິທິນ' });
     await user.click(status);
-    expect(screen.getByRole('option', { name: 'ທຸກສະຖານະ' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('option', { name: 'ວາງແຜນ' })).toHaveAttribute('aria-selected', 'false');
+    const expectedStatuses = [['ທຸກສະຖານະ', 'all', 'true'], ['ວາງແຜນ', 'planned', 'false'], ['ຢືນຢັນແລ້ວ', 'confirmed', 'false'], ['ກຳລັງດຳເນີນ', 'in_progress', 'false'], ['ສຳເລັດແລ້ວ', 'completed', 'false'], ['ຍົກເລີກ', 'cancelled', 'false']];
+    expect(screen.getAllByRole('option')).toHaveLength(expectedStatuses.length);
+    expect(screen.getAllByRole('option').map((option) => option.id)).toEqual(expectedStatuses.map(([, value]) => `calendar-status-option-${value}`));
+    expectedStatuses.forEach(([label, value, selected]) => {
+      expect(screen.getByRole('option', { name: label })).toHaveAttribute('id', `calendar-status-option-${value}`);
+      expect(screen.getByRole('option', { name: label })).toHaveAttribute('aria-selected', selected);
+    });
     await user.click(screen.getByRole('option', { name: 'ວາງແຜນ' }));
     expect(screen.getByText('Later')).toBeInTheDocument();
-    expect(screen.queryByText('Boundary Previous')).not.toBeInTheDocument();
+    expect(screen.queryByText('Boundary Next Day')).not.toBeInTheDocument();
     expect(serviceMocks.subscribeActivities).toHaveBeenCalledTimes(1);
     expect(serviceMocks.subscribeAssignableUsers).toHaveBeenCalledTimes(1);
   });
