@@ -22,6 +22,7 @@ const activities = [
 
 describe('ActivitiesPage shared filters', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     serviceMocks.subscribeActivities.mockImplementation((_, onData) => { onData(activities); return vi.fn(); });
     serviceMocks.subscribeAssignableUsers.mockImplementation((_, onData) => { onData([{ uid: 'u1', name: 'One' }, { uid: 'u2', name: 'Two' }]); return vi.fn(); });
   });
@@ -35,11 +36,34 @@ describe('ActivitiesPage shared filters', () => {
     expect(screen.getByText('Meeting A')).toBeInTheDocument();
     expect(screen.queryByText('Meeting B')).not.toBeInTheDocument();
 
+    expect(serviceMocks.subscribeActivities).toHaveBeenCalledTimes(1);
+    expect(serviceMocks.subscribeAssignableUsers).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves branch and mine scope while staff selection filters the rendered activities without resubscribing', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><ActivitiesPage /></MemoryRouter>);
+
+    const scope = screen.getByRole('combobox', { name: 'ຂອບເຂດກິດຈະກຳ' });
+    await user.click(scope);
+    expect(screen.getByRole('option', { name: 'ກິດຈະກຳຂອງສາຂາ' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('option', { name: 'ກິດຈະກຳຂອງຂ້ອຍ' })).toHaveAttribute('aria-selected', 'false');
+    await user.click(screen.getByRole('option', { name: 'ກິດຈະກຳຂອງຂ້ອຍ' }));
+    expect(screen.getByText('Meeting A')).toBeInTheDocument();
+    expect(screen.queryByText('Meeting B')).not.toBeInTheDocument();
+
     const staff = screen.getByRole('combobox', { name: 'ພະນັກງານຮັບຜິດຊອບ' });
     expect(staff).toHaveAttribute('aria-autocomplete', 'list');
     await user.click(staff);
     await user.type(staff, 'Two');
     await user.click(screen.getByRole('option', { name: 'Two' }));
+    expect(screen.queryByText('Meeting A')).not.toBeInTheDocument();
+    expect(screen.queryByText('Meeting B')).not.toBeInTheDocument();
+
+    await user.click(scope);
+    await user.click(screen.getByRole('option', { name: 'ກິດຈະກຳຂອງສາຂາ' }));
+    expect(screen.queryByText('Meeting A')).not.toBeInTheDocument();
+    expect(screen.getByText('Meeting B')).toBeInTheDocument();
     expect(serviceMocks.subscribeActivities).toHaveBeenCalledTimes(1);
     expect(serviceMocks.subscribeAssignableUsers).toHaveBeenCalledTimes(1);
   });
