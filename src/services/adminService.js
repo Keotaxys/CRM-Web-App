@@ -7,6 +7,7 @@ const invoke = async (name, payload) => (await httpsCallable(functions, name)(pa
 export const approveUser = (uid, role, branchId) => invoke('approveUser', { uid, role, branchId });
 export const updateUserAccess = (uid, role, branchId) => invoke('updateUserAccess', { uid, role, branchId });
 export const disableUser = (uid) => invoke('disableUser', { uid });
+export const reactivateUser = (uid, role, branchId) => invoke('reactivateUser', { uid, role, branchId });
 export const transferCustomer = (id, branchId) => invoke('transferCustomer', { id, branchId });
 export const trashCustomer = (id) => invoke('trashCustomer', { id });
 export const restoreCustomer = (id) => invoke('restoreCustomer', { id });

@@ -33,3 +33,31 @@ export async function disableUserOperation({ db, auth }, actor, data) {
   await auth.revokeRefreshTokens(data.uid);
   return { uid: data.uid, accountStatus: 'disabled' };
 }
+
+export async function reactivateUserOperation({ db, auth }, actor, data) {
+  assertAdmin(actor);
+  if (!data?.uid || data.uid === actor.uid) throw new Error('Admin cannot reactivate this account');
+  assertKnownRoleAndBranch(data.role, data.branchId);
+
+  const target = await auth.getUser(data.uid);
+  const profileRef = db.doc(`users/${data.uid}`);
+  const profile = await profileRef.get();
+  if (!profile.exists || profile.data().accountStatus !== 'disabled') throw new Error('Target account must be disabled');
+
+  const branchId = data.role === 'admin' ? null : data.branchId;
+  const claims = { ...(target.customClaims ?? {}), role: data.role, branchId, accountStatus: 'approved' };
+  // Keep access fail-closed and the transition retryable: until the final
+  // profile write, Rules deny both old and newly refreshed sessions.
+  await auth.setCustomUserClaims(data.uid, claims);
+  await auth.updateUser(data.uid, { disabled: false });
+  await profileRef.set({
+    role: data.role,
+    branchId,
+    accountStatus: 'approved',
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: actor.uid,
+    reactivatedAt: FieldValue.serverTimestamp(),
+    reactivatedBy: actor.uid,
+  }, { merge: true });
+  return { uid: data.uid, accountStatus: 'approved' };
+}

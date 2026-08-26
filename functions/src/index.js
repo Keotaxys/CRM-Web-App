@@ -6,7 +6,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { actorFromRequest, assertAdmin, profileMatchesActor } from './authz.js';
-import { approveUserOperation, disableUserOperation, updateUserAccessOperation } from './userAdmin.js';
+import { approveUserOperation, disableUserOperation, reactivateUserOperation, updateUserAccessOperation } from './userAdmin.js';
 import { cleanupExpiredActivities, completeFollowUpOperation, permanentlyDeleteActivityOperation, restoreActivityOperation, trashActivityOperation, upsertActivityOperation } from './activityAdmin.js';
 import { abortCustomerUploadsOperation, archiveCustomerOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
 import { syncLegacyCustomerOperation } from './legacyWebhook.js';
@@ -36,6 +36,7 @@ function callable(operation, options = {}) {
 export const approveUser = callable(approveUserOperation);
 export const updateUserAccess = callable(updateUserAccessOperation);
 export const disableUser = callable(disableUserOperation);
+export const reactivateUser = callable(reactivateUserOperation);
 export const upsertActivity = callable(upsertActivityOperation);
 export const trashActivity = callable(trashActivityOperation);
 export const completeFollowUp = callable(completeFollowUpOperation);

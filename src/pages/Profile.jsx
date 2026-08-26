@@ -6,6 +6,7 @@ import { deleteManagedImage, uploadManagedImage } from '../services/imageService
 import { updatePersonalProfile } from '../services/profileService';
 import ManagedImage from '../components/ManagedImage';
 import { roleLabel } from '../shared/constants';
+import CameraUpload from '../components/CameraUpload';
 
 export default function Profile() {
   const identity = useAuth();
@@ -22,8 +23,8 @@ export default function Profile() {
     } catch (error) { console.error(error); if(abandonedPath)deleteManagedImage(abandonedPath).catch((cleanupError)=>console.error('Avatar cleanup failed',cleanupError)); setMessage('ບັນທຶກບໍ່ສຳເລັດ'); } finally { setBusy(false); }
   };
   return <><Navbar title="ໂປຣໄຟລ໌"/><main className="page-content narrow"><section className="panel">
-    <form className="form-stack" onSubmit={save}><div className="avatar"><ManagedImage storagePath={values.photoStoragePath} legacyUrl={values.photoURL} alt="Profile" fallback={values.name?.[0] || 'U'}/></div>
-      <label>ຮູບໂປຣໄຟລ໌<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setAvatar(event.target.files[0] ?? null)}/></label>
+    <form className="form-stack" onSubmit={save}><div className="avatar"><ManagedImage storagePath={values.photoStoragePath} legacyUrl={values.photoURL} alt="ຮູບໂປຣໄຟລ໌" fallback={values.name?.[0] || 'ຜ'}/></div>
+      <CameraUpload label="ຮູບໂປຣໄຟລ໌" actionLabel="ເລືອກຮູບໂປຣໄຟລ໌" changeActionLabel="ປ່ຽນຮູບໂປຣໄຟລ໌" file={avatar} onChange={setAvatar}/>
       <label>ຊື່<input required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })}/></label>
       <label>ເບີໂທ<input value={values.phone} onChange={(event) => setValues({ ...values, phone: event.target.value })}/></label>
       <div className="read-only-field"><span>ບົດບາດ</span><strong>{roleLabel(identity.claims.role)}</strong></div><div className="read-only-field"><span>ສາຂາ</span><strong>{identity.claims.branchId || 'ທຸກສາຂາ'}</strong></div>
