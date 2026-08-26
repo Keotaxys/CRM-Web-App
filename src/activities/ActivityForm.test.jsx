@@ -1,3 +1,37 @@
-import { render, screen } from '@testing-library/react'; import { describe, expect, it, vi } from 'vitest'; import ActivityForm from './ActivityForm';
-const users=[{uid:'u1',name:'One'},{uid:'u2',name:'Two'}]; const customers=[{id:'c1',name:'Customer',phone:'020'}];
-describe('ActivityForm relationships',()=>{it('requires a customer for Customer Visit and supports multiple staff',()=>{render(<ActivityForm type="customer_visit" customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()}/>);expect(screen.getByLabelText(/ລູກຄ້າ/)).toBeRequired();expect(screen.getAllByRole('checkbox')).toHaveLength(3);});it('keeps customer optional for Appointment',()=>{render(<ActivityForm type="appointment" customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()}/>);expect(screen.getByLabelText(/ລູກຄ້າ/)).not.toBeRequired();});it('preserves Product / Service values while editing',()=>{render(<ActivityForm type="customer_visit" initial={{ productServices: ['Coffee','Tea'] }} customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()}/>);expect(screen.getByLabelText(/Product \/ Service/)).toHaveValue('Coffee, Tea');});it('shows the activity type and status choices in Lao',()=>{render(<ActivityForm type="customer_visit" customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()}/>);expect(screen.getByText('ການຢ້ຽມລູກຄ້າ')).toBeInTheDocument();expect(screen.getByRole('option',{name:'ວາງແຜນ'})).toHaveValue('planned');expect(screen.queryByText('Customer Visit')).not.toBeInTheDocument();});});
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import ActivityForm from './ActivityForm';
+
+const users = [{ uid: 'u1', name: 'One' }, { uid: 'u2', name: 'Two' }];
+const customers = [{ id: 'c1', name: 'Customer', phone: '020' }];
+
+describe('ActivityForm relationships', () => {
+  it('requires a customer for Customer Visit and supports multiple staff', () => {
+    render(<ActivityForm type="customer_visit" customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/ລູກຄ້າ/)).toBeRequired();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3);
+  });
+
+  it('keeps customer optional for Appointment', () => {
+    render(<ActivityForm type="appointment" customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/ລູກຄ້າ/)).not.toBeRequired();
+  });
+
+  it('preserves product and service values while editing under the Lao label', () => {
+    render(<ActivityForm type="customer_visit" initial={{ productServices: ['Coffee', 'Tea'] }} customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/ສິນຄ້າ \/ ບໍລິການ/)).toHaveValue('Coffee, Tea');
+  });
+
+  it('shows all customer-visit fields in natural Lao', () => {
+    render(<ActivityForm type="customer_visit" customers={customers} users={users} currentUid="u1" onSubmit={vi.fn()} />);
+
+    expect(screen.getByText('ການຢ້ຽມລູກຄ້າ')).toBeInTheDocument();
+    expect(screen.getByLabelText('ຈຸດປະສົງການຢ້ຽມ')).toBeInTheDocument();
+    expect(screen.getByLabelText('ບັນທຶກກ່ອນຢ້ຽມ')).toBeInTheDocument();
+    expect(screen.getByLabelText('ບັນທຶກການຢ້ຽມ')).toBeInTheDocument();
+    expect(screen.getByLabelText('ຜົນການຢ້ຽມ')).toBeInTheDocument();
+    expect(screen.getByText('ຕ້ອງຕິດຕາມຕໍ່')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'ວາງແຜນ' })).toHaveValue('planned');
+    expect(screen.queryByText(/Visit Purpose|Product \/ Service|Pre-visit|Visit Notes|Result|Follow-up/)).not.toBeInTheDocument();
+  });
+});

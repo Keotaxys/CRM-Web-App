@@ -7,7 +7,7 @@ export default function ActivityFormPage() {
   useEffect(() => subscribeAssignableUsers(identity, setUsers, (reason) => console.error(reason)), [identity]);
   useEffect(() => { if (id) getActivity(id).then(setInitial).catch(() => setError('ບໍ່ພົບກິດຈະກຳ')); }, [id]);
   const actualType = initial?.type || type;
-  if (actualType && !Object.values(ACTIVITY_TYPES).includes(actualType)) return <div className="page-state">Invalid activity type</div>;
+  if (actualType && !Object.values(ACTIVITY_TYPES).includes(actualType)) return <div className="page-state">ປະເພດກິດຈະກຳບໍ່ຖືກຕ້ອງ</div>;
   const submit = async (values) => { setBusy(true); setError(''); try { const result = await saveActivity(values, id); navigate(`/activities/${result.id || id}`); } catch (reason) { console.error(reason); setError(reason.message || 'ບັນທຶກບໍ່ສຳເລັດ'); } finally { setBusy(false); } };
   return <><Navbar title={id ? 'ແກ້ໄຂກິດຈະກຳ' : 'ສ້າງກິດຈະກຳ'} showBack/><main className="page-content narrow">{error && <div className="error-banner">{error}</div>}{initial && actualType ? <ActivityForm initial={initial} type={actualType} customers={customers} users={users} currentUid={identity.claims.role === 'admin' ? '' : identity.user.uid} onSubmit={submit} busy={busy} admin={identity.claims.role === 'admin'}/> : <div className="page-state">ກຳລັງໂຫຼດ...</div>}</main></>;
 }

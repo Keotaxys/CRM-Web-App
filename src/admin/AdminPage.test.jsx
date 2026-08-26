@@ -40,4 +40,20 @@ describe('Admin disabled-user lifecycle', () => {
     await waitFor(() => expect(serviceMocks.reactivateUser).toHaveBeenCalledWith('disabled-user', 'branch_manager', '020'));
     expect(serviceMocks.updateUserAccess).not.toHaveBeenCalled();
   });
+
+  it('shows branch and trash management actions in Lao', async () => {
+    const user = userEvent.setup();
+    render(<AdminPage />);
+
+    await user.click(screen.getByRole('button', { name: 'ສາຂາ' }));
+    expect(screen.getByRole('heading', { name: 'ລາຍຊື່ສາຂາ' })).toBeInTheDocument();
+    expect(screen.getAllByText('ເປີດໃຊ້ງານ').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Branch Master')).not.toBeInTheDocument();
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ຖັງຂີ້ເຫຍື້ອ' }));
+    expect(screen.getByRole('button', { name: 'ລຶບລາຍການທີ່ຄົບ 30 ວັນ' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ລູກຄ້າໃນຖັງຂີ້ເຫຍື້ອ' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ກິດຈະກຳໃນຖັງຂີ້ເຫຍື້ອ' })).toBeInTheDocument();
+  });
 });
