@@ -15,6 +15,15 @@ function Dialog({ open, onClose, initialFocusRef, footer }) {
   );
 }
 
+function EmptyDialog({ open, onClose }) {
+  return (
+    <ModalSheet open={open} onClose={onClose} title="ວ່າງ">
+      <button type="button" disabled>ບໍ່ພ້ອມ</button>
+      <div hidden tabIndex="0">ຖືກເຊື່ອງ</div>
+    </ModalSheet>
+  );
+}
+
 describe('ModalSheet', () => {
   it('renders a labelled portal dialog and closes on Escape', async () => {
     const user = userEvent.setup();
@@ -58,6 +67,17 @@ describe('ModalSheet', () => {
     expect(firstChoice).toHaveFocus();
   });
 
+  it('contains programmatic focus that enters outside the dialog', () => {
+    render(<Dialog open onClose={vi.fn()} />);
+
+    const opener = screen.getByRole('button', { name: 'ກ່ອນເປີດ' });
+    const firstChoice = screen.getByRole('button', { name: 'ຕົວເລືອກ' });
+    opener.focus();
+    fireEvent.focusIn(opener);
+
+    expect(firstChoice).toHaveFocus();
+  });
+
   it('keeps the active dialog control focused when the parent rerenders', () => {
     const { rerender } = render(<Dialog open onClose={() => {}} />);
     const secondChoice = screen.getByRole('button', { name: 'ປິດ' });
@@ -66,6 +86,28 @@ describe('ModalSheet', () => {
     rerender(<Dialog open onClose={() => {}} />);
 
     expect(secondChoice).toHaveFocus();
+  });
+
+  it('focuses an empty dialog and cleans up its lock when unmounted', () => {
+    document.body.style.overflow = 'auto';
+    const opener = document.createElement('button');
+    opener.type = 'button';
+    opener.textContent = 'ກ່ອນເປີດວ່າງ';
+    document.body.append(opener);
+    opener.focus();
+    const { rerender, unmount } = render(<EmptyDialog open={false} onClose={vi.fn()} />);
+
+    rerender(<EmptyDialog open onClose={vi.fn()} />);
+
+    const dialog = screen.getByRole('dialog', { name: 'ວ່າງ' });
+    expect(dialog).toHaveFocus();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    unmount();
+
+    expect(document.body.style.overflow).toBe('auto');
+    expect(opener).toHaveFocus();
+    opener.remove();
   });
 
   it('closes only from the backdrop and restores focus and scroll state after closing', async () => {

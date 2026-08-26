@@ -8,10 +8,17 @@ const FOCUSABLE_SELECTOR = [
   'select:not([disabled])',
   'textarea:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
+  '[contenteditable]:not([contenteditable="false"]):not([tabindex="-1"])',
 ].join(',');
 
 function getFocusableElements(dialog) {
-  return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter((element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true');
+  return [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter((element) => {
+    if (element.disabled || element.hidden || element.hasAttribute('disabled')) return false;
+    if (element.getAttribute('aria-disabled') === 'true') return false;
+    if (element.closest('[aria-hidden="true"], [hidden], [inert]')) return false;
+    const style = window.getComputedStyle?.(element);
+    return style?.display !== 'none' && style?.visibility !== 'hidden';
+  });
 }
 
 export default function ModalSheet({
@@ -78,9 +85,20 @@ export default function ModalSheet({
       }
     };
 
+    const handleFocusIn = (event) => {
+      const dialog = dialogRef.current;
+      if (!dialog || dialog.contains(event.target)) return;
+
+      const focusableElements = getFocusableElements(dialog);
+      const target = focusableElements[0] || dialog;
+      if (target !== document.activeElement) target.focus();
+    };
+
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('focusin', handleFocusIn, true);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('focusin', handleFocusIn, true);
       document.body.style.overflow = previousOverflowRef.current;
       previouslyFocusedRef.current?.focus?.();
     };
