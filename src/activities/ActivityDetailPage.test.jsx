@@ -73,4 +73,21 @@ describe('ActivityDetailPage linked customer', () => {
     expect(screen.queryByRole('link', { name: 'ຕິດຕໍ່ຜ່ານ WhatsApp' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'ເບິ່ງລູກຄ້າ' })).toHaveAttribute('href', '/customers/c2');
   });
+
+  it('hides linked customer actions for the full transition while the next activity is unresolved', async () => {
+    const secondActivity = new Promise(() => {});
+    serviceMocks.getActivity.mockImplementation((id) => id === 'a1' ? Promise.resolve(activity) : secondActivity);
+    serviceMocks.getCustomer.mockResolvedValue({ id: 'c1', name: 'Customer One', phone: '020 5555 1234' });
+    const router = createMemoryRouter([{ path: '/activities/:id', element: <ActivityDetailPage /> }], { initialEntries: ['/activities/a1'] });
+
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByText('Customer One')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'ໂທຫາລູກຄ້າ' })).toHaveAttribute('href', 'tel:02055551234');
+    expect(screen.getByRole('link', { name: 'ຕິດຕໍ່ຜ່ານ WhatsApp' })).toHaveAttribute('href', 'https://wa.me/8562055551234');
+
+    await act(async () => { await router.navigate('/activities/a2'); });
+    expect(screen.queryByText('Customer One')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'ໂທຫາລູກຄ້າ' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'ຕິດຕໍ່ຜ່ານ WhatsApp' })).not.toBeInTheDocument();
+  });
 });
