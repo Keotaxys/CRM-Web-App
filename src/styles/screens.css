@@ -1,1 +1,6 @@
 /* Screen-specific CRM layouts are added by their owning feature tasks. */
+
+@media (max-width: 430px) {
+  .ui-select-popover--sheet { inset: auto 8px 0; width: auto; max-height: calc(100dvh - 16px); padding-bottom: env(safe-area-inset-bottom); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .ui-select-popover--sheet .ui-select__listbox { max-height: min(320px, calc(100dvh - 48px)); padding: var(--space-2); }
+}
