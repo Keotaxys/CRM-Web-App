@@ -3,5 +3,5 @@ import BottomNav from './BottomNav';
 import QuickCreate from './QuickCreate';
 
 export default function AppShell() {
-  return <div className="app-shell"><Outlet/><QuickCreate/><BottomNav/></div>;
+  return <div className="app-shell app-shell--mobile-nav"><div className="app-shell__content"><Outlet/></div><QuickCreate/><BottomNav/></div>;
 }
