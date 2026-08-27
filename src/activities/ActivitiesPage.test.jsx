@@ -76,4 +76,20 @@ describe('ActivitiesPage shared filters', () => {
     expect(screen.getByText('Meeting A')).toBeInTheDocument();
     expect(screen.queryByText('Meeting B')).not.toBeInTheDocument();
   });
+
+  it('announces an asynchronous loading failure with the Orange error presentation', async () => {
+    const reason = new Error('load failed');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    serviceMocks.subscribeActivities.mockImplementationOnce((_, __, onError) => {
+      onError(reason);
+      return vi.fn();
+    });
+
+    render(<MemoryRouter><ActivitiesPage /></MemoryRouter>);
+
+    const feedback = await screen.findByRole('alert');
+    expect(feedback).toHaveTextContent('ບໍ່ສາມາດໂຫຼດກິດຈະກຳ');
+    expect(feedback).toHaveClass('error-banner');
+    consoleError.mockRestore();
+  });
 });

@@ -14,7 +14,7 @@ export default function CustomerCard({ customer, onStatusChange }) {
       {customer.priority !== 'ທົ່ວໄປ' && <span className={`priority priority-${customer.priority === 'VIP' ? 'vip' : 'urgent'}`}>{customer.priority}</span>}
     </Link>
     <div className="p-4"><Link to={`/customers/${customer.id}`}><h2 className="font-extrabold truncate">{customer.name}</h2><p className="muted text-xs mt-1 truncate">{customer.phone}</p></Link>
-      <CustomSelect id={`customer-${customer.id}-status`} label={`Status for ${customer.name}`} value={customer.status} onChange={(nextValue) => onStatusChange(customer.id, nextValue)} options={statusOptions} compact />
+      <CustomSelect id={`customer-${customer.id}-status`} ariaLabel={`ປ່ຽນສະຖານະຂອງ ${customer.name}`} value={customer.status} onChange={(nextValue) => onStatusChange(customer.id, nextValue)} options={statusOptions} compact />
       <ContactActions customer={customer} size="compact" />
     </div>
   </GlassCard>;

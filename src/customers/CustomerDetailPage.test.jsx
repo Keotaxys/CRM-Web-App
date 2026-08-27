@@ -39,4 +39,36 @@ describe('CustomerDetailPage transfer', () => {
     expect(screen.getByRole('combobox', { name: 'Transfer branch' })).toHaveTextContent('— Select —');
     confirm.mockRestore();
   });
+
+  it('announces a transfer failure with the Orange error presentation', async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    serviceMocks.transferCustomer.mockRejectedValueOnce(new Error('Transfer failed'));
+    render(<MemoryRouter initialEntries={['/customers/c1']}><Routes><Route path="/customers/:id" element={<CustomerDetailPage />} /></Routes></MemoryRouter>);
+
+    await screen.findByText('ຮູບລູກຄ້າ');
+    await user.click(screen.getByRole('combobox', { name: 'Transfer branch' }));
+    await user.click(screen.getByRole('option', { name: /019/ }));
+    await user.click(screen.getByRole('button', { name: 'Transfer customer' }));
+
+    const feedback = await screen.findByRole('alert');
+    expect(feedback).toHaveTextContent('Transfer failed');
+    expect(feedback).toHaveClass('error-banner');
+    confirm.mockRestore();
+    consoleError.mockRestore();
+  });
+
+  it('renders customer history status through the shared badge mapping', async () => {
+    serviceMocks.subscribeActivities.mockImplementationOnce((_, onData) => {
+      onData([{ id: 'a1', title: 'ນັດຕິດຕາມ', type: 'customer_visit', status: 'in_progress', startAt: '2026-08-26T02:00:00.000Z' }]);
+      return vi.fn();
+    });
+    render(<MemoryRouter initialEntries={['/customers/c1']}><Routes><Route path="/customers/:id" element={<CustomerDetailPage />} /></Routes></MemoryRouter>);
+
+    const badge = await screen.findByText('ກຳລັງດຳເນີນ');
+    expect(badge).toHaveClass('ui-status-badge');
+    expect(badge).toHaveAttribute('data-kind', 'activity');
+    expect(badge).toHaveAttribute('data-status', 'in_progress');
+  });
 });

@@ -22,6 +22,7 @@ const CustomSelect = forwardRef(function CustomSelect(
   {
     id,
     label,
+    ariaLabel,
     value,
     options,
     onChange,
@@ -42,11 +43,22 @@ const CustomSelect = forwardRef(function CustomSelect(
   const triggerRef = useRef(null);
   const rootRef = useRef(null);
   const popoverRef = useRef(null);
+  const disabledRef = useRef(disabled);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
   const [popoverStyle, setPopoverStyle] = useState({});
   const [sheet, setSheet] = useState(false);
+  const [previousDisabled, setPreviousDisabled] = useState(disabled);
+
+  if (disabled !== previousDisabled) {
+    setPreviousDisabled(disabled);
+    if (disabled) {
+      setOpen(false);
+      setQuery('');
+      setActiveIndex(-1);
+    }
+  }
 
   const selectedOption = options.find((option) => option.value === value);
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -54,6 +66,7 @@ const CustomSelect = forwardRef(function CustomSelect(
     ? options.filter((option) => `${option.label} ${option.searchText || ''}`.toLocaleLowerCase().includes(normalizedQuery))
     : options;
   const activeOption = filteredOptions[activeIndex];
+  const accessibleLabel = ariaLabel || label;
   const describedBy = error ? `${controlId}-error` : undefined;
 
   const focusTrigger = useCallback(() => {
@@ -104,7 +117,7 @@ const CustomSelect = forwardRef(function CustomSelect(
   }, [disabled, options, updatePosition, value]);
 
   const choose = useCallback((option) => {
-    if (!option || option.disabled) return;
+    if (disabledRef.current || !option || option.disabled) return;
     onChange(option.value);
     closeMenu({ restoreFocus: true });
   }, [closeMenu, onChange]);
@@ -180,6 +193,10 @@ const CustomSelect = forwardRef(function CustomSelect(
     };
   }, [closeMenu, open, updatePosition]);
 
+  useEffect(() => {
+    disabledRef.current = disabled;
+  }, [disabled]);
+
   const setTriggerRef = useCallback((node) => {
     triggerRef.current = node;
     if (typeof forwardedRef === 'function') forwardedRef(node);
@@ -202,7 +219,7 @@ const CustomSelect = forwardRef(function CustomSelect(
       className={`ui-select-popover ${sheet ? 'ui-select-popover--sheet' : ''}`.trim()}
       style={popoverStyle}
     >
-      <div id={listboxId} className="ui-select__listbox" role="listbox" aria-label={label}>
+      <div id={listboxId} className="ui-select__listbox" role="listbox" aria-label={accessibleLabel}>
         {filteredOptions.map((option, index) => (
           <button
             key={option.value}
@@ -211,8 +228,8 @@ const CustomSelect = forwardRef(function CustomSelect(
             role="option"
             className={`ui-select__option ${index === activeIndex ? 'is-active' : ''}`.trim()}
             aria-selected={option.value === value}
-            aria-disabled={option.disabled || undefined}
-            disabled={option.disabled}
+            aria-disabled={disabled || option.disabled || undefined}
+            disabled={disabled || option.disabled}
             onClick={() => choose(option)}
           >
             {option.label}
@@ -231,6 +248,7 @@ const CustomSelect = forwardRef(function CustomSelect(
     role: 'combobox',
     disabled,
     'aria-expanded': open,
+    'aria-label': ariaLabel,
     'aria-controls': listboxId,
     'aria-haspopup': 'listbox',
     'aria-required': required || undefined,
@@ -243,7 +261,7 @@ const CustomSelect = forwardRef(function CustomSelect(
 
   return (
     <div ref={rootRef} className={`ui-field ui-select ${compact ? 'ui-select--compact' : ''} ${className}`.trim()}>
-      <label className="ui-field__label" htmlFor={controlId}>{label}</label>
+      {label ? <label className="ui-field__label" htmlFor={controlId}>{label}</label> : null}
       {searchable ? (
         <input
           {...commonProps}

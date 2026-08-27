@@ -17,4 +17,11 @@ describe('form controls', () => {
 
     expect(screen.getByLabelText('ໝາຍເຫດ')).toHaveAccessibleDescription('ບໍ່ບັງຄັບ');
   });
+
+  it('supports a Lao accessible name without rendering a visible utility label', () => {
+    render(<Input id="search" ariaLabel="ຄົ້ນຫາລູກຄ້າ" placeholder="ຄົ້ນຫາ..." value="" onChange={() => {}} />);
+
+    expect(screen.getByRole('textbox', { name: 'ຄົ້ນຫາລູກຄ້າ' })).toBeInTheDocument();
+    expect(document.querySelector('label[for="search"]')).not.toBeInTheDocument();
+  });
 });

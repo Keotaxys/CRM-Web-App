@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 
 const Input = forwardRef(function Input(
-  { id, label, error, hint, className = '', ...inputProps },
+  { id, label, ariaLabel, error, hint, className = '', ...inputProps },
   ref,
 ) {
   const describedBy = [
@@ -12,12 +12,13 @@ const Input = forwardRef(function Input(
 
   return (
     <div className="ui-field">
-      <label className="ui-field__label" htmlFor={id}>{label}</label>
+      {label ? <label className="ui-field__label" htmlFor={id}>{label}</label> : null}
       <input
         ref={ref}
         {...inputProps}
         id={id}
         className={`ui-input ${className}`.trim()}
+        aria-label={ariaLabel}
         aria-describedby={describedBy}
         aria-invalid={error ? true : undefined}
       />

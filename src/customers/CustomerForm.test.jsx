@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import CustomerForm from './CustomerForm';
+
+const screensCss = readFileSync('src/styles/screens.css', 'utf8');
 
 describe('CustomerForm image and branch policy', () => {
   it('uses two accessible camera controls while preserving the two CRM file slots', async () => {
@@ -15,6 +18,7 @@ describe('CustomerForm image and branch policy', () => {
 
     await user.upload(inputs[0], new File(['photo'], 'customer.webp', { type: 'image/webp' }));
     expect(screen.getByText('customer.webp')).toBeInTheDocument();
+    expect(container.querySelector('form')).toHaveClass('ui-glass-card--padded');
   });
 
   it('shows branch selection only for an Admin creating a customer', () => {
@@ -59,6 +63,9 @@ describe('CustomerForm location actions', () => {
     const expectedUrl = 'https://www.google.com/maps?q=17.975706,102.633104';
     expect(screen.getByLabelText('ລິ້ງແຜນທີ່ / ພິກັດ GPS')).toHaveValue(expectedUrl);
     expect(screen.getByRole('link', { name: 'ເປີດແຜນທີ່' })).toHaveAttribute('href', expectedUrl);
+    expect(screen.getByRole('link', { name: 'ເປີດແຜນທີ່' })).toHaveClass('ui-button--neutral');
+    expect(screen.getByRole('link', { name: 'ເປີດແຜນທີ່' })).not.toHaveClass('ui-button--ghost');
+    expect(screensCss).toMatch(/\.location-actions\s+\.ui-button[^}]*gap:\s*7px/s);
     expect(screen.getByRole('status')).toHaveTextContent('ດຶງຕຳແໜ່ງປັດຈຸບັນແລ້ວ');
   });
 
