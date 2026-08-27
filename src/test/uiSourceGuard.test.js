@@ -51,3 +51,10 @@ it('keeps the mobile viewport and motion safety contracts', () => {
   expect(screens).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*\.form-grid,\s*\.admin-row,\s*\.calendar-day\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   expect(screens).toMatch(/@media\s*\(max-width:\s*320px\)[\s\S]*\.page-content,\s*\.app-header\s*\{\s*padding-inline:\s*10px/);
 });
+
+it('keeps dashboard disclosure links and activity check cards at the touch target', () => {
+  const screens = readFileSync('src/styles/screens.css', 'utf8');
+
+  expect(screens).toMatch(/\.section-heading a\s*\{[^}]*min-width:\s*var\(--touch-target\)[^}]*min-height:\s*var\(--touch-target\)/);
+  expect(screens).toMatch(/\.check-card\s*\{[^}]*min-height:\s*var\(--touch-target\)/);
+});
