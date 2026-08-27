@@ -114,6 +114,12 @@
 .ui-modal-sheet__description { margin: var(--space-2) 0 0; color: var(--gray-600); font-size: 14px; line-height: 1.5; }
 .ui-modal-sheet__content { padding: 0 var(--space-5) var(--space-5); }
 .ui-modal-sheet__footer { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; padding: var(--space-3) var(--space-5) var(--space-5); border-top: 1px solid var(--gray-100); }
+.quick-create__choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.quick-choice { flex-direction: column; gap: var(--space-2); min-height: 104px; padding: var(--space-4) var(--space-2); text-align: center; }
+.quick-choice .material-symbols-outlined { font-size: 26px; }
+.btn-primary, .btn-secondary, .btn-ghost, .btn-danger { display: inline-flex; min-height: var(--touch-target); align-items: center; justify-content: center; padding: 11px 16px; border: 1px solid transparent; border-radius: 13px; cursor: pointer; font-size: 15px; font-weight: 800; line-height: 1.35; transition: transform var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard); }
+.btn-primary { color: var(--color-white); background: var(--teal-700); box-shadow: var(--shadow-sm); }.btn-secondary { color: var(--teal-700); border-color: var(--teal-100); background: var(--teal-50); }.btn-ghost { color: var(--ink-800); border-color: var(--gray-200); background: var(--color-white); }.btn-danger { color: var(--orange-700); border-color: var(--orange-100); background: var(--orange-50); }.btn-primary:active, .btn-secondary:active { transform: scale(.97); }
+.activity-status { display: inline-flex; flex: none; padding: 5px 8px; border-radius: var(--radius-pill); color: var(--ink-800); background: var(--gray-100); font-size: 12px; font-weight: 900; }.activity-status.completed, .activity-status.in_progress { color: var(--teal-700); background: var(--teal-100); }.activity-status.cancelled { color: var(--orange-700); background: var(--orange-100); }
 @supports (backdrop-filter: blur(1px)) {
   .ui-modal-sheet__backdrop { backdrop-filter: blur(var(--blur-backdrop)); }
 }
