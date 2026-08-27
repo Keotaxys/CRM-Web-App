@@ -99,7 +99,7 @@
 
 .ui-date-field__control { position: relative; }
 .ui-date-field__input { padding-right: calc(var(--touch-target) + var(--space-2)); color-scheme: light; }
-.ui-date-field__picker { position: absolute; top: 50%; right: 2px; display: inline-grid; place-items: center; width: var(--touch-target); min-width: var(--touch-target); min-height: var(--touch-target); padding: 0; border: 0; border-radius: var(--radius-sm); color: var(--teal-700); background: transparent; cursor: pointer; transform: translateY(-50%); }
+.ui-date-field__picker, .ui-date-action { position: absolute; top: 50%; right: 2px; display: inline-grid; place-items: center; width: var(--touch-target); min-width: var(--touch-target); min-height: var(--touch-target); padding: 0; border: 0; border-radius: var(--radius-sm); color: var(--teal-700); background: transparent; cursor: pointer; transform: translateY(-50%); }
 .ui-date-field__picker:hover:not(:disabled) { background: var(--teal-50); }
 .ui-date-field__picker:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .ui-date-field__picker:disabled { color: var(--gray-400); cursor: not-allowed; }
