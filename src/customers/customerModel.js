@@ -1,13 +1,27 @@
 import { branchIdFromLegacy, branchName } from '../branches/branches';
-import { CUSTOMER_STATUSES, PRIORITIES, RECORD_STATES } from '../shared/constants';
+import {
+  CUSTOMER_STATUSES,
+  PRIORITIES,
+  RECORD_STATES,
+} from '../shared/constants';
 
 const editableFields = new Set([
-  'name', 'phone', 'address', 'status', 'priority', 'note', 'gps', 'location',
-  'imageUrl', 'placeImageUrl', 'imageStoragePath', 'placeImageStoragePath', 'statusTimestamps',
+  'name',
+  'phone',
+  'address',
+  'priority',
+  'note',
+  'gps',
+  'location',
+  'imageUrl',
+  'placeImageUrl',
+  'imageStoragePath',
+  'placeImageStoragePath',
 ]);
 
 export function normalizeCustomer(customer) {
   if (!customer) return null;
+
   return {
     ...customer,
     branchId: customer.branchId || branchIdFromLegacy(customer.branch),
@@ -19,8 +33,14 @@ export function normalizeCustomer(customer) {
 }
 
 export function customerCreatePayload(values, actor, timestamp) {
-  const status = CUSTOMER_STATUSES.includes(values.status) ? values.status : CUSTOMER_STATUSES[0];
-  const priority = PRIORITIES.includes(values.priority) ? values.priority : PRIORITIES[0];
+  const status = CUSTOMER_STATUSES.includes(values.status)
+    ? values.status
+    : CUSTOMER_STATUSES[0];
+
+  const priority = PRIORITIES.includes(values.priority)
+    ? values.priority
+    : PRIORITIES[0];
+
   return {
     name: values.name?.trim() ?? '',
     phone: values.phone?.trim() ?? '',
@@ -36,7 +56,9 @@ export function customerCreatePayload(values, actor, timestamp) {
     placeImageUrl: values.placeImageUrl ?? '',
     imageStoragePath: values.imageStoragePath ?? null,
     placeImageStoragePath: values.placeImageStoragePath ?? null,
-    statusTimestamps: values.statusTimestamps ?? { [status]: timestamp },
+    statusTimestamps: values.statusTimestamps ?? {
+      [status]: timestamp,
+    },
     recordState: RECORD_STATES.ACTIVE,
     createdBy: actor.uid,
     createdAt: timestamp,
@@ -51,10 +73,15 @@ export function customerCreatePayload(values, actor, timestamp) {
 
 export function customerUpdatePayload(values, actor, timestamp) {
   const payload = {};
+
   for (const [key, value] of Object.entries(values)) {
-    if (editableFields.has(key)) payload[key] = value;
+    if (editableFields.has(key)) {
+      payload[key] = value;
+    }
   }
+
   payload.updatedBy = actor.uid;
   payload.updatedAt = timestamp;
+
   return payload;
 }

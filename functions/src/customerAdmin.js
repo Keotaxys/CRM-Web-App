@@ -1,4 +1,4 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+﻿import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { assertAdmin, assertBranchAccess, canTrashRecord } from './authz.js';
 import { branchLabel, isTrashExpired, trashExpiresAt } from './validators.js';
 
@@ -64,7 +64,6 @@ function isCurrentCustomerVisit(activity, customer, now) {
   if (activity.type !== 'customer_visit') return false;
   if (activity.branchId !== customer.branchId) return false;
   if (activity.recordState !== 'active') return false;
-  if (!SYNCABLE_ACTIVITY_STATUSES.has(activity.status)) return false;
 
   const startAt = activityDate(activity.startAt);
   const endAt = activityDate(activity.endAt);
@@ -119,8 +118,14 @@ export async function changeCustomerStatusOperation({ db }, actor, data) {
         }))
         .filter((activity) => isCurrentCustomerVisit(activity, customer, now));
 
-      if (currentVisits.length === 1) {
-        const activity = currentVisits[0];
+      const hasCurrentInProgress = currentVisits
+        .some((activity) => activity.status === 'in_progress');
+
+      const syncCandidates = currentVisits
+        .filter((activity) => SYNCABLE_ACTIVITY_STATUSES.has(activity.status));
+
+      if (!hasCurrentInProgress && syncCandidates.length === 1) {
+        const activity = syncCandidates[0];
 
         transaction.update(activity.ref, {
           status: 'in_progress',

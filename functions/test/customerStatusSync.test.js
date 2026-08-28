@@ -268,3 +268,34 @@ test('cross branch actor cannot change customer status', async () => {
 
   assert.equal(writes.length, 0);
 });
+
+test('does not promote another current visit when one is already in_progress', async () => {
+  const { services, writes } = makeServices({
+    activities: [
+      activity({
+        id: 'already-active',
+        status: 'in_progress',
+      }),
+      activity({
+        id: 'candidate',
+        status: 'confirmed',
+      }),
+    ],
+  });
+
+  await getOperation()(services, actor, {
+    id: 'c1',
+    status: 'ດຳເນີນການແລ້ວ',
+  });
+
+  const activityWrites = writes.filter((item) =>
+    item.path.startsWith('activities/'),
+  );
+
+  assert.equal(activityWrites.length, 0);
+
+  assert.equal(
+    writes.find((item) => item.path === 'customers/c1')?.value.status,
+    'ດຳເນີນການແລ້ວ',
+  );
+});
