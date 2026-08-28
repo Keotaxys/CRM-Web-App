@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase-admin/app';
+﻿import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -8,7 +8,7 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { actorFromRequest, assertAdmin, profileMatchesActor } from './authz.js';
 import { approveUserOperation, disableUserOperation, reactivateUserOperation, updateUserAccessOperation } from './userAdmin.js';
 import { cleanupExpiredActivities, completeFollowUpOperation, permanentlyDeleteActivityOperation, restoreActivityOperation, trashActivityOperation, upsertActivityOperation } from './activityAdmin.js';
-import { abortCustomerUploadsOperation, archiveCustomerOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
+import { abortCustomerUploadsOperation, archiveCustomerOperation, changeCustomerStatusOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
 import { syncLegacyCustomerOperation } from './legacyWebhook.js';
 
 initializeApp();
@@ -44,6 +44,7 @@ export const restoreActivity = callable(restoreActivityOperation);
 export const permanentlyDeleteActivity = callable(permanentlyDeleteActivityOperation);
 export const trashCustomer = callable(trashCustomerOperation);
 export const archiveCustomer = callable(archiveCustomerOperation);
+export const changeCustomerStatus = callable(changeCustomerStatusOperation);
 export const abortCustomerUploads = callable(abortCustomerUploadsOperation);
 export const transferCustomer = callable(transferCustomerOperation);
 export const restoreCustomer = callable(restoreCustomerOperation);

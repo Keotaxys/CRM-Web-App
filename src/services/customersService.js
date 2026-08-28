@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+﻿import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db } from '../firebase/config';
 import { functions } from '../firebase/config';
@@ -53,12 +53,7 @@ export function abortCustomerUploads(id) {
   return httpsCallable(functions, 'abortCustomerUploads')({ id });
 }
 
-export function changeCustomerStatus(id, status, identity) {
-  const actor = actorFromIdentity(identity);
-  return updateDoc(doc(db, 'customers', id), {
-    status,
-    [`statusTimestamps.${status}`]: serverTimestamp(),
-    updatedBy: actor.uid,
-    updatedAt: serverTimestamp(),
-  });
+export async function changeCustomerStatus(id, status) {
+  const result = await httpsCallable(functions, 'changeCustomerStatus')({ id, status });
+  return result.data;
 }

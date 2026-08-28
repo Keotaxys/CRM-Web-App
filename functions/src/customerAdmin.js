@@ -38,3 +38,111 @@ export async function abortCustomerUploadsOperation({ db, bucket }, actor, data)
   const ref=db.doc(`customers/${data?.id}`);const snapshot=await ref.get();if(!snapshot.exists)throw new Error('Customer not found');assertBranchAccess(actor,snapshot.data().branchId);
   return { id:ref.id,deletedObjects:await deleteAbandonedManagedImages(bucket,ref.id,snapshot.data()) };
 }
+
+const CUSTOMER_STATUS_VALUES = new Set([
+  'ໃໝ່',
+  'ຕິດຕາມຕໍ່',
+  'ດຳເນີນການແລ້ວ',
+  'ຈັດສົ່ງແລ້ວ',
+]);
+
+const CUSTOMER_PROGRESS_STATUS = 'ດຳເນີນການແລ້ວ';
+const SYNCABLE_ACTIVITY_STATUSES = new Set(['planned', 'confirmed']);
+
+function activityDate(value) {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') return value.toDate();
+  if (value instanceof Date) return value;
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isCurrentCustomerVisit(activity, customer, now) {
+  if (!activity) return false;
+  if (activity.customerId !== customer.id) return false;
+  if (activity.type !== 'customer_visit') return false;
+  if (activity.branchId !== customer.branchId) return false;
+  if (activity.recordState !== 'active') return false;
+  if (!SYNCABLE_ACTIVITY_STATUSES.has(activity.status)) return false;
+
+  const startAt = activityDate(activity.startAt);
+  const endAt = activityDate(activity.endAt);
+
+  if (!startAt || !endAt) return false;
+
+  return startAt.getTime() <= now.getTime()
+    && now.getTime() <= endAt.getTime();
+}
+
+export async function changeCustomerStatusOperation({ db }, actor, data) {
+  if (!data?.id) throw new Error('Customer id required');
+  if (!CUSTOMER_STATUS_VALUES.has(data?.status)) {
+    throw new Error('Invalid customer status');
+  }
+
+  const customerRef = db.doc(`customers/${data.id}`);
+
+  return db.runTransaction(async (transaction) => {
+    const customerSnapshot = await transaction.get(customerRef);
+
+    if (!customerSnapshot.exists) {
+      throw new Error('Customer not found');
+    }
+
+    const customer = {
+      id: customerSnapshot.id ?? data.id,
+      ...customerSnapshot.data(),
+    };
+
+    assertBranchAccess(actor, customer.branchId);
+
+    if (customer.recordState !== 'active') {
+      throw new Error('Only active customer status can be changed');
+    }
+
+    let syncedActivityId = null;
+
+    if (data.status === CUSTOMER_PROGRESS_STATUS) {
+      const relatedActivities = await transaction.get(
+        db.collection('activities')
+          .where('customerId', '==', data.id),
+      );
+
+      const now = new Date();
+
+      const currentVisits = relatedActivities.docs
+        .map((snapshot) => ({
+          id: snapshot.id,
+          ref: snapshot.ref,
+          ...snapshot.data(),
+        }))
+        .filter((activity) => isCurrentCustomerVisit(activity, customer, now));
+
+      if (currentVisits.length === 1) {
+        const activity = currentVisits[0];
+
+        transaction.update(activity.ref, {
+          status: 'in_progress',
+          updatedBy: actor.uid,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        syncedActivityId = activity.id;
+      }
+    }
+
+    transaction.update(customerRef, {
+      status: data.status,
+      [`statusTimestamps.${data.status}`]: FieldValue.serverTimestamp(),
+      updatedBy: actor.uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    return {
+      id: data.id,
+      status: data.status,
+      syncedActivityId,
+    };
+  });
+}
