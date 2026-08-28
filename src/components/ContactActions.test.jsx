@@ -29,6 +29,34 @@ describe('ContactActions', () => {
     expect(screen.getByText('call')).toHaveClass('filled');
   });
 
+  it('uses one teal touch-target treatment and optical icon size for every contact action', () => {
+    render(<ContactActions customer={{ phone: '020 5555 1234', gps: 'https://maps.example/test' }} />);
+
+    const actionLinks = [
+      screen.getByRole('link', { name: 'ໂທຫາລູກຄ້າ' }),
+      screen.getByRole('link', { name: 'ຕິດຕໍ່ຜ່ານ WhatsApp' }),
+      screen.getByRole('link', { name: 'ເປີດແຜນທີ່ລູກຄ້າ' }),
+    ];
+
+    actionLinks.forEach((link) => {
+      expect(link).toHaveClass('contact-action', 'ui-icon-button--teal', 'ui-icon-button--sm');
+    });
+
+    const touchTargetRule = [...stylesheet.sheet.cssRules].find((rule) => rule.selectorText === '.ui-icon-button');
+    expect(touchTargetRule.style.minWidth).toBe('var(--touch-target)');
+    expect(touchTargetRule.style.minHeight).toBe('var(--touch-target)');
+
+    const opticalSizeRule = [...stylesheet.sheet.cssRules].find((rule) => (
+      rule.selectorText?.includes('.contact-action .material-symbols-outlined')
+      && rule.selectorText.includes('.contact-action__whatsapp-icon')
+    ));
+    expect(opticalSizeRule).toBeDefined();
+    expect(opticalSizeRule.style.width).toBe('22px');
+    expect(opticalSizeRule.style.height).toBe('22px');
+    expect(opticalSizeRule.style.fontSize).toBe('22px');
+    expect(opticalSizeRule.style.lineHeight).toBe('1');
+  });
+
   it('omits unavailable links and shows labels when requested', () => {
     render(<ContactActions customer={{ phone: '', gps: '' }} showLabels />);
 
