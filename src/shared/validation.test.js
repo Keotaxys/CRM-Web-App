@@ -9,8 +9,9 @@ const base = {
 };
 
 describe('activity validation', () => {
-  it('requires a customer for Customer Visit but not Appointment or Event', () => {
-    expect(validateActivity({ ...base, type: 'customer_visit', customerId: '' }).errors.customerId).toBeTruthy();
+  it('requires a customer for Customer Meeting but not Appointment or Event', () => {
+    expect(validateActivity({ ...base, type: 'customer_visit', customerId: '' }).errors.customerId)
+      .toBe('ນັດພົບລູກຄ້າຕ້ອງເລືອກລູກຄ້າ');
     expect(validateActivity({ ...base, type: 'appointment', customerId: '' }).valid).toBe(true);
     expect(validateActivity({ ...base, type: 'event', customerId: '' }).valid).toBe(true);
   });

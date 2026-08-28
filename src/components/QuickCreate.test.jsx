@@ -22,7 +22,7 @@ describe('QuickCreate', () => {
     ['ລູກຄ້າ', '/customers/new'],
     ['ນັດໝາຍ', '/activities/new/appointment'],
     ['ກິດຈະກຳ', '/activities/new/event'],
-    ['ການຢ້ຽມລູກຄ້າ', '/activities/new/customer_visit'],
+    ['ນັດພົບລູກຄ້າ', '/activities/new/customer_visit'],
   ])('closes before navigating from %s', async (choice, expectedPath) => {
     const user = userEvent.setup();
     const { container } = renderQuickCreate();
@@ -40,5 +40,18 @@ describe('QuickCreate', () => {
     await user.click(container.querySelector('.quick-create'));
     await user.click(screen.getByRole('button', { name: 'ປິດ' }));
     expect(screen.queryByRole('heading', { name: 'ສ້າງໃໝ່' })).not.toBeInTheDocument();
+  });
+
+  it('opens an accessible dialog and restores focus after Escape', async () => {
+    const user = userEvent.setup();
+    renderQuickCreate();
+    const launcher = screen.getByRole('button', { name: 'ສ້າງລາຍການໃໝ່' });
+
+    await user.click(launcher);
+    expect(screen.getByRole('dialog', { name: 'ສ້າງໃໝ່' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(launcher).toHaveFocus();
   });
 });

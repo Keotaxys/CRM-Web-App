@@ -22,5 +22,5 @@ export default function CustomerFormPage() {
       syncLegacyCustomer(customerId, edit ? 'updated' : 'created').catch((reason) => console.error('Legacy sync failed', reason)); navigate(`/customers/${customerId}`);
     } catch (reason) { console.error(reason); if(cleanupId&&uploadedManagedImage)abortCustomerUploads(cleanupId).catch((cleanupError)=>console.error('Upload cleanup failed',cleanupError)); setError('ບັນທຶກບໍ່ສຳເລັດ; ກົດບັນທຶກອີກຄັ້ງໄດ້ໂດຍຈະບໍ່ສ້າງລູກຄ້າຊ້ຳ'); } finally { setBusy(false); }
   };
-  return <><Navbar title={edit ? 'ແກ້ໄຂລູກຄ້າ' : 'ເພີ່ມລູກຄ້າ'} showBack/><main className="page-content narrow">{error && <div className="error-banner">{error}</div>}{initial ? <CustomerForm key={id || 'new'} initial={initial} onSubmit={submit} busy={busy} admin={identity.claims.role === 'admin'}/> : <div className="page-state">ກຳລັງໂຫຼດ...</div>}</main></>;
+  return <><Navbar title={edit ? 'ແກ້ໄຂລູກຄ້າ' : 'ເພີ່ມລູກຄ້າ'} showBack/><main className="page-content narrow">{error && <div className="error-banner" role="alert">{error}</div>}{initial ? <CustomerForm key={id || 'new'} initial={initial} onSubmit={submit} busy={busy} admin={identity.claims.role === 'admin'}/> : <div className="page-state">ກຳລັງໂຫຼດ...</div>}</main></>;
 }

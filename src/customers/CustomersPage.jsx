@@ -18,7 +18,7 @@ export default function CustomersPage() {
     await changeCustomerStatus(id, status, identity);
     syncLegacyCustomer(id, 'status_changed').catch((reason) => console.error('Legacy sync failed', reason));
   };
-  return <><Navbar title="ລູກຄ້າ"/><main className="page-content"><CustomerFilters filters={filters} onChange={setFilters}/>{error && <div className="error-banner">{error}</div>}
+  return <><Navbar title="ລູກຄ້າ"/><main className="page-content"><CustomerFilters filters={filters} onChange={setFilters}/>{error && <div className="error-banner" role="alert">{error}</div>}
     {loading ? <div className="page-state">ກຳລັງໂຫຼດ...</div> : filtered.length === 0 ? <div className="page-state">ບໍ່ພົບຂໍ້ມູນລູກຄ້າ</div> : <section className="customer-grid">{filtered.map((customer) => <CustomerCard key={customer.id} customer={customer} onStatusChange={updateStatus}/>)}</section>}
   </main></>;
 }
