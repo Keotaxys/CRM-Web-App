@@ -73,6 +73,10 @@ describe('keyboard focus and navigation contrast contracts', () => {
     expect(declarationsFor(screensCss, '.bottom-nav-item')).toMatch(/width:\s*20%/);
     expect(declarationsFor(screensCss, '.bottom-nav-item')).toMatch(/min-height:\s*var\(--touch-target\)/);
     expect(declarationsFor(screensCss, '.bottom-nav')).toMatch(/env\(safe-area-inset-bottom\)/);
+    const bottomNavRules = [...screensCss.matchAll(/\.bottom-nav\s*\{([^}]*)\}/g)].map(([, declarations]) => declarations);
+    expect(bottomNavRules[0]).toMatch(/padding:\s*var\(--space-2\) max\(8px, env\(safe-area-inset-right\)\) calc\(var\(--space-2\) \+ env\(safe-area-inset-bottom\)\) max\(8px, env\(safe-area-inset-left\)\)/);
+    expect(bottomNavRules.at(-1)).toMatch(/padding-left:\s*max\(4px, env\(safe-area-inset-left\)\)/);
+    expect(bottomNavRules.at(-1)).toMatch(/padding-right:\s*max\(4px, env\(safe-area-inset-right\)\)/);
     expect(tokensCss).toMatch(/--surface-navigation-glass:\s*rgb\(240 253 250 \/ \.88\)/);
     expect(screensCss).toMatch(/@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*var\(--surface-navigation-glass\)[^}]*backdrop-filter:\s*blur\(var\(--blur-navigation\)\) saturate\(140%\)/);
 
