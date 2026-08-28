@@ -25,6 +25,16 @@ it('contains no visible native select markup in production JSX', () => {
   expect(offenders).toEqual([]);
 });
 
+it('keeps the native date indicator hidden behind the themed picker trigger', () => {
+  const components = readFileSync('src/styles/components.css', 'utf8');
+  const rule = components.match(
+    /\.ui-date-field__input::-webkit-calendar-picker-indicator\s*\{([^}]*)\}/,
+  )?.[1] ?? '';
+
+  expect(rule).toMatch(/opacity:\s*0\s*;/);
+  expect(rule).toMatch(/pointer-events:\s*none\s*;/);
+});
+
 it('contains no legacy Customer Visit display phrase', () => {
   const offenders = productionSourceFiles('src').filter((path) => {
     const source = readFileSync(path, 'utf8');
