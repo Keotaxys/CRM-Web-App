@@ -4,53 +4,74 @@
   --surface-glass: rgb(255 255 255 / .82);
   --surface-navigation-glass: rgb(240 253 250 / .88);
   --surface-muted: #f1f5f4;
+
+  --teal-800: #115e59;
   --teal-700: #0f766e;
   --teal-600: #0d9488;
   --teal-500: #14b8a6;
   --teal-100: #ccfbf1;
   --teal-50: #f0fdfa;
+
   --ink-950: #0a0f0e;
   --ink-800: #1f2937;
+
   --gray-600: #5f6b69;
   --gray-400: #94a3a0;
   --gray-200: #dde5e3;
   --gray-100: #edf2f1;
+
   --orange-700: #c2410c;
   --orange-600: #ea580c;
   --orange-100: #ffedd5;
   --orange-50: #fff7ed;
+
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-xl: 26px;
   --radius-pill: 999px;
-  --shadow-sm: 0 2px 8px rgb(15 118 110 / .07);
-  --shadow-card: 0 10px 30px rgb(15 118 110 / .08);
-  --shadow-float: 0 18px 42px rgb(15 118 110 / .14);
-  --focus-ring: 0 0 0 3px var(--teal-700);
-  --focus-outline: 3px solid var(--teal-700);
+
+  --shadow-sm:
+    0 2px 8px rgb(15 118 110 / .07);
+  --shadow-card:
+    0 10px 30px rgb(15 118 110 / .08);
+  --shadow-float:
+    0 18px 42px rgb(15 118 110 / .14);
+
+  --focus-ring:
+    0 0 0 3px var(--teal-700);
+  --focus-outline:
+    3px solid var(--teal-700);
   --focus-offset: 2px;
+
   --motion-fast: 150ms;
   --motion-base: 180ms;
   --motion-slow: 220ms;
-  --ease-standard: cubic-bezier(.2, .8, .2, 1);
+  --ease-standard:
+    cubic-bezier(.2, .8, .2, 1);
+
   --blur-glass: 8px;
   --blur-navigation: 10px;
   --blur-backdrop: 4px;
+
   --touch-target: 44px;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+
   --z-base: 0;
   --z-sticky: 40;
   --z-overlay: 100;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
