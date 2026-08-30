@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -68,13 +68,57 @@ describe('ActivitiesPage shared filters', () => {
     expect(serviceMocks.subscribeAssignableUsers).toHaveBeenCalledTimes(1);
   });
 
-  it('uses a native themed date field with Laos day-key filtering', () => {
+  it('uses the custom date picker with Laos day-key filtering', async () => {
+    const user = userEvent.setup();
     render(<MemoryRouter><ActivitiesPage /></MemoryRouter>);
     const date = screen.getByLabelText('ວັນທີກິດຈະກຳ');
-    expect(date).toHaveAttribute('type', 'date');
-    fireEvent.change(date, { target: { value: '2026-08-26' } });
+
+    expect(date).toHaveAttribute('type', 'text');
+    expect(date).toHaveAttribute('readonly');
+
+    await user.click(screen.getByRole('button', {
+      name: 'ເປີດປະຕິທິນ ວັນທີກິດຈະກຳ',
+    }));
+
+    expect(screen.getByRole('dialog', {
+      name: 'ເລືອກວັນທີ ວັນທີກິດຈະກຳ',
+    })).toBeInTheDocument();
+
+    /*
+     * ActivitiesPage starts with an empty date filter.
+     * DateField therefore opens on the current month.
+     * Navigate until August 2026 is visible before selecting the test day.
+     */
+    const targetMonth = 'ສິງຫາ 2026';
+
+    for (let count = 0; count < 120; count += 1) {
+      if (screen.queryByText(targetMonth)) break;
+
+      const monthTitle = document.querySelector('.ui-date-picker__month-title');
+
+      if (!monthTitle) {
+        throw new Error('Custom date picker month title not found');
+      }
+
+      const text = monthTitle.textContent ?? '';
+      const yearMatch = text.match(/(\d{4})$/);
+      const currentYear = yearMatch ? Number(yearMatch[1]) : 0;
+
+      if (currentYear > 2026 || (currentYear === 2026 && !text.includes('ສິງຫາ'))) {
+        await user.click(screen.getByRole('button', { name: 'ເດືອນກ່ອນໜ້າ' }));
+      } else {
+        await user.click(screen.getByRole('button', { name: 'ເດືອນຖັດໄປ' }));
+      }
+    }
+
+    expect(screen.getByText(targetMonth)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ເລືອກ 2026-08-26' }));
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນ' }));
+
     expect(screen.getByText('Meeting A')).toBeInTheDocument();
     expect(screen.queryByText('Meeting B')).not.toBeInTheDocument();
+    expect(date).toHaveValue('26/08/2026');
   });
 
   it('announces an asynchronous loading failure with the Orange error presentation', async () => {

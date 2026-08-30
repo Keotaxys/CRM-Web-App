@@ -15,15 +15,9 @@ const currentWindow = () => ({
   endAt: Timestamp.fromMillis(Date.now() + 60_000),
 });
 
-const pastWindow = () => ({
-  startAt: Timestamp.fromMillis(Date.now() - 3_600_000),
-  endAt: Timestamp.fromMillis(Date.now() - 1_800_000),
-});
+const laoTimestamp = (value) => Timestamp.fromDate(new Date(value));
 
-const futureWindow = () => ({
-  startAt: Timestamp.fromMillis(Date.now() + 1_800_000),
-  endAt: Timestamp.fromMillis(Date.now() + 3_600_000),
-});
+const FIXED_LAO_NOW = new Date('2035-01-02T00:15:00+07:00');
 
 function getOperation() {
   assert.equal(
@@ -31,6 +25,7 @@ function getOperation() {
     'function',
     'changeCustomerStatusOperation must be exported from customerAdmin.js',
   );
+
   return customerAdmin.changeCustomerStatusOperation;
 }
 
@@ -41,6 +36,7 @@ function makeServices({
     status: 'ຕິດຕາມຕໍ່',
   },
   activities = [],
+  now = null,
 } = {}) {
   const writes = [];
 
@@ -61,14 +57,21 @@ function makeServices({
 
   const db = {
     doc(path) {
-      if (path === 'customers/c1') return customerRef;
+      if (path === 'customers/c1') {
+        return customerRef;
+      }
 
       if (path.startsWith('activities/')) {
         const id = path.split('/')[1];
-        return activityRefs.get(id) ?? { id, path };
+        return activityRefs.get(id) ?? {
+          id,
+          path,
+        };
       }
 
-      return { path };
+      return {
+        path,
+      };
     },
 
     collection(name) {
@@ -101,7 +104,11 @@ function makeServices({
 
           if (target?.kind === 'activity-query') {
             const docs = activities
-              .filter((activity) => activity.customerId === target.customerId)
+              .filter(
+                (activity) =>
+                  activity.customerId
+                  === target.customerId,
+              )
               .map((activity) => ({
                 id: activity.id,
                 ref: activityRefs.get(activity.id),
@@ -114,7 +121,9 @@ function makeServices({
             };
           }
 
-          throw new Error(`Unexpected transaction.get target: ${target?.path ?? 'unknown'}`);
+          throw new Error(
+            `Unexpected transaction.get target: ${target?.path ?? 'unknown'}`,
+          );
         },
 
         update(ref, value) {
@@ -129,8 +138,16 @@ function makeServices({
     },
   };
 
+  const services = {
+    db,
+  };
+
+  if (now) {
+    services.now = () => new Date(now);
+  }
+
   return {
-    services: { db },
+    services,
     writes,
   };
 }
@@ -150,152 +167,461 @@ function activity(overrides = {}) {
   };
 }
 
-test('customer progress status moves the one current confirmed customer visit to in_progress', async () => {
-  const { services, writes } = makeServices({
-    activities: [activity()],
-  });
+test(
+  'customer progress status moves the one current confirmed customer visit to in_progress',
+  async () => {
+    const { services, writes } = makeServices({
+      activities: [
+        activity(),
+      ],
+    });
 
-  await getOperation()(services, actor, {
-    id: 'c1',
-    status: 'ດຳເນີນການແລ້ວ',
-  });
-
-  const customerWrite = writes.find((item) => item.path === 'customers/c1');
-  const activityWrite = writes.find((item) => item.path === 'activities/a1');
-
-  assert.equal(customerWrite?.value.status, 'ດຳເນີນການແລ້ວ');
-  assert.equal(activityWrite?.value.status, 'in_progress');
-  assert.equal(activityWrite?.value.updatedBy, 'u1');
-});
-
-test('planned current customer visit can also move to in_progress', async () => {
-  const { services, writes } = makeServices({
-    activities: [activity({ status: 'planned' })],
-  });
-
-  await getOperation()(services, actor, {
-    id: 'c1',
-    status: 'ດຳເນີນການແລ້ວ',
-  });
-
-  assert.equal(
-    writes.find((item) => item.path === 'activities/a1')?.value.status,
-    'in_progress',
-  );
-});
-
-test('completed cancelled past future and unrelated activities stay untouched', async () => {
-  const { services, writes } = makeServices({
-    activities: [
-      activity({ id: 'completed', status: 'completed' }),
-      activity({ id: 'cancelled', status: 'cancelled' }),
-      activity({ id: 'past', ...pastWindow() }),
-      activity({ id: 'future', ...futureWindow() }),
-      activity({ id: 'other', customerId: 'c2' }),
-    ],
-  });
-
-  await getOperation()(services, actor, {
-    id: 'c1',
-    status: 'ດຳເນີນການແລ້ວ',
-  });
-
-  assert.equal(
-    writes.filter((item) => item.path.startsWith('activities/')).length,
-    0,
-  );
-
-  assert.equal(
-    writes.find((item) => item.path === 'customers/c1')?.value.status,
-    'ດຳເນີນການແລ້ວ',
-  );
-});
-
-test('ambiguous multiple current visits are not auto-selected', async () => {
-  const { services, writes } = makeServices({
-    activities: [
-      activity({ id: 'a1' }),
-      activity({ id: 'a2', status: 'planned' }),
-    ],
-  });
-
-  await getOperation()(services, actor, {
-    id: 'c1',
-    status: 'ດຳເນີນການແລ້ວ',
-  });
-
-  assert.equal(
-    writes.filter((item) => item.path.startsWith('activities/')).length,
-    0,
-  );
-
-  assert.equal(
-    writes.find((item) => item.path === 'customers/c1')?.value.status,
-    'ດຳເນີນການແລ້ວ',
-  );
-});
-
-test('other customer statuses do not change activity status', async () => {
-  const { services, writes } = makeServices({
-    activities: [activity()],
-  });
-
-  await getOperation()(services, actor, {
-    id: 'c1',
-    status: 'ຕິດຕາມຕໍ່',
-  });
-
-  assert.equal(
-    writes.filter((item) => item.path.startsWith('activities/')).length,
-    0,
-  );
-});
-
-test('cross branch actor cannot change customer status', async () => {
-  const { services, writes } = makeServices();
-
-  await assert.rejects(
-    () => getOperation()(
+    await getOperation()(
       services,
-      { ...actor, branchId: '019' },
+      actor,
       {
         id: 'c1',
         status: 'ດຳເນີນການແລ້ວ',
       },
-    ),
-    /Cross-branch/i,
-  );
+    );
 
-  assert.equal(writes.length, 0);
-});
+    const customerWrite =
+      writes.find(
+        (item) =>
+          item.path === 'customers/c1',
+      );
 
-test('does not promote another current visit when one is already in_progress', async () => {
-  const { services, writes } = makeServices({
-    activities: [
-      activity({
-        id: 'already-active',
-        status: 'in_progress',
-      }),
-      activity({
-        id: 'candidate',
-        status: 'confirmed',
-      }),
-    ],
-  });
+    const activityWrite =
+      writes.find(
+        (item) =>
+          item.path === 'activities/a1',
+      );
 
-  await getOperation()(services, actor, {
-    id: 'c1',
-    status: 'ດຳເນີນການແລ້ວ',
-  });
+    assert.equal(
+      customerWrite?.value.status,
+      'ດຳເນີນການແລ້ວ',
+    );
 
-  const activityWrites = writes.filter((item) =>
-    item.path.startsWith('activities/'),
-  );
+    assert.equal(
+      activityWrite?.value.status,
+      'in_progress',
+    );
 
-  assert.equal(activityWrites.length, 0);
+    assert.equal(
+      activityWrite?.value.updatedBy,
+      'u1',
+    );
+  },
+);
 
-  assert.equal(
-    writes.find((item) => item.path === 'customers/c1')?.value.status,
-    'ດຳເນີນການແລ້ວ',
-  );
-});
+test(
+  'planned current customer visit can also move to in_progress',
+  async () => {
+    const { services, writes } = makeServices({
+      activities: [
+        activity({
+          status: 'planned',
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    assert.equal(
+      writes.find(
+        (item) =>
+          item.path === 'activities/a1',
+      )?.value.status,
+      'in_progress',
+    );
+  },
+);
+
+test(
+  'same-day visit can move to in_progress before its scheduled start time',
+  async () => {
+    const { services, writes } = makeServices({
+      now: FIXED_LAO_NOW,
+      activities: [
+        activity({
+          startAt: laoTimestamp(
+            '2035-01-02T10:00:00+07:00',
+          ),
+          endAt: laoTimestamp(
+            '2035-01-02T11:00:00+07:00',
+          ),
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    assert.equal(
+      writes.find(
+        (item) =>
+          item.path === 'activities/a1',
+      )?.value.status,
+      'in_progress',
+    );
+  },
+);
+
+test(
+  'same-day visit can move to in_progress after its scheduled end time',
+  async () => {
+    const { services, writes } = makeServices({
+      now: FIXED_LAO_NOW,
+      activities: [
+        activity({
+          startAt: laoTimestamp(
+            '2035-01-02T00:00:00+07:00',
+          ),
+          endAt: laoTimestamp(
+            '2035-01-02T00:05:00+07:00',
+          ),
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    assert.equal(
+      writes.find(
+        (item) =>
+          item.path === 'activities/a1',
+      )?.value.status,
+      'in_progress',
+    );
+  },
+);
+
+test(
+  'visits on the previous or next Laos calendar day stay untouched',
+  async () => {
+    const { services, writes } = makeServices({
+      now: FIXED_LAO_NOW,
+      activities: [
+        activity({
+          id: 'yesterday',
+          startAt: laoTimestamp(
+            '2035-01-01T10:00:00+07:00',
+          ),
+          endAt: laoTimestamp(
+            '2035-01-01T11:00:00+07:00',
+          ),
+        }),
+        activity({
+          id: 'tomorrow',
+          startAt: laoTimestamp(
+            '2035-01-03T10:00:00+07:00',
+          ),
+          endAt: laoTimestamp(
+            '2035-01-03T11:00:00+07:00',
+          ),
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    assert.equal(
+      writes.filter(
+        (item) =>
+          item.path.startsWith(
+            'activities/',
+          ),
+      ).length,
+      0,
+    );
+  },
+);
+
+test(
+  'completed cancelled and unrelated activities stay untouched',
+  async () => {
+    const { services, writes } = makeServices({
+      activities: [
+        activity({
+          id: 'completed',
+          status: 'completed',
+        }),
+        activity({
+          id: 'cancelled',
+          status: 'cancelled',
+        }),
+        activity({
+          id: 'other-customer',
+          customerId: 'c2',
+        }),
+        activity({
+          id: 'other-branch',
+          branchId: '019',
+        }),
+        activity({
+          id: 'other-type',
+          type: 'follow_up',
+        }),
+        activity({
+          id: 'archived',
+          recordState: 'archived',
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    assert.equal(
+      writes.filter(
+        (item) =>
+          item.path.startsWith(
+            'activities/',
+          ),
+      ).length,
+      0,
+    );
+
+    assert.equal(
+      writes.find(
+        (item) =>
+          item.path === 'customers/c1',
+      )?.value.status,
+      'ດຳເນີນການແລ້ວ',
+    );
+  },
+);
+
+test(
+  'ambiguous multiple current visits are not auto-selected',
+  async () => {
+    const { services, writes } = makeServices({
+      activities: [
+        activity({
+          id: 'a1',
+        }),
+        activity({
+          id: 'a2',
+          status: 'planned',
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    assert.equal(
+      writes.filter(
+        (item) =>
+          item.path.startsWith(
+            'activities/',
+          ),
+      ).length,
+      0,
+    );
+
+    assert.equal(
+      writes.find(
+        (item) =>
+          item.path === 'customers/c1',
+      )?.value.status,
+      'ດຳເນີນການແລ້ວ',
+    );
+  },
+);
+
+test(
+  'ambiguous multiple same-day visits are not auto-selected',
+  async () => {
+    const { services, writes } = makeServices({
+      now: FIXED_LAO_NOW,
+      activities: [
+        activity({
+          id: 'a1',
+          startAt: laoTimestamp(
+            '2035-01-02T09:00:00+07:00',
+          ),
+          endAt: laoTimestamp(
+            '2035-01-02T10:00:00+07:00',
+          ),
+        }),
+        activity({
+          id: 'a2',
+          status: 'planned',
+          startAt: laoTimestamp(
+            '2035-01-02T14:00:00+07:00',
+          ),
+          endAt: laoTimestamp(
+            '2035-01-02T15:00:00+07:00',
+          ),
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    assert.equal(
+      writes.filter(
+        (item) =>
+          item.path.startsWith(
+            'activities/',
+          ),
+      ).length,
+      0,
+    );
+  },
+);
+
+test(
+  'other customer statuses do not change activity status',
+  async () => {
+    const { services, writes } = makeServices({
+      activities: [
+        activity(),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ຕິດຕາມຕໍ່',
+      },
+    );
+
+    assert.equal(
+      writes.filter(
+        (item) =>
+          item.path.startsWith(
+            'activities/',
+          ),
+      ).length,
+      0,
+    );
+  },
+);
+
+test(
+  'cross branch actor cannot change customer status',
+  async () => {
+    const { services, writes } =
+      makeServices();
+
+    await assert.rejects(
+      () =>
+        getOperation()(
+          services,
+          {
+            ...actor,
+            branchId: '019',
+          },
+          {
+            id: 'c1',
+            status:
+              'ດຳເນີນການແລ້ວ',
+          },
+        ),
+      /Cross-branch/i,
+    );
+
+    assert.equal(
+      writes.length,
+      0,
+    );
+  },
+);
+
+test(
+  'does not promote another current visit when one is already in_progress',
+  async () => {
+    const { services, writes } = makeServices({
+      activities: [
+        activity({
+          id: 'already-active',
+          status: 'in_progress',
+        }),
+        activity({
+          id: 'candidate',
+          status: 'confirmed',
+        }),
+      ],
+    });
+
+    await getOperation()(
+      services,
+      actor,
+      {
+        id: 'c1',
+        status: 'ດຳເນີນການແລ້ວ',
+      },
+    );
+
+    const activityWrites =
+      writes.filter(
+        (item) =>
+          item.path.startsWith(
+            'activities/',
+          ),
+      );
+
+    assert.equal(
+      activityWrites.length,
+      0,
+    );
+
+    assert.equal(
+      writes.find(
+        (item) =>
+          item.path === 'customers/c1',
+      )?.value.status,
+      'ດຳເນີນການແລ້ວ',
+    );
+  },
+);
