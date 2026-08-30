@@ -7,7 +7,7 @@ import { getFunctions } from "firebase/functions";
 // ⚠️ ເອົາໂຄ້ດ firebaseConfig ທີ່ເຈົ້າກັອບປີ້ມາຈາກເວັບ Firebase ມາວາງປ່ຽນແທນກ້ອນນີ້ທັງໝົດເລີຍເດີ້
 const firebaseConfig = {
     apiKey: "AIzaSyB8JI0cDIYI1UG1YvNe8EqtzT-uR7vwcSA",
-    authDomain: "crm-web-app-97b91.firebaseapp.com",
+    authDomain: "crm.keotasystem.com",
     projectId: "crm-web-app-97b91",
     storageBucket: "crm-web-app-97b91.firebasestorage.app",
     messagingSenderId: "601560289578",
