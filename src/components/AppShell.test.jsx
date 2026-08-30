@@ -17,4 +17,16 @@ describe('AppShell', () => {
     expect(screen.getByTestId('quick-create')).toBeInTheDocument();
     expect(screen.getByTestId('bottom-nav')).toBeInTheDocument();
   });
+
+  it('locks document scrolling only while the protected application shell is mounted', () => {
+    const { unmount } = render(<AppShell />);
+
+    expect(document.documentElement).toHaveClass('app-viewport--locked');
+    expect(document.body).toHaveClass('app-viewport--locked');
+
+    unmount();
+
+    expect(document.documentElement).not.toHaveClass('app-viewport--locked');
+    expect(document.body).not.toHaveClass('app-viewport--locked');
+  });
 });

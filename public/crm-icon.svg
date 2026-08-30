@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Keota CRM</title>
+  <defs>
+    <linearGradient id="background" x1="120" y1="80" x2="904" y2="944" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#115e59"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="300" y1="240" x2="730" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ccfbf1" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity=".08"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#background)"/>
+  <circle cx="842" cy="158" r="250" fill="#ffffff" opacity=".06"/>
+  <circle cx="170" cy="870" r="330" fill="#2dd4bf" opacity=".08"/>
+  <rect x="176" y="176" width="672" height="672" rx="190" fill="url(#highlight)" stroke="#ccfbf1" stroke-opacity=".32" stroke-width="18"/>
+  <circle cx="512" cy="356" r="104" fill="#f0fdfa"/>
+  <path d="M306 650c0-114 92-206 206-206s206 92 206 206v46c0 28-22 50-50 50H356c-28 0-50-22-50-50v-46Z" fill="#f0fdfa"/>
+  <circle cx="706" cy="660" r="100" fill="#14b8a6" stroke="#f0fdfa" stroke-width="18"/>
+  <path d="m657 661 32 32 66-74" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+</svg>

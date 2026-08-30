@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 * { box-sizing: border-box; }
+html, body, #root { min-width: 0; min-height: 100%; }
+.app-viewport--locked { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body { margin: 0; background-color: var(--surface-page); color: var(--ink-800); font-family: 'Noto Sans Lao', system-ui, sans-serif; font-size: 16px; line-height: 1.55; }
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }

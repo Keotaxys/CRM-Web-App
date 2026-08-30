@@ -220,7 +220,11 @@ it(
     );
 
     expect(screens).toMatch(
-      /@media\s*\(max-width:\s*320px\)[\s\S]*\.page-content,\s*\.app-header\s*\{\s*padding-inline:\s*10px/,
+      /@media\s*\(max-width:\s*320px\)[\s\S]*\.page-content\s*\{\s*padding-inline:\s*10px/,
+    );
+
+    expect(screens).toMatch(
+      /@media\s*\(max-width:\s*320px\)[\s\S]*\.app-header\s*\{[^}]*padding-left:\s*max\(10px,\s*env\(safe-area-inset-left\)\)[^}]*padding-right:\s*max\(10px,\s*env\(safe-area-inset-right\)\)/,
     );
   },
 );

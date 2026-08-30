@@ -1,13 +1,22 @@
 /* Screen-specific CRM layouts are added by their owning feature tasks. */
 
 .app-shell {
-  min-height: 100vh;
-  padding-bottom: 94px;
-  overflow-x: clip;
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .app-shell__content {
+  height: 100%;
   min-width: 0;
+  overflow-x: clip;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom:
+    calc(94px + env(safe-area-inset-bottom));
 }
 
 .app-header {
@@ -18,8 +27,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: 70px;
-  padding: var(--space-3) clamp(16px, 4vw, 32px);
+  min-height:
+    calc(70px + env(safe-area-inset-top));
+  padding-top:
+    calc(var(--space-3) + env(safe-area-inset-top));
+  padding-right:
+    max(clamp(16px, 4vw, 32px), env(safe-area-inset-right));
+  padding-bottom: var(--space-3);
+  padding-left:
+    max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
   border-bottom: 1px solid var(--teal-500);
   background: linear-gradient(
     135deg,
@@ -744,7 +760,7 @@
 /* Dark teal glass bottom navigation */
 
 .bottom-nav {
-  position: fixed;
+  position: absolute;
   z-index: var(--z-sticky);
   bottom: 0;
   left: 50%;
@@ -827,10 +843,11 @@
 }
 
 .quick-create {
-  position: fixed;
+  position: absolute;
   z-index: var(--z-sticky);
   right: max(18px, calc((100vw - 1180px) / 2));
-  bottom: 92px;
+  bottom:
+    calc(92px + env(safe-area-inset-bottom));
   width: 54px;
   height: 54px;
   color: var(--color-white);
@@ -1009,8 +1026,14 @@
     border-radius: var(--radius-lg);
   }
 
-  .app-shell {
-    padding-bottom: 110px;
+  .app-shell__content {
+    padding-bottom:
+      calc(110px + env(safe-area-inset-bottom));
+  }
+
+  .quick-create {
+    bottom:
+      calc(106px + env(safe-area-inset-bottom));
   }
 }
 
@@ -1099,9 +1122,15 @@
     padding-inline: 11px;
   }
 
-  .page-content,
-  .app-header {
+  .page-content {
     padding-inline: 12px;
+  }
+
+  .app-header {
+    padding-left:
+      max(12px, env(safe-area-inset-left));
+    padding-right:
+      max(12px, env(safe-area-inset-right));
   }
 
   .app-header {
@@ -1297,9 +1326,15 @@
 }
 
 @media (max-width: 390px) {
-  .page-content,
-  .app-header {
+  .page-content {
     padding-inline: 12px;
+  }
+
+  .app-header {
+    padding-left:
+      max(12px, env(safe-area-inset-left));
+    padding-right:
+      max(12px, env(safe-area-inset-right));
   }
 
   .contact-actions {
@@ -1325,9 +1360,15 @@
 }
 
 @media (max-width: 320px) {
-  .page-content,
-  .app-header {
+  .page-content {
     padding-inline: 10px;
+  }
+
+  .app-header {
+    padding-left:
+      max(10px, env(safe-area-inset-left));
+    padding-right:
+      max(10px, env(safe-area-inset-right));
   }
 
   .glass-card,
