@@ -315,14 +315,22 @@ describe(
           /padding:\s*var\(--space-2\)\s*max\(8px,\s*env\(safe-area-inset-right\)\)\s*calc\(var\(--space-2\)\s*\+\s*env\(safe-area-inset-bottom\)\)\s*max\(8px,\s*env\(safe-area-inset-left\)\)/s,
         );
 
+        const compactSafeAreaRule =
+          bottomNavRules.find(
+            (declarations) =>
+              /padding-left:\s*max\(4px,\s*env\(safe-area-inset-left\)\)/.test(
+                declarations,
+              ),
+          );
+
         expect(
-          bottomNavRules.at(-1),
+          compactSafeAreaRule,
         ).toMatch(
           /padding-left:\s*max\(4px,\s*env\(safe-area-inset-left\)\)/,
         );
 
         expect(
-          bottomNavRules.at(-1),
+          compactSafeAreaRule,
         ).toMatch(
           /padding-right:\s*max\(4px,\s*env\(safe-area-inset-right\)\)/,
         );

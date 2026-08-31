@@ -9,9 +9,31 @@ const items = [
 ];
 
 export default function BottomNav() {
-  return <nav className="bottom-nav" aria-label="Main navigation">
-    {items.map(([to, icon, label]) => <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}>
-      <span className="material-symbols-outlined" aria-hidden="true">{icon}</span><span className="bottom-nav-item__label">{label}</span>
-    </NavLink>)}
-  </nav>;
+  return (
+    <nav className="bottom-nav" aria-label="Main navigation">
+      {items.map(([to, icon, label]) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/'}
+          className={({ isActive }) =>
+            `bottom-nav-item ${isActive ? 'active' : ''}`
+          }
+        >
+          <span className="bottom-nav-item__inner">
+            <span
+              className="material-symbols-outlined"
+              aria-hidden="true"
+            >
+              {icon}
+            </span>
+
+            <span className="bottom-nav-item__label">
+              {label}
+            </span>
+          </span>
+        </NavLink>
+      ))}
+    </nav>
+  );
 }
