@@ -361,7 +361,7 @@ describe(
             '.bottom-nav-item.active .bottom-nav-item__inner',
           ),
         ).toMatch(
-          /background:\s*rgb\(255 255 255 \/ \.36\)/,
+          /background:\s*rgb\(255 255 255 \/ \.28\)/,
         );
 
         expect(

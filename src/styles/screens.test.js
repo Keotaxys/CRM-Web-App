@@ -66,7 +66,7 @@ describe(
       'uses one subtle active glass pill around both the bottom-nav icon and label',
       () => {
         expect(screensCss).toMatch(
-          /\.bottom-nav-item\.active\s+\.bottom-nav-item__inner\s*\{[^}]*background:\s*rgb\(255 255 255 \/ \.36\)/s,
+          /\.bottom-nav-item\.active\s+\.bottom-nav-item__inner\s*\{[^}]*background:\s*rgb\(255 255 255 \/ \.28\)/s,
         );
 
         expect(screensCss).toMatch(
