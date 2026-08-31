@@ -5,6 +5,8 @@
   --surface-navigation-glass: rgb(240 253 250 / .88);
   --surface-muted: #f1f5f4;
 
+  --nav-glass-strong: #353a40;
+
   --teal-800: #115e59;
   --teal-700: #0f766e;
   --teal-600: #0d9488;
@@ -33,20 +35,25 @@
 
   --shadow-sm:
     0 2px 8px rgb(15 118 110 / .07);
+
   --shadow-card:
     0 10px 30px rgb(15 118 110 / .08);
+
   --shadow-float:
     0 18px 42px rgb(15 118 110 / .14);
 
   --focus-ring:
     0 0 0 3px var(--teal-700);
+
   --focus-outline:
     3px solid var(--teal-700);
+
   --focus-offset: 2px;
 
   --motion-fast: 150ms;
   --motion-base: 180ms;
   --motion-slow: 220ms;
+
   --ease-standard:
     cubic-bezier(.2, .8, .2, 1);
 

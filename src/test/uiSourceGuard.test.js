@@ -224,7 +224,7 @@ it(
     );
 
     expect(screens).toMatch(
-      /@media\s*\(max-width:\s*320px\)[\s\S]*\.app-header\s*\{[^}]*padding-left:\s*max\(10px,\s*env\(safe-area-inset-left\)\)[^}]*padding-right:\s*max\(10px,\s*env\(safe-area-inset-right\)\)/,
+      /@media\s*\(max-width:\s*320px\)[\s\S]*\.app-header\s*\{[^}]*padding-left:\s*max\(\s*10px,\s*env\(safe-area-inset-left\)\s*\)[^}]*padding-right:\s*max\(\s*10px,\s*env\(safe-area-inset-right\)\s*\)/,
     );
   },
 );

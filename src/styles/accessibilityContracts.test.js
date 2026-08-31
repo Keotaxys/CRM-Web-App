@@ -26,21 +26,34 @@ function token(name) {
 }
 
 function relativeLuminance(hex) {
-  const expanded = hex.length === 4
-    ? hex
-        .slice(1)
-        .split('')
-        .map((digit) => digit.repeat(2))
-    : hex.slice(1).match(/.{2}/g);
+  const expanded =
+    hex.length === 4
+      ? hex
+          .slice(1)
+          .split('')
+          .map(
+            (digit) =>
+              digit.repeat(2),
+          )
+      : hex
+          .slice(1)
+          .match(/.{2}/g);
 
-  const channels = expanded.map((part) => {
-    const value =
-      Number.parseInt(part, 16) / 255;
+  const channels =
+    expanded.map((part) => {
+      const value =
+        Number.parseInt(
+          part,
+          16,
+        ) / 255;
 
-    return value <= 0.04045
-      ? value / 12.92
-      : ((value + 0.055) / 1.055) ** 2.4;
-  });
+      return value <= 0.04045
+        ? value / 12.92
+        : (
+            (value + 0.055)
+            / 1.055
+          ) ** 2.4;
+    });
 
   return (
     (0.2126 * channels[0])
@@ -49,7 +62,10 @@ function relativeLuminance(hex) {
   );
 }
 
-function contrast(foreground, background) {
+function contrast(
+  foreground,
+  background,
+) {
   const lighter = Math.max(
     relativeLuminance(foreground),
     relativeLuminance(background),
@@ -60,7 +76,10 @@ function contrast(foreground, background) {
     relativeLuminance(background),
   );
 
-  return (lighter + 0.05) / (darker + 0.05);
+  return (
+    (lighter + 0.05)
+    / (darker + 0.05)
+  );
 }
 
 function withoutComments(css) {
@@ -70,23 +89,46 @@ function withoutComments(css) {
   );
 }
 
-function declarationsFor(css, selector) {
-  const cleanCss = withoutComments(css);
+function declarationsFor(
+  css,
+  selector,
+) {
+  const cleanCss =
+    withoutComments(css);
+
+  const normalizeSelector = (
+    value,
+  ) =>
+    value
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const normalizedTarget =
+    normalizeSelector(selector);
 
   return [
     ...cleanCss.matchAll(
       /([^{}]+)\{([^{}]*)\}/g,
     ),
   ]
-    .filter(([, selectorList]) =>
-      selectorList
-        .split(',')
-        .map((item) => item.trim())
-        .includes(selector))
-    .map(([, , declarations]) => declarations)
+    .filter(
+      ([, selectorList]) =>
+        selectorList
+          .split(',')
+          .map(
+            (item) =>
+              normalizeSelector(item),
+          )
+          .includes(
+            normalizedTarget,
+          ),
+    )
+    .map(
+      ([, , declarations]) =>
+        declarations,
+    )
     .join('\n');
 }
-
 describe(
   'keyboard focus and navigation contrast contracts',
   () => {
@@ -100,7 +142,9 @@ describe(
           ),
         ).toBeGreaterThanOrEqual(3);
 
-        expect(tokensCss).toMatch(
+        expect(
+          tokensCss,
+        ).toMatch(
           /--focus-outline:\s*3px solid var\(--teal-700\)/,
         );
 
@@ -168,35 +212,25 @@ describe(
     );
 
     it(
-      'keeps neutral navigation and teal-gradient filters readable',
+      'keeps the white and light-gray navigation content readable on the dark neutral glass',
       () => {
         expect(
           contrast(
-            token('--teal-800'),
-            token('--color-white'),
+            token('--gray-100'),
+            token('--nav-glass-strong'),
           ),
-        ).toBeGreaterThanOrEqual(4.5);
-
-        expect(
-          contrast(
-            token('--teal-700'),
-            token('--color-white'),
-          ),
-        ).toBeGreaterThanOrEqual(4.5);
+        ).toBeGreaterThanOrEqual(
+          4.5,
+        );
 
         expect(
           contrast(
             token('--color-white'),
-            token('--teal-800'),
+            token('--nav-glass-strong'),
           ),
-        ).toBeGreaterThanOrEqual(4.5);
-
-        expect(
-          contrast(
-            token('--color-white'),
-            token('--teal-700'),
-          ),
-        ).toBeGreaterThanOrEqual(4.5);
+        ).toBeGreaterThanOrEqual(
+          4.5,
+        );
 
         expect(
           declarationsFor(
@@ -204,7 +238,7 @@ describe(
             '.bottom-nav-item',
           ),
         ).toMatch(
-          /color:\s*var\(--teal-800\)/,
+          /color:\s*var\(--gray-100\)/,
         );
 
         expect(
@@ -213,7 +247,16 @@ describe(
             '.bottom-nav-item.active',
           ),
         ).toMatch(
-          /color:\s*var\(--teal-800\)/,
+          /color:\s*var\(--color-white\)/,
+        );
+
+        expect(
+          declarationsFor(
+            screensCss,
+            '.chip',
+          ),
+        ).toMatch(
+          /color:\s*var\(--gray-600\)/,
         );
 
         expect(
@@ -224,20 +267,11 @@ describe(
         ).toMatch(
           /color:\s*var\(--color-white\)/,
         );
-
-        expect(
-          declarationsFor(
-            screensCss,
-            '.chip.active',
-          ),
-        ).toMatch(
-          /background:\s*linear-gradient\([\s\S]*var\(--teal-800\)[\s\S]*var\(--teal-700\)/,
-        );
       },
     );
 
     it(
-      'keeps neutral glass navigation, a single active pill, focus, safe-area, and touch contracts',
+      'keeps frosted navigation, single active pill, focus, safe-area, and touch contracts',
       () => {
         const headerDeclarations =
           declarationsFor(
@@ -254,25 +288,13 @@ describe(
         expect(
           headerDeclarations,
         ).toMatch(
-          /border-bottom:\s*1px solid rgb\(15 118 110 \/ \.12\)/,
-        );
-
-        expect(
-          headerDeclarations,
-        ).toMatch(
-          /background:\s*rgb\(255 255 255 \/ \.86\)/,
+          /background:\s*rgb\(53 58 64 \/ \.76\)/,
         );
 
         expect(
           bottomNavDeclarations,
         ).toMatch(
-          /border:\s*1px solid rgb\(15 118 110 \/ \.12\)/,
-        );
-
-        expect(
-          bottomNavDeclarations,
-        ).toMatch(
-          /background:\s*rgb\(255 255 255 \/ \.86\)/,
+          /background:\s*rgb\(53 58 64 \/ \.78\)/,
         );
 
         expect(
@@ -308,7 +330,7 @@ describe(
             '.bottom-nav-item.active .bottom-nav-item__inner',
           ),
         ).toMatch(
-          /background:\s*rgb\(15 118 110 \/ \.10\)/,
+          /background:\s*rgb\(255 255 255 \/ \.14\)/,
         );
 
         expect(
@@ -333,19 +355,20 @@ describe(
             /\.bottom-nav\s*\{([^}]*)\}/g,
           ),
         ].map(
-          ([, declarations]) => declarations,
+          ([, declarations]) =>
+            declarations,
         );
 
         expect(
           bottomNavRules[0],
         ).toMatch(
-          /padding:\s*var\(--space-2\)\s*max\(8px,\s*env\(safe-area-inset-right\)\)\s*calc\(var\(--space-2\)\s*\+\s*env\(safe-area-inset-bottom\)\)\s*max\(8px,\s*env\(safe-area-inset-left\)\)/s,
+          /padding:\s*var\(--space-2\)\s*max\(8px,\s*env\(safe-area-inset-right\)\)\s*calc\(\s*var\(--space-2\)\s*\+\s*env\(safe-area-inset-bottom\)\s*\)\s*max\(8px,\s*env\(safe-area-inset-left\)\)/s,
         );
 
         const compactSafeAreaRule =
           bottomNavRules.find(
             (declarations) =>
-              /padding-left:\s*max\(4px,\s*env\(safe-area-inset-left\)\)/.test(
+              /padding-left:\s*max\(\s*4px,\s*env\(safe-area-inset-left\)\s*\)/s.test(
                 declarations,
               ),
           );
@@ -353,20 +376,27 @@ describe(
         expect(
           compactSafeAreaRule,
         ).toMatch(
-          /padding-left:\s*max\(4px,\s*env\(safe-area-inset-left\)\)/,
+          /padding-left:\s*max\(\s*4px,\s*env\(safe-area-inset-left\)\s*\)/s,
         );
 
         expect(
           compactSafeAreaRule,
         ).toMatch(
-          /padding-right:\s*max\(4px,\s*env\(safe-area-inset-right\)\)/,
+          /padding-right:\s*max\(\s*4px,\s*env\(safe-area-inset-right\)\s*\)/s,
         );
 
-        expect(screensCss).toMatch(
-          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*rgb\(255 255 255 \/ \.58\)[^}]*-webkit-backdrop-filter:\s*blur\(18px\)\s*saturate\(150%\)[^}]*backdrop-filter:\s*blur\(18px\)\s*saturate\(150%\)/s,
+        expect(
+          screensCss,
+        ).toMatch(
+          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*rgb\(53 58 64 \/ \.58\)[^}]*-webkit-backdrop-filter:\s*blur\(18px\)\s*saturate\(125%\)[^}]*backdrop-filter:\s*blur\(18px\)\s*saturate\(125%\)/s,
         );
 
-        [430, 390, 360, 320].forEach(
+        [
+          430,
+          390,
+          360,
+          320,
+        ].forEach(
           (viewport) => {
             expect(
               screensCss,

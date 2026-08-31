@@ -10,7 +10,10 @@ const items = [
 
 export default function BottomNav() {
   return (
-    <nav className="bottom-nav" aria-label="Main navigation">
+    <nav
+      className="bottom-nav"
+      aria-label="Main navigation"
+    >
       {items.map(([to, icon, label]) => (
         <NavLink
           key={to}

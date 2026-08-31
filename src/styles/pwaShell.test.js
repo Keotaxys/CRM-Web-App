@@ -54,8 +54,8 @@ describe('iOS standalone viewport shell', () => {
 
     expect(headerRules.filter((rule) => /padding-inline:/.test(rule))).toEqual([]);
     expect(headerRules).toEqual(expect.arrayContaining([
-      expect.stringMatching(/padding-left:\s*max\(12px,\s*env\(safe-area-inset-left\)\)[^}]*padding-right:\s*max\(12px,\s*env\(safe-area-inset-right\)\)/s),
-      expect.stringMatching(/padding-left:\s*max\(10px,\s*env\(safe-area-inset-left\)\)[^}]*padding-right:\s*max\(10px,\s*env\(safe-area-inset-right\)\)/s),
+      expect.stringMatching(/padding-left:\s*max\(\s*12px,\s*env\(safe-area-inset-left\)\s*\)[^}]*padding-right:\s*max\(\s*12px,\s*env\(safe-area-inset-right\)\s*\)/s),
+      expect.stringMatching(/padding-left:\s*max\(\s*10px,\s*env\(safe-area-inset-left\)\s*\)[^}]*padding-right:\s*max\(\s*10px,\s*env\(safe-area-inset-right\)\s*\)/s),
     ]));
   });
 });
