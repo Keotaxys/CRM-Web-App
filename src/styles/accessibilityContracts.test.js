@@ -168,18 +168,25 @@ describe(
     );
 
     it(
-      'keeps inactive and active bottom-navigation content readable on the dark teal surface',
+      'keeps neutral navigation and teal-gradient filters readable',
       () => {
         expect(
           contrast(
-            token('--teal-50'),
-            token('--teal-700'),
+            token('--teal-800'),
+            token('--color-white'),
           ),
         ).toBeGreaterThanOrEqual(4.5);
 
         expect(
           contrast(
-            token('--teal-50'),
+            token('--teal-700'),
+            token('--color-white'),
+          ),
+        ).toBeGreaterThanOrEqual(4.5);
+
+        expect(
+          contrast(
+            token('--color-white'),
             token('--teal-800'),
           ),
         ).toBeGreaterThanOrEqual(4.5);
@@ -188,13 +195,6 @@ describe(
           contrast(
             token('--color-white'),
             token('--teal-700'),
-          ),
-        ).toBeGreaterThanOrEqual(4.5);
-
-        expect(
-          contrast(
-            token('--color-white'),
-            token('--teal-800'),
           ),
         ).toBeGreaterThanOrEqual(4.5);
 
@@ -204,7 +204,7 @@ describe(
             '.bottom-nav-item',
           ),
         ).toMatch(
-          /color:\s*var\(--teal-50\)/,
+          /color:\s*var\(--teal-800\)/,
         );
 
         expect(
@@ -213,22 +213,31 @@ describe(
             '.bottom-nav-item.active',
           ),
         ).toMatch(
+          /color:\s*var\(--teal-800\)/,
+        );
+
+        expect(
+          declarationsFor(
+            screensCss,
+            '.chip.active',
+          ),
+        ).toMatch(
           /color:\s*var\(--color-white\)/,
         );
 
         expect(
           declarationsFor(
             screensCss,
-            '.bottom-nav-item.active .material-symbols-outlined',
+            '.chip.active',
           ),
         ).toMatch(
-          /background:\s*rgb\(255 255 255 \/ \.18\)/,
+          /background:\s*linear-gradient\([\s\S]*var\(--teal-800\)[\s\S]*var\(--teal-700\)/,
         );
       },
     );
 
     it(
-      'keeps dark teal glass navigation surfaces, themed focus, and responsive touch contracts',
+      'keeps neutral glass navigation, a single active pill, focus, safe-area, and touch contracts',
       () => {
         const headerDeclarations =
           declarationsFor(
@@ -245,25 +254,25 @@ describe(
         expect(
           headerDeclarations,
         ).toMatch(
-          /border-bottom:\s*1px solid var\(--teal-500\)/,
+          /border-bottom:\s*1px solid rgb\(15 118 110 \/ \.12\)/,
         );
 
         expect(
           headerDeclarations,
         ).toMatch(
-          /background:\s*linear-gradient\([\s\S]*var\(--teal-800\)[\s\S]*var\(--teal-700\)[\s\S]*\)/,
+          /background:\s*rgb\(255 255 255 \/ \.86\)/,
         );
 
         expect(
           bottomNavDeclarations,
         ).toMatch(
-          /border:\s*1px solid var\(--teal-500\)/,
+          /border:\s*1px solid rgb\(15 118 110 \/ \.12\)/,
         );
 
         expect(
           bottomNavDeclarations,
         ).toMatch(
-          /background:\s*linear-gradient\([\s\S]*var\(--teal-800\)[\s\S]*var\(--teal-700\)[\s\S]*\)/,
+          /background:\s*rgb\(255 255 255 \/ \.86\)/,
         );
 
         expect(
@@ -291,6 +300,24 @@ describe(
           ),
         ).toMatch(
           /min-height:\s*var\(--touch-target\)/,
+        );
+
+        expect(
+          declarationsFor(
+            screensCss,
+            '.bottom-nav-item.active .bottom-nav-item__inner',
+          ),
+        ).toMatch(
+          /background:\s*rgb\(15 118 110 \/ \.10\)/,
+        );
+
+        expect(
+          declarationsFor(
+            screensCss,
+            '.bottom-nav-item.active .material-symbols-outlined',
+          ),
+        ).toMatch(
+          /background:\s*none/,
         );
 
         expect(
@@ -336,7 +363,7 @@ describe(
         );
 
         expect(screensCss).toMatch(
-          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*linear-gradient\([^}]*rgb\(17 94 89 \/ \.92\)[^}]*rgb\(15 118 110 \/ \.84\)[^}]*\)[^}]*-webkit-backdrop-filter:\s*blur\(var\(--blur-navigation\)\)\s*saturate\(160%\)[^}]*backdrop-filter:\s*blur\(var\(--blur-navigation\)\)\s*saturate\(160%\)/s,
+          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*rgb\(255 255 255 \/ \.58\)[^}]*-webkit-backdrop-filter:\s*blur\(18px\)\s*saturate\(150%\)[^}]*backdrop-filter:\s*blur\(18px\)\s*saturate\(150%\)/s,
         );
 
         [430, 390, 360, 320].forEach(
