@@ -20,49 +20,53 @@ describe(
     );
 
     it(
-      'uses a frosted neutral gray surface for the sticky app header',
+      'uses a light translucent neutral glass surface for the sticky app header',
       () => {
         expect(screensCss).toMatch(
-          /\.app-header\s*\{[^}]*border-bottom:\s*1px solid rgb\(255 255 255 \/ \.16\)[^}]*background:\s*rgb\(53 58 64 \/ \.76\)/s,
+          /\.app-header\s*\{[^}]*border-bottom:\s*1px solid rgb\(95 107 105 \/ \.14\)[^}]*background:\s*rgb\(64 70 76 \/ \.32\)/s,
         );
 
         expect(screensCss).toMatch(
-          /\.app-header h1\s*\{[^}]*color:\s*var\(--color-white\)/s,
+          /\.app-header h1\s*\{[^}]*color:\s*var\(--ink-950\)/s,
         );
 
         expect(screensCss).toMatch(
-          /\.app-header p\s*\{[^}]*color:\s*var\(--gray-100\)/s,
+          /\.app-header p\s*\{[^}]*color:\s*var\(--teal-800\)/s,
         );
       },
     );
 
     it(
-      'uses a frosted neutral gray surface for the bottom navigation',
+      'uses a light translucent neutral glass surface for the bottom navigation',
       () => {
         expect(screensCss).toMatch(
-          /\.bottom-nav\s*\{[^}]*border:\s*1px solid rgb\(255 255 255 \/ \.14\)[^}]*background:\s*rgb\(53 58 64 \/ \.78\)/s,
+          /\.bottom-nav\s*\{[^}]*border:\s*1px solid rgb\(95 107 105 \/ \.14\)[^}]*background:\s*rgb\(64 70 76 \/ \.34\)/s,
         );
 
         expect(screensCss).toMatch(
-          /\.bottom-nav-item\s*\{[^}]*color:\s*var\(--gray-100\)/s,
+          /\.bottom-nav-item\s*\{[^}]*color:\s*var\(--ink-800\)/s,
         );
-      },
-    );
 
-    it(
-      'keeps the navigation surfaces translucent and blurred when supported',
-      () => {
         expect(screensCss).toMatch(
-          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*rgb\(53 58 64 \/ \.58\)[^}]*-webkit-backdrop-filter:\s*blur\(18px\)\s*saturate\(125%\)[^}]*backdrop-filter:\s*blur\(18px\)\s*saturate\(125%\)/s,
+          /\.bottom-nav-item\.active\s*\{[^}]*color:\s*var\(--teal-800\)/s,
         );
       },
     );
 
     it(
-      'uses one active glass pill around both the bottom-nav icon and label',
+      'increases transparency and blur on browsers with backdrop-filter support',
       () => {
         expect(screensCss).toMatch(
-          /\.bottom-nav-item\.active\s+\.bottom-nav-item__inner\s*\{[^}]*background:\s*rgb\(255 255 255 \/ \.14\)/s,
+          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*rgb\(64 70 76 \/ \.22\)[^}]*-webkit-backdrop-filter:\s*blur\(22px\)\s*saturate\(120%\)[^}]*backdrop-filter:\s*blur\(22px\)\s*saturate\(120%\)/s,
+        );
+      },
+    );
+
+    it(
+      'uses one subtle active glass pill around both the bottom-nav icon and label',
+      () => {
+        expect(screensCss).toMatch(
+          /\.bottom-nav-item\.active\s+\.bottom-nav-item__inner\s*\{[^}]*background:\s*rgb\(255 255 255 \/ \.36\)/s,
         );
 
         expect(screensCss).toMatch(

@@ -19,7 +19,7 @@
     calc(94px + env(safe-area-inset-bottom));
 }
 
-/* WhatsApp-inspired neutral frosted glass header */
+/* Light neutral frosted-glass header */
 
 .app-header {
   position: sticky;
@@ -45,21 +45,21 @@
       env(safe-area-inset-left)
     );
   border-bottom:
-    1px solid rgb(255 255 255 / .16);
+    1px solid rgb(95 107 105 / .14);
   background:
-    rgb(53 58 64 / .76);
+    rgb(64 70 76 / .32);
   box-shadow:
-    0 10px 30px rgb(15 23 42 / .12);
+    0 8px 24px rgb(15 23 42 / .08);
 }
 
 .app-header h1 {
-  color: var(--color-white);
+  color: var(--ink-950);
   font-size: 20px;
   line-height: 1.35;
 }
 
 .app-header p {
-  color: var(--gray-100);
+  color: var(--teal-800);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -313,7 +313,7 @@
   scrollbar-width: none;
 }
 
-/* Inactive filters are neutral light gray. */
+/* Inactive filters stay neutral light gray. */
 
 .chip {
   flex: none;
@@ -360,7 +360,7 @@
   );
 }
 
-/* Only the selected filter uses the CRM teal gradient. */
+/* Only selected filters use the CRM teal gradient. */
 
 .chip.active {
   color: var(--color-white);
@@ -734,7 +734,8 @@
 
 .welcome h1 {
   margin-top: 5px;
-  font-size: clamp(20px, 4.8vw, 29px);
+  font-size:
+    clamp(20px, 4.8vw, 29px);
   font-weight: 900;
 }
 
@@ -827,7 +828,8 @@
   gap: var(--space-2);
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom:
+    1px solid var(--gray-100);
 }
 
 .trash-row > * {
@@ -841,7 +843,7 @@
   overflow-wrap: anywhere;
 }
 
-/* WhatsApp-inspired frosted gray bottom navigation */
+/* Light translucent frosted-glass bottom navigation */
 
 .bottom-nav {
   position: absolute;
@@ -860,7 +862,7 @@
     )
     max(8px, env(safe-area-inset-left));
   border:
-    1px solid rgb(255 255 255 / .14);
+    1px solid rgb(95 107 105 / .14);
   border-bottom: 0;
   border-radius:
     var(--radius-lg)
@@ -868,9 +870,9 @@
     0
     0;
   background:
-    rgb(53 58 64 / .78);
+    rgb(64 70 76 / .34);
   box-shadow:
-    0 18px 42px rgb(15 23 42 / .18);
+    0 14px 34px rgb(15 23 42 / .10);
   transform: translateX(-50%);
 }
 
@@ -885,7 +887,7 @@
   gap: 3px;
   padding: 6px 2px;
   border-radius: var(--radius-md);
-  color: var(--gray-100);
+  color: var(--ink-800);
   background: transparent;
   font-size: 11px;
   font-weight: 800;
@@ -895,7 +897,7 @@
 }
 
 .bottom-nav-item:hover {
-  color: var(--color-white);
+  color: var(--ink-950);
   background: transparent;
 }
 
@@ -939,25 +941,26 @@
   line-height: 1.2;
 }
 
-.bottom-nav-item .material-symbols-outlined {
+.bottom-nav-item
+.material-symbols-outlined {
   font-size: 24px;
 }
 
 .bottom-nav-item.active {
-  color: var(--color-white);
+  color: var(--teal-800);
 }
 
-/* One pill wraps the active icon and label together. */
+/* A single subtle pill wraps the active icon and label. */
 
 .bottom-nav-item.active
 .bottom-nav-item__inner {
   border:
-    1px solid rgb(255 255 255 / .16);
+    1px solid rgb(255 255 255 / .34);
   background:
-    rgb(255 255 255 / .14);
+    rgb(255 255 255 / .36);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / .18),
-    0 6px 16px rgb(0 0 0 / .10);
+    inset 0 1px 0 rgb(255 255 255 / .46),
+    0 6px 16px rgb(15 23 42 / .07);
 }
 
 .bottom-nav-item.active
@@ -1026,7 +1029,8 @@
   justify-content: center;
   gap: 9px;
   padding: 11px 14px;
-  border: 1px solid var(--teal-100);
+  border:
+    1px solid var(--teal-100);
   border-radius: var(--radius-md);
   color: var(--teal-700);
   background: var(--teal-50);
@@ -1088,7 +1092,8 @@
   text-decoration: none;
 }
 
-.location-actions .material-symbols-outlined {
+.location-actions
+.material-symbols-outlined {
   flex: none;
   font-size: 21px;
 }
@@ -1109,7 +1114,8 @@
 
 .location-message.error {
   color: var(--orange-700);
-  border: 1px solid var(--orange-100);
+  border:
+    1px solid var(--orange-100);
   background: var(--orange-50);
 }
 
@@ -1122,7 +1128,7 @@
   text-decoration: none;
 }
 
-/* iOS / modern browser frosted glass enhancement */
+/* Stronger iOS-style frost with more transparency. */
 
 @supports (
   (-webkit-backdrop-filter: blur(1px))
@@ -1132,15 +1138,15 @@
   .app-header,
   .bottom-nav {
     background:
-      rgb(53 58 64 / .58);
+      rgb(64 70 76 / .22);
 
     -webkit-backdrop-filter:
-      blur(18px)
-      saturate(125%);
+      blur(22px)
+      saturate(120%);
 
     backdrop-filter:
-      blur(18px)
-      saturate(125%);
+      blur(22px)
+      saturate(120%);
   }
 }
 
@@ -1157,7 +1163,7 @@
   .bottom-nav {
     bottom: 14px;
     border-bottom:
-      1px solid rgb(255 255 255 / .14);
+      1px solid rgb(95 107 105 / .14);
     border-radius: var(--radius-lg);
   }
 
@@ -1248,11 +1254,13 @@
   .form-grid,
   .admin-row,
   .calendar-day {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, 1fr);
   }
 
   .filter-panel .form-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, 1fr);
   }
 
   .trash-row {
@@ -1462,7 +1470,8 @@
 
 .linked-customer-card {
   padding: var(--space-4);
-  border: 1px solid var(--gray-200);
+  border:
+    1px solid var(--gray-200);
   border-radius: var(--radius-md);
   background: var(--surface-muted);
 }

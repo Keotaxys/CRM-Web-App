@@ -129,6 +129,7 @@ function declarationsFor(
     )
     .join('\n');
 }
+
 describe(
   'keyboard focus and navigation contrast contracts',
   () => {
@@ -212,12 +213,15 @@ describe(
     );
 
     it(
-      'keeps the white and light-gray navigation content readable on the dark neutral glass',
+      'keeps dark navigation content readable on the lighter frosted glass',
       () => {
+        const lightGlassReference =
+          '#d5d6d8';
+
         expect(
           contrast(
-            token('--gray-100'),
-            token('--nav-glass-strong'),
+            token('--ink-800'),
+            lightGlassReference,
           ),
         ).toBeGreaterThanOrEqual(
           4.5,
@@ -225,8 +229,17 @@ describe(
 
         expect(
           contrast(
-            token('--color-white'),
-            token('--nav-glass-strong'),
+            token('--teal-800'),
+            lightGlassReference,
+          ),
+        ).toBeGreaterThanOrEqual(
+          4.5,
+        );
+
+        expect(
+          contrast(
+            token('--ink-950'),
+            lightGlassReference,
           ),
         ).toBeGreaterThanOrEqual(
           4.5,
@@ -238,7 +251,7 @@ describe(
             '.bottom-nav-item',
           ),
         ).toMatch(
-          /color:\s*var\(--gray-100\)/,
+          /color:\s*var\(--ink-800\)/,
         );
 
         expect(
@@ -247,7 +260,25 @@ describe(
             '.bottom-nav-item.active',
           ),
         ).toMatch(
-          /color:\s*var\(--color-white\)/,
+          /color:\s*var\(--teal-800\)/,
+        );
+
+        expect(
+          declarationsFor(
+            screensCss,
+            '.app-header h1',
+          ),
+        ).toMatch(
+          /color:\s*var\(--ink-950\)/,
+        );
+
+        expect(
+          declarationsFor(
+            screensCss,
+            '.app-header p',
+          ),
+        ).toMatch(
+          /color:\s*var\(--teal-800\)/,
         );
 
         expect(
@@ -271,7 +302,7 @@ describe(
     );
 
     it(
-      'keeps frosted navigation, single active pill, focus, safe-area, and touch contracts',
+      'keeps lighter frosted navigation, single active pill, focus, safe-area, and touch contracts',
       () => {
         const headerDeclarations =
           declarationsFor(
@@ -288,13 +319,13 @@ describe(
         expect(
           headerDeclarations,
         ).toMatch(
-          /background:\s*rgb\(53 58 64 \/ \.76\)/,
+          /background:\s*rgb\(64 70 76 \/ \.32\)/,
         );
 
         expect(
           bottomNavDeclarations,
         ).toMatch(
-          /background:\s*rgb\(53 58 64 \/ \.78\)/,
+          /background:\s*rgb\(64 70 76 \/ \.34\)/,
         );
 
         expect(
@@ -330,7 +361,7 @@ describe(
             '.bottom-nav-item.active .bottom-nav-item__inner',
           ),
         ).toMatch(
-          /background:\s*rgb\(255 255 255 \/ \.14\)/,
+          /background:\s*rgb\(255 255 255 \/ \.36\)/,
         );
 
         expect(
@@ -388,7 +419,7 @@ describe(
         expect(
           screensCss,
         ).toMatch(
-          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*rgb\(53 58 64 \/ \.58\)[^}]*-webkit-backdrop-filter:\s*blur\(18px\)\s*saturate\(125%\)[^}]*backdrop-filter:\s*blur\(18px\)\s*saturate\(125%\)/s,
+          /@supports[\s\S]*\.app-header,\s*\.bottom-nav\s*\{[^}]*background:\s*rgb\(64 70 76 \/ \.22\)[^}]*-webkit-backdrop-filter:\s*blur\(22px\)\s*saturate\(120%\)[^}]*backdrop-filter:\s*blur\(22px\)\s*saturate\(120%\)/s,
         );
 
         [
