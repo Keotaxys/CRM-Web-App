@@ -33,10 +33,14 @@ export async function getCustomer(id) {
   return snapshot.exists() ? normalizeCustomer({ id: snapshot.id, ...snapshot.data() }) : null;
 }
 
-export async function createCustomer(values, identity) {
+export function reserveCustomerId() {
+  return doc(collection(db, 'customers')).id;
+}
+
+export async function createCustomer(values, identity, id = reserveCustomerId()) {
   const actor = actorFromIdentity(identity);
   if (actor.role === 'admin') actor.branchId = values.branchId;
-  const customerRef = doc(collection(db, 'customers'));
+  const customerRef = doc(db, 'customers', id);
   await setDoc(customerRef, customerCreatePayload(values, actor, serverTimestamp()));
   return customerRef.id;
 }
@@ -51,6 +55,11 @@ export function archiveCustomer(id) {
 
 export function abortCustomerUploads(id) {
   return httpsCallable(functions, 'abortCustomerUploads')({ id });
+}
+
+export async function rollbackCustomerCreate(id) {
+  const result = await httpsCallable(functions, 'rollbackCustomerCreate')({ id });
+  return result.data;
 }
 
 export async function changeCustomerStatus(id, status) {

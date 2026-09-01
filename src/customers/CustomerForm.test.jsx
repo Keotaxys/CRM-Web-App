@@ -7,6 +7,13 @@ import CustomerForm from './CustomerForm';
 const screensCss = readFileSync('src/styles/screens.css', 'utf8');
 
 describe('CustomerForm image and branch policy', () => {
+  it('disables the submit action while a save is in progress', () => {
+    render(<CustomerForm onSubmit={vi.fn()} busy />);
+
+    expect(screen.getByRole('button', { name: 'ກຳລັງບັນທຶກ...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'ກຳລັງບັນທຶກ...' })).toHaveAttribute('aria-busy', 'true');
+  });
+
   it('uses two accessible camera controls while preserving the two CRM file slots', async () => {
     const user = userEvent.setup();
     const { container } = render(<CustomerForm onSubmit={vi.fn()} />);

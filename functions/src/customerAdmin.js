@@ -195,6 +195,8 @@ async function deleteManagedImages(
         ignoreNotFound: true,
       })),
   );
+
+  return paths.size;
 }
 
 export async function permanentlyDeleteCustomerOperation(
@@ -311,6 +313,106 @@ export async function abortCustomerUploadsOperation(
         ref.id,
         snapshot.data(),
       ),
+  };
+}
+
+const CUSTOMER_CREATE_ROLLBACK_WINDOW_MS =
+  15 * 60 * 1000;
+
+function timestampMillis(value) {
+  if (typeof value?.toMillis === 'function') {
+    return value.toMillis();
+  }
+
+  if (typeof value?.toDate === 'function') {
+    return value.toDate().getTime();
+  }
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  return Number.NaN;
+}
+
+export async function rollbackCustomerCreateOperation(
+  { db, bucket, now: nowProvider },
+  actor,
+  data,
+) {
+  if (!data?.id) {
+    throw new Error('Customer id required');
+  }
+
+  const ref = db.doc(`customers/${data.id}`);
+  const snapshot = await ref.get();
+
+  if (!snapshot.exists) {
+    return {
+      id: data.id,
+      deletedObjects: 0,
+      rolledBack: false,
+    };
+  }
+
+  const customer = snapshot.data();
+
+  assertBranchAccess(actor, customer.branchId);
+
+  if (customer.createdBy !== actor.uid) {
+    throw new Error('Only the customer creator can roll back creation');
+  }
+
+  if (
+    customer.imageStoragePath
+    || customer.placeImageStoragePath
+  ) {
+    throw new Error('Finalized customer creation cannot be rolled back');
+  }
+
+  if (customer.recordState !== 'active') {
+    throw new Error('Only an active customer creation can be rolled back');
+  }
+
+  const createdAt = timestampMillis(customer.createdAt);
+  const now = typeof nowProvider === 'function'
+    ? nowProvider().getTime()
+    : Date.now();
+  const age = now - createdAt;
+
+  if (
+    !Number.isFinite(age)
+    || age < 0
+    || age > CUSTOMER_CREATE_ROLLBACK_WINDOW_MS
+  ) {
+    throw new Error('Customer creation rollback window expired');
+  }
+
+  const updatedAt = timestampMillis(customer.updatedAt);
+
+  if (
+    updatedAt !== createdAt
+    || customer.updatedBy !== customer.createdBy
+  ) {
+    throw new Error('Edited customer creation cannot be rolled back');
+  }
+
+  if (await hasRelatedActivities(db, ref.id)) {
+    throw new Error('Customer with related activities cannot be rolled back');
+  }
+
+  const deletedObjects = await deleteManagedImages(
+    bucket,
+    ref.id,
+    customer,
+  );
+
+  await ref.delete();
+
+  return {
+    id: ref.id,
+    deletedObjects,
+    rolledBack: true,
   };
 }
 

@@ -1,6 +1,6 @@
 import { useId, useRef } from 'react';
 
-const ACCEPTED_IMAGES = 'image/jpeg,image/png,image/webp';
+const ACCEPTED_IMAGES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif';
 
 export default function CameraUpload({ label, actionLabel, changeActionLabel = actionLabel, file, onChange }) {
   const inputRef = useRef(null);

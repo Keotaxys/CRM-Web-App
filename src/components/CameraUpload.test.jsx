@@ -18,7 +18,7 @@ describe('CameraUpload', () => {
     const input = container.querySelector('input[type="file"]');
     const clickSpy = vi.spyOn(input, 'click');
 
-    expect(input).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp');
+    expect(input).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif');
     await user.click(screen.getByRole('button', { name: 'ເລືອກຮູບລູກຄ້າ' }));
     expect(clickSpy).toHaveBeenCalledOnce();
   });
