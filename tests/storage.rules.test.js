@@ -9,9 +9,9 @@ const rules = readFileSync(
 );
 
 describe('Storage image contract', () => {
-  it('allows managed images up to the same 2.5 MB limit as the client', () => {
+  it('allows managed images up to the same 5 MB limit as the client', () => {
     expect(rules).toMatch(
-      /request\.resource\.size\s*<=\s*2500000/,
+      /request\.resource\.size\s*<=\s*5000000/,
     );
   });
 

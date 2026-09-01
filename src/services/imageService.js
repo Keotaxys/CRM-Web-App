@@ -8,7 +8,7 @@ import {
 
 import { storage } from '../firebase/config';
 
-export const IMAGE_MAX_BYTES = 2_500_000;
+export const IMAGE_MAX_BYTES = 5_000_000;
 
 export const SUPPORTED_IMAGE_TYPES = Object.freeze([
   'image/jpeg',
@@ -23,7 +23,7 @@ export const SUPPORTED_SOURCE_IMAGE_TYPES = Object.freeze([
 ]);
 
 const COMPRESSION_OPTIONS = Object.freeze({
-  maxSizeMB: 2.2,
+  maxSizeMB: 4.5,
   maxWidthOrHeight: 1800,
   initialQuality: 0.82,
   useWebWorker: true,
@@ -106,7 +106,7 @@ export function validateImageFile(file) {
     return {
       valid: false,
       error:
-        'Image must be 2.5 MB or smaller after compression.',
+        'Image must be 5 MB or smaller after compression.',
     };
   }
 

@@ -21,8 +21,8 @@ describe('image preprocessing', () => {
     vi.clearAllMocks();
   });
 
-  it('skips compression for an already-supported image within 2.5 MB', async () => {
-    const source = file(2_000_000, 'image/jpeg', 'photo.jpg');
+  it('skips compression for an already-supported image within 5 MB', async () => {
+    const source = file(4_000_000, 'image/jpeg', 'photo.jpg');
     const compressor = vi.fn();
 
     const result = await imageService.prepareImage(source, { compressor });
@@ -33,20 +33,23 @@ describe('image preprocessing', () => {
 
   it('compresses an oversized image once using the larger mobile-friendly budget', async () => {
     const source = file(8_000_000);
-    const prepared = file(2_200_000);
+    const prepared = file(4_500_000);
     const compressor = vi.fn().mockResolvedValue(prepared);
 
     const result = await imageService.prepareImage(source, { compressor });
 
     expect(result).toBe(prepared);
     expect(compressor).toHaveBeenCalledTimes(1);
-    expect(compressor).toHaveBeenCalledWith(source, expect.objectContaining({
-      maxSizeMB: 2.2,
-      maxWidthOrHeight: 1800,
-      initialQuality: 0.82,
-      useWebWorker: true,
-      fileType: 'image/jpeg',
-    }));
+    expect(compressor).toHaveBeenCalledWith(
+      source,
+      expect.objectContaining({
+        maxSizeMB: 4.5,
+        maxWidthOrHeight: 1800,
+        initialQuality: 0.82,
+        useWebWorker: true,
+        fileType: 'image/jpeg',
+      }),
+    );
   });
 
   it.each([
@@ -54,10 +57,12 @@ describe('image preprocessing', () => {
     ['HEIF', 'image/heif', 'iphone.heif'],
   ])('converts %s input to JPEG', async (_, type, name) => {
     const heic = file(6_000_000, type, name);
+
     const converted = new Blob(
-      [new Uint8Array(2_000_000)],
+      [new Uint8Array(4_000_000)],
       { type: 'image/jpeg' },
     );
+
     const heicConverter = vi.fn().mockResolvedValue(converted);
     const compressor = vi.fn();
 
@@ -66,27 +71,37 @@ describe('image preprocessing', () => {
       heicConverter,
     });
 
-    expect(heicConverter).toHaveBeenCalledWith(expect.objectContaining({
-      blob: heic,
-      toType: 'image/jpeg',
-    }));
+    expect(heicConverter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blob: heic,
+        toType: 'image/jpeg',
+      }),
+    );
 
-    expect(result).toEqual(expect.objectContaining({
-      name: 'iphone.jpg',
-      type: 'image/jpeg',
-    }));
+    expect(result).toEqual(
+      expect.objectContaining({
+        name: 'iphone.jpg',
+        type: 'image/jpeg',
+      }),
+    );
 
-    expect(result.size).toBe(2_000_000);
+    expect(result.size).toBe(4_000_000);
     expect(compressor).not.toHaveBeenCalled();
   });
 
-  it('compresses a converted HEIC only once when conversion output exceeds 2.5 MB', async () => {
+  it('compresses a converted HEIC only once when conversion output exceeds 5 MB', async () => {
     const heic = file(7_000_000, 'image/heic', 'iphone.heic');
+
     const converted = new Blob(
-      [new Uint8Array(4_000_000)],
+      [new Uint8Array(6_000_000)],
       { type: 'image/jpeg' },
     );
-    const prepared = file(2_200_000, 'image/jpeg', 'iphone.jpg');
+
+    const prepared = file(
+      4_500_000,
+      'image/jpeg',
+      'iphone.jpg',
+    );
 
     const heicConverter = vi.fn().mockResolvedValue(converted);
     const compressor = vi.fn().mockResolvedValue(prepared);
@@ -97,23 +112,31 @@ describe('image preprocessing', () => {
     });
 
     expect(result).toBe(prepared);
+
     expect(compressor).toHaveBeenCalledTimes(1);
 
-    expect(compressor.mock.calls[0][0]).toEqual(expect.objectContaining({
-      name: 'iphone.jpg',
-      type: 'image/jpeg',
-    }));
+    expect(compressor.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        name: 'iphone.jpg',
+        type: 'image/jpeg',
+      }),
+    );
   });
 
-  it('rejects an image when the single compression pass still exceeds 2.5 MB', async () => {
+  it('rejects an image when the single compression pass still exceeds 5 MB', async () => {
     const source = file(8_000_000);
-    const stillTooLarge = file(2_500_001);
+
+    const stillTooLarge = file(
+      5_000_001,
+      'image/jpeg',
+      'photo.jpg',
+    );
 
     const compressor = vi.fn().mockResolvedValue(stillTooLarge);
 
     await expect(
       imageService.prepareImage(source, { compressor }),
-    ).rejects.toThrow(/2\.5 MB/i);
+    ).rejects.toThrow(/5 MB/i);
 
     expect(compressor).toHaveBeenCalledTimes(1);
   });
@@ -137,9 +160,11 @@ describe('managed image upload', () => {
     vi.clearAllMocks();
   });
 
-  it('accepts supported processed image MIME types within 2.5 MB', () => {
+  it('accepts supported processed image MIME types within 5 MB', () => {
     expect(
-      imageService.validateImageFile(file(2_500_000)),
+      imageService.validateImageFile(
+        file(5_000_000),
+      ),
     ).toEqual({
       valid: true,
       error: null,
@@ -152,7 +177,7 @@ describe('managed image upload', () => {
     ).toBe(true);
   });
 
-  it('rejects non-images and processed files over 2.5 MB', () => {
+  it('rejects non-images and processed files over 5 MB', () => {
     expect(
       imageService.validateImageFile(
         file(10, 'text/plain'),
@@ -161,14 +186,14 @@ describe('managed image upload', () => {
 
     expect(
       imageService.validateImageFile(
-        file(2_500_001),
+        file(5_000_001),
       ).error,
-    ).toMatch(/2\.5 MB/i);
+    ).toMatch(/5 MB/i);
   });
 
   it('uses a resumable upload for an already-prepared mobile image and returns only its managed path', async () => {
     const prepared = file(
-      2_000_000,
+      4_000_000,
       'image/jpeg',
       'prepared.jpg',
     );
