@@ -27,4 +27,24 @@ describe('ManagedImage', () => {
     expect(storageMocks.ref).toHaveBeenCalledWith({}, 'customers/c1/customer-photo');
     expect(storageMocks.getBlob).toHaveBeenCalledTimes(1);
   });
+
+  it('reports a redacted managed-read failure before using the legacy fallback', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    storageMocks.getBlob.mockRejectedValue(Object.assign(
+      new Error('request customers/c1/customer-photo?token=secret failed'),
+      { code: 'storage/unauthorized' },
+    ));
+
+    render(<ManagedImage storagePath="customers/c1/customer-photo" legacyUrl="https://legacy.example/photo.jpg" alt="Fallback"/>);
+
+    await waitFor(() => expect(screen.getByAltText('Fallback')).toHaveAttribute('src', 'https://legacy.example/photo.jpg'));
+    expect(consoleError).toHaveBeenCalledWith('Managed image read failed', {
+      errorCode: 'storage/unauthorized',
+      errorMessage: 'request customers/[redacted-customer]/customer-photo?token=[redacted] failed',
+      hasLegacyFallback: true,
+      slot: 'customer-photo',
+    });
+    expect(JSON.stringify(consoleError.mock.calls)).not.toMatch(/c1|secret/);
+    consoleError.mockRestore();
+  });
 });

@@ -2,6 +2,22 @@ import { useEffect, useState } from 'react';
 import { getBlob, ref } from 'firebase/storage';
 import { storage } from '../firebase/config';
 
+function safeDiagnosticText(value, fallback) {
+  const text = typeof value === 'string' && value ? value : fallback;
+  return text
+    .replace(/customers\/[^/'"\s]+/gi, 'customers/[redacted-customer]')
+    .replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]')
+    .replace(/https?:\/\/\S+/gi, '[redacted-url]')
+    .slice(0, 300);
+}
+
+function managedSlot(storagePath) {
+  if (storagePath?.endsWith('/customer-photo')) return 'customer-photo';
+  if (storagePath?.endsWith('/place-photo')) return 'place-photo';
+  if (storagePath?.endsWith('/avatar')) return 'avatar';
+  return 'unknown';
+}
+
 function AuthenticatedStorageImage({ storagePath, legacyUrl, alt, className, fallback }) {
   const [source, setSource] = useState('');
   useEffect(() => {
@@ -11,7 +27,13 @@ function AuthenticatedStorageImage({ storagePath, legacyUrl, alt, className, fal
       if (!active) return;
       objectUrl = URL.createObjectURL(blob);
       setSource(objectUrl);
-    }).catch(() => {
+    }).catch((reason) => {
+      console.error('Managed image read failed', {
+        errorCode: safeDiagnosticText(reason?.code, 'unknown'),
+        errorMessage: safeDiagnosticText(reason?.message, 'unknown error'),
+        hasLegacyFallback: Boolean(legacyUrl),
+        slot: managedSlot(storagePath),
+      });
       if (active) setSource(legacyUrl || '');
     });
     return () => {
