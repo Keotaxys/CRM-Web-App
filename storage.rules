@@ -9,7 +9,7 @@ service firebase.storage {
       && profile().role == request.auth.token.role
       && profile().branchId == request.auth.token.branchId; }
     function admin() { return approved() && request.auth.token.role == 'admin'; }
-    function validImage() { return request.resource != null && request.resource.size <= 1000000 && request.resource.contentType.matches('image/(jpeg|png|webp)'); }
+    function validImage() { return request.resource != null && request.resource.size <= 2500000 && request.resource.contentType.matches('image/(jpeg|png|webp)'); }
     function customer(customerId) { return firestore.get(/databases/(default)/documents/customers/$(customerId)).data; }
     function customerAccess(customerId) { return admin() || (approved() && customer(customerId).branchId == request.auth.token.branchId); }
 
