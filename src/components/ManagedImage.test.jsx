@@ -38,12 +38,12 @@ describe('ManagedImage', () => {
     render(<ManagedImage storagePath="customers/c1/customer-photo" legacyUrl="https://legacy.example/photo.jpg" alt="Fallback"/>);
 
     await waitFor(() => expect(screen.getByAltText('Fallback')).toHaveAttribute('src', 'https://legacy.example/photo.jpg'));
-    expect(consoleError).toHaveBeenCalledWith('Managed image read failed', {
+    expect(consoleError).toHaveBeenCalledWith('Managed image read failed', JSON.stringify({
       errorCode: 'storage/unauthorized',
       errorMessage: 'request customers/[redacted-customer]/customer-photo?token=[redacted] failed',
       hasLegacyFallback: true,
       slot: 'customer-photo',
-    });
+    }));
     expect(JSON.stringify(consoleError.mock.calls)).not.toMatch(/c1|secret/);
     consoleError.mockRestore();
   });

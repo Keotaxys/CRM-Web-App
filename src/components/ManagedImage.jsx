@@ -28,12 +28,12 @@ function AuthenticatedStorageImage({ storagePath, legacyUrl, alt, className, fal
       objectUrl = URL.createObjectURL(blob);
       setSource(objectUrl);
     }).catch((reason) => {
-      console.error('Managed image read failed', {
+      console.error('Managed image read failed', JSON.stringify({
         errorCode: safeDiagnosticText(reason?.code, 'unknown'),
         errorMessage: safeDiagnosticText(reason?.message, 'unknown error'),
         hasLegacyFallback: Boolean(legacyUrl),
         slot: managedSlot(storagePath),
-      });
+      }));
       if (active) setSource(legacyUrl || '');
     });
     return () => {
