@@ -24,6 +24,42 @@ const ERROR_MESSAGES = Object.freeze({
 
 const CLEANUP_WARNING = ' ການລ້າງຂໍ້ມູນຄ້າງບໍ່ສຳເລັດ; ກະລຸນາແຈ້ງຜູ້ດູແລລະບົບ.';
 
+const IMAGE_SLOTS = Object.freeze([
+  ['customerPhoto', 'customer-photo'],
+  ['placePhoto', 'place-photo'],
+]);
+
+function safeDiagnosticText(value, fallback) {
+  const text = typeof value === 'string' && value ? value : fallback;
+  return text
+    .replace(/https?:\/\/\S+/gi, '[redacted-url]')
+    .replace(/customers\/[^/'"\s]+/gi, 'customers/[redacted-customer]')
+    .replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]')
+    .slice(0, 300);
+}
+
+function imageDiagnostics(files = {}, preparedFiles = {}) {
+  return IMAGE_SLOTS.flatMap(([key, slot]) => {
+    const original = files[key];
+    if (!original) return [];
+    const processed = preparedFiles[key];
+    return [{
+      originalSize: Number.isFinite(original.size) ? original.size : null,
+      originalType: original.type || '(blank)',
+      processedSize: Number.isFinite(processed?.size) ? processed.size : null,
+      processedType: processed?.type || null,
+      slot,
+    }];
+  });
+}
+
+function errorDiagnostics(reason) {
+  return {
+    errorCode: safeDiagnosticText(reason?.code, 'unknown'),
+    errorMessage: safeDiagnosticText(reason?.message, 'unknown error'),
+  };
+}
+
 async function prepareSelectedImages(files = {}) {
   const prepared = {};
 
@@ -98,9 +134,10 @@ export default function CustomerFormPage() {
     let customerId = edit ? id : null;
     let createdCustomer = false;
     let uploadedEditImage = false;
+    let preparedFiles = {};
 
     try {
-      const preparedFiles = await prepareSelectedImages(files);
+      preparedFiles = await prepareSelectedImages(files);
 
       if (!edit) {
         customerId = reservedCustomerId.current || reserveCustomerId();
@@ -143,7 +180,12 @@ export default function CustomerFormPage() {
         .catch((reason) => console.error('Legacy sync failed', reason));
       navigate(`/customers/${customerId}`);
     } catch (reason) {
-      console.error('Customer save flow failed', { stage, reason });
+      console.error('Customer save flow failed', {
+        ...errorDiagnostics(reason),
+        flow: edit ? 'edit' : 'create',
+        images: imageDiagnostics(files, preparedFiles),
+        stage,
+      });
       let cleanupFailed = false;
 
       try {
@@ -154,7 +196,7 @@ export default function CustomerFormPage() {
         }
       } catch (cleanupError) {
         cleanupFailed = true;
-        console.error('Customer save cleanup failed', cleanupError);
+        console.error('Customer save cleanup failed', errorDiagnostics(cleanupError));
       }
 
       setError(`${ERROR_MESSAGES[stage] ?? ERROR_MESSAGES['customer-save']}${cleanupFailed ? CLEANUP_WARNING : ''}`);

@@ -131,8 +131,11 @@ describe('CustomerFormPage create flow', () => {
     const prepared = new File(['prepared'], 'customer.jpg', { type: 'image/jpeg' });
     serviceMocks.files = { customerPhoto: selected };
     serviceMocks.prepareImage.mockResolvedValueOnce(prepared);
-    serviceMocks.uploadManagedImage.mockRejectedValueOnce(new Error('upload failed'));
-    serviceMocks.uploadPreparedImage.mockRejectedValueOnce(new Error('upload failed'));
+    const uploadError = Object.assign(new Error('upload failed'), {
+      code: 'storage/retry-limit-exceeded',
+    });
+    serviceMocks.uploadManagedImage.mockRejectedValueOnce(uploadError);
+    serviceMocks.uploadPreparedImage.mockRejectedValueOnce(uploadError);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     renderPage();
 
@@ -145,6 +148,19 @@ describe('CustomerFormPage create flow', () => {
       .toBeLessThan(serviceMocks.uploadPreparedImage.mock.invocationCallOrder[0]);
     expect(serviceMocks.rollbackCustomerCreate).toHaveBeenCalledWith('c1');
     expect(serviceMocks.updateCustomer).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith('Customer save flow failed', {
+      errorCode: 'storage/retry-limit-exceeded',
+      errorMessage: 'upload failed',
+      flow: 'create',
+      images: [{
+        originalSize: selected.size,
+        originalType: 'image/jpeg',
+        processedSize: prepared.size,
+        processedType: 'image/jpeg',
+        slot: 'customer-photo',
+      }],
+      stage: 'image-upload',
+    });
     consoleError.mockRestore();
   });
 

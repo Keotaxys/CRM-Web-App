@@ -1,5 +1,5 @@
 import imageCompression from 'browser-image-compression';
-import { deleteObject, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, ref, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '../firebase/config';
 
 export const IMAGE_MAX_BYTES = 1_000_000;
@@ -121,7 +121,11 @@ export async function uploadPreparedImage(path, preparedFile) {
   const validation = validateImageFile(preparedFile);
   if (!validation.valid) throw new Error(validation.error);
   const objectRef = ref(storage, path);
-  const snapshot = await uploadBytes(objectRef, preparedFile, { contentType: preparedFile.type });
+  const snapshot = await uploadBytesResumable(
+    objectRef,
+    preparedFile,
+    { contentType: preparedFile.type },
+  );
   return { path: snapshot.ref.fullPath };
 }
 

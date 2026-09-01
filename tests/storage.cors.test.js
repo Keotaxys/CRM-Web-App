@@ -7,6 +7,7 @@ describe('production Storage CORS contract', () => {
     const config = JSON.parse(await readFile('storage.cors.json', 'utf8'));
     expect(config).toHaveLength(1);
     expect(config[0].origin).toEqual([
+      'https://crm.keotasystem.com',
       'https://crm-web-app-97b91.web.app',
       'https://crm-web-app-97b91.firebaseapp.com',
       'http://localhost:5173',

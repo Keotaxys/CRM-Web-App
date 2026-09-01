@@ -4,6 +4,7 @@ const storageMocks = vi.hoisted(() => ({
   deleteObject: vi.fn(),
   ref: vi.fn((_, path) => ({ fullPath: path })),
   uploadBytes: vi.fn(),
+  uploadBytesResumable: vi.fn(),
 }));
 
 vi.mock('firebase/storage', () => storageMocks);
@@ -103,19 +104,23 @@ describe('managed image upload', () => {
     expect(imageService.validateImageFile(file(1_000_001)).error).toMatch(/1 MB/i);
   });
 
-  it('uploads an already-prepared file without recompressing and returns only its managed path', async () => {
+  it('uses a resumable upload for an already-prepared mobile image and returns only its managed path', async () => {
     const prepared = file(800_000, 'image/jpeg', 'prepared.jpg');
     storageMocks.uploadBytes.mockResolvedValue({
+      ref: { fullPath: 'customers/c1/customer-photo' },
+    });
+    storageMocks.uploadBytesResumable.mockResolvedValue({
       ref: { fullPath: 'customers/c1/customer-photo' },
     });
 
     const result = await imageService.uploadPreparedImage('customers/c1/customer-photo', prepared);
 
-    expect(storageMocks.uploadBytes).toHaveBeenCalledWith(
+    expect(storageMocks.uploadBytesResumable).toHaveBeenCalledWith(
       { fullPath: 'customers/c1/customer-photo' },
       prepared,
       { contentType: 'image/jpeg' },
     );
+    expect(storageMocks.uploadBytes).not.toHaveBeenCalled();
     expect(result).toEqual({ path: 'customers/c1/customer-photo' });
   });
 });
