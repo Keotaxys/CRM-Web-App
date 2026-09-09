@@ -8,7 +8,7 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { actorFromRequest, assertAdmin, profileMatchesActor } from './authz.js';
 import { approveUserOperation, disableUserOperation, reactivateUserOperation, updateUserAccessOperation } from './userAdmin.js';
 import { cleanupExpiredActivities, completeFollowUpOperation, permanentlyDeleteActivityOperation, restoreActivityOperation, trashActivityOperation, upsertActivityOperation } from './activityAdmin.js';
-import { abortCustomerUploadsOperation, archiveCustomerOperation, changeCustomerStatusOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, rollbackCustomerCreateOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
+import { abortCustomerUploadsOperation, acknowledgeBirthdayGreetingOperation, archiveCustomerOperation, changeCustomerStatusOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, rollbackCustomerCreateOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
 import { syncLegacyCustomerOperation } from './legacyWebhook.js';
 
 initializeApp();
@@ -45,6 +45,7 @@ export const permanentlyDeleteActivity = callable(permanentlyDeleteActivityOpera
 export const trashCustomer = callable(trashCustomerOperation);
 export const archiveCustomer = callable(archiveCustomerOperation);
 export const changeCustomerStatus = callable(changeCustomerStatusOperation);
+export const acknowledgeBirthdayGreeting = callable(acknowledgeBirthdayGreetingOperation);
 export const abortCustomerUploads = callable(abortCustomerUploadsOperation);
 export const rollbackCustomerCreate = callable(rollbackCustomerCreateOperation);
 export const transferCustomer = callable(transferCustomerOperation);

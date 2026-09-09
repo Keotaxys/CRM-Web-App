@@ -66,3 +66,12 @@ export async function changeCustomerStatus(id, status) {
   const result = await httpsCallable(functions, 'changeCustomerStatus')({ id, status });
   return result.data;
 }
+
+export async function acknowledgeBirthdayGreeting(id) {
+  const result = await httpsCallable(
+    functions,
+    'acknowledgeBirthdayGreeting',
+  )({ id });
+
+  return result.data;
+}

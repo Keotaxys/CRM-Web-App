@@ -9,6 +9,68 @@ import {
   isTrashExpired,
   trashExpiresAt,
 } from './validators.js';
+import { birthdayOccurrenceFor } from './birthday.js';
+
+export async function acknowledgeBirthdayGreetingOperation(
+  { db, now: nowProvider },
+  actor,
+  data,
+) {
+  if (!data?.id) {
+    throw new Error('Customer id required');
+  }
+
+  const ref = db.doc(`customers/${data.id}`);
+  const now = typeof nowProvider === 'function'
+    ? nowProvider()
+    : new Date();
+
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+
+    if (!snapshot.exists) {
+      throw new Error('Customer not found');
+    }
+
+    const customer = {
+      id: snapshot.id ?? data.id,
+      ...snapshot.data(),
+    };
+
+    assertBranchAccess(actor, customer.branchId);
+
+    const occurrence = birthdayOccurrenceFor(customer, now);
+
+    if (!occurrence) {
+      throw new Error('Customer has no eligible birthday reminder');
+    }
+
+    if (
+      customer.birthdayGreeting?.occurrenceYear
+      === occurrence.occurrenceYear
+    ) {
+      return {
+        id: data.id,
+        occurrenceYear: occurrence.occurrenceYear,
+        acknowledged: false,
+      };
+    }
+
+    transaction.update(ref, {
+      birthdayGreeting: {
+        occurrenceYear: occurrence.occurrenceYear,
+        acknowledgedBy: actor.uid,
+        acknowledgedAt: FieldValue.serverTimestamp(),
+      },
+    });
+
+    return {
+      id: data.id,
+      occurrenceYear: occurrence.occurrenceYear,
+      acknowledged: true,
+    };
+  });
+}
 
 async function hasRelatedActivities(db, customerId) {
   const snapshot = await db

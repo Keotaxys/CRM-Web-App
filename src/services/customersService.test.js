@@ -32,6 +32,7 @@ vi.mock('../firebase/config', () => ({
 }));
 
 import {
+  acknowledgeBirthdayGreeting,
   changeCustomerStatus,
   createCustomer,
   reserveCustomerId,
@@ -136,6 +137,32 @@ describe('customersService.changeCustomerStatus', () => {
       id: 'c1',
       status: 'ດຳເນີນການແລ້ວ',
       syncedActivityId: 'a1',
+    });
+  });
+});
+
+describe('customersService.acknowledgeBirthdayGreeting', () => {
+  it('uses the trusted callable and returns its result', async () => {
+    mocks.httpsCallable.mockReturnValue(mocks.callable);
+    mocks.callable.mockResolvedValue({
+      data: {
+        id: 'c1',
+        occurrenceYear: 2026,
+        acknowledged: true,
+      },
+    });
+
+    const result = await acknowledgeBirthdayGreeting('c1');
+
+    expect(mocks.httpsCallable).toHaveBeenCalledWith(
+      { region: 'asia-southeast1' },
+      'acknowledgeBirthdayGreeting',
+    );
+    expect(mocks.callable).toHaveBeenCalledWith({ id: 'c1' });
+    expect(result).toEqual({
+      id: 'c1',
+      occurrenceYear: 2026,
+      acknowledged: true,
     });
   });
 });
