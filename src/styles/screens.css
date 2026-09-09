@@ -292,6 +292,45 @@
     saturate(120%);
 }
 
+.app-header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.birthday-notification-link {
+  position: relative;
+  display: grid;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  flex: none;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / .46);
+  border-radius: var(--radius-md);
+  color: var(--ink-900);
+  background: rgb(255 255 255 / .78);
+  box-shadow: var(--shadow-sm);
+}
+
+.birthday-notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  min-width: 21px;
+  height: 21px;
+  padding-inline: 5px;
+  place-items: center;
+  border: 2px solid var(--color-white);
+  border-radius: var(--radius-pill);
+  color: var(--color-white);
+  background: var(--orange-600);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .activity-date-filter {
   display: flex;
   flex-direction: column;
@@ -585,6 +624,80 @@
   display: flex;
   flex-direction: column;
   gap: 11px;
+}
+
+.birthday-reminders-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.birthday-reminders-intro h2 {
+  margin-top: var(--space-1);
+  font-size: clamp(20px, 4vw, 26px);
+  font-weight: 900;
+}
+
+.birthday-reminders-intro p {
+  margin-top: var(--space-2);
+  color: var(--gray-600);
+}
+
+.birthday-reminder-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.birthday-reminder-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.birthday-reminder-card__body,
+.birthday-reminder-card__actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.birthday-reminder-card__icon {
+  display: grid;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: var(--orange-700);
+  background: var(--orange-50);
+}
+
+.birthday-reminder-card__details {
+  min-width: 0;
+}
+
+.birthday-reminder-card__details h3 {
+  overflow-wrap: anywhere;
+  font-weight: 900;
+}
+
+.birthday-reminder-card__details p {
+  margin-top: 3px;
+  color: var(--gray-600);
+  font-size: 13px;
+}
+
+.birthday-reminder-card__actions {
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.birthday-reminder-card__actions a {
+  text-decoration: none;
 }
 
 .activity-card,
@@ -1204,6 +1317,21 @@
 }
 
 @media (max-width: 700px) {
+  .birthday-reminder-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .birthday-reminder-card__actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .birthday-reminder-card__actions > * {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
   .form-grid,
   .summary-grid.three {
     grid-template-columns: 1fr;

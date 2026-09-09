@@ -91,5 +91,18 @@ describe(
         );
       },
     );
+
+    it(
+      'keeps birthday reminder actions inside the mobile card width',
+      () => {
+        expect(screensCss).toMatch(
+          /@media \(max-width: 700px\)[\s\S]*\.birthday-reminder-card\s*\{[^}]*align-items:\s*stretch[^}]*flex-direction:\s*column/s,
+        );
+
+        expect(screensCss).toMatch(
+          /\.birthday-reminder-card__actions\s*\{[^}]*flex-wrap:\s*wrap/s,
+        );
+      },
+    );
   },
 );
