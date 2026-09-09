@@ -17,6 +17,7 @@ const editableFields = new Set([
   'placeImageUrl',
   'imageStoragePath',
   'placeImageStoragePath',
+  'birthDate',
 ]);
 
 export function normalizeCustomer(customer) {
@@ -24,6 +25,7 @@ export function normalizeCustomer(customer) {
 
   return {
     ...customer,
+    birthDate: customer.birthDate ?? null,
     branchId: customer.branchId || branchIdFromLegacy(customer.branch),
     recordState: customer.recordState || RECORD_STATES.ACTIVE,
     location: customer.location ?? null,
@@ -52,6 +54,7 @@ export function customerCreatePayload(values, actor, timestamp) {
     note: values.note?.trim() ?? '',
     gps: values.gps?.trim() ?? '',
     location: values.location ?? null,
+    birthDate: values.birthDate ?? null,
     imageUrl: values.imageUrl ?? '',
     placeImageUrl: values.placeImageUrl ?? '',
     imageStoragePath: values.imageStoragePath ?? null,

@@ -27,6 +27,7 @@ describe('legacy customer compatibility', () => {
     expect(normalizeCustomer(legacy)).toEqual(
       expect.objectContaining({
         ...legacy,
+        birthDate: null,
         branchId: '010',
         recordState: 'active',
         location: null,
@@ -44,6 +45,7 @@ describe('legacy customer compatibility', () => {
         name: 'A',
         phone: '020',
         status: 'ໃໝ່',
+        birthDate: '15-09-1990',
       },
       {
         uid: 'u1',
@@ -61,7 +63,28 @@ describe('legacy customer compatibility', () => {
       createdAt: 'NOW',
       updatedBy: 'u1',
       updatedAt: 'NOW',
+      birthDate: '15-09-1990',
     });
+  });
+
+  it('stores a missing birth date as null and allows ordinary users to edit or clear it', () => {
+    expect(customerCreatePayload(
+      { name: 'A', phone: '020', status: 'ໃໝ່' },
+      { uid: 'u1', branchId: '010' },
+      'NOW',
+    ).birthDate).toBeNull();
+
+    expect(customerUpdatePayload(
+      { birthDate: '15-09-1990' },
+      { uid: 'u1' },
+      'NOW',
+    )).toMatchObject({ birthDate: '15-09-1990' });
+
+    expect(customerUpdatePayload(
+      { birthDate: null },
+      { uid: 'u1' },
+      'NOW',
+    )).toMatchObject({ birthDate: null });
   });
 
   it('drops privileged fields from ordinary customer updates', () => {

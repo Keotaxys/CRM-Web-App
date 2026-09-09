@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import CustomerForm from './CustomerForm';
 
+vi.mock('../shared/dateTime', async (importOriginal) => ({
+  ...(await importOriginal()),
+  laosTodayKey: () => '2026-09-09',
+}));
+
 const screensCss = readFileSync('src/styles/screens.css', 'utf8');
 
 describe('CustomerForm image and branch policy', () => {
@@ -52,6 +57,42 @@ describe('CustomerForm image and branch policy', () => {
     await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ branchId: '020', status: 'ຕິດຕາມຕໍ່', priority: 'VIP' }), expect.any(Object));
+  });
+
+  it('displays DD-MM-YYYY storage and submits a newly selected birth date', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CustomerForm initial={{ name: 'VIP Customer', phone: '020', birthDate: '15-09-1990' }} onSubmit={onSubmit} />);
+
+    const birthDate = screen.getByLabelText('ວັນເກີດ (ບໍ່ບັງຄັບ)');
+    expect(birthDate).toHaveValue('15/09/1990');
+
+    await user.click(screen.getByRole('button', { name: 'ເປີດປະຕິທິນ ວັນເກີດ (ບໍ່ບັງຄັບ)' }));
+    await user.click(screen.getByRole('button', { name: 'ເລືອກ 1990-09-16' }));
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນ' }));
+    await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ birthDate: '16-09-1990' }),
+      expect.any(Object),
+    );
+  });
+
+  it('can clear an existing birth date and blocks future selection', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CustomerForm initial={{ name: 'VIP Customer', phone: '020', birthDate: '09-09-2026' }} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole('button', { name: 'ເປີດປະຕິທິນ ວັນເກີດ (ບໍ່ບັງຄັບ)' }));
+    expect(screen.getByRole('button', { name: 'ເລືອກ 2026-09-10' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'ປິດ' }));
+    await user.click(screen.getByRole('button', { name: 'ລ້າງວັນເກີດ' }));
+    await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ birthDate: null }),
+      expect.any(Object),
+    );
   });
 });
 

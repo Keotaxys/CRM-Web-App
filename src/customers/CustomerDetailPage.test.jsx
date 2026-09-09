@@ -71,4 +71,28 @@ describe('CustomerDetailPage transfer', () => {
     expect(badge).toHaveAttribute('data-kind', 'activity');
     expect(badge).toHaveAttribute('data-status', 'in_progress');
   });
+
+  it('shows the optional customer birth date when present', async () => {
+    serviceMocks.getCustomer.mockResolvedValueOnce({
+      id: 'c1',
+      name: 'VIP Customer',
+      branchId: '010',
+      phone: '02055551234',
+      status: 'ໃໝ່',
+      priority: 'VIP',
+      birthDate: '15-09-1990',
+    });
+
+    render(<MemoryRouter initialEntries={['/customers/c1']}><Routes><Route path="/customers/:id" element={<CustomerDetailPage />} /></Routes></MemoryRouter>);
+
+    const label = await screen.findByText('ວັນເກີດ');
+    expect(label.parentElement).toHaveTextContent('15-09-1990');
+  });
+
+  it('shows an empty birth-date value for a legacy customer', async () => {
+    render(<MemoryRouter initialEntries={['/customers/c1']}><Routes><Route path="/customers/:id" element={<CustomerDetailPage />} /></Routes></MemoryRouter>);
+
+    const label = await screen.findByText('ວັນເກີດ');
+    expect(label.parentElement).toHaveTextContent('—');
+  });
 });
