@@ -29,6 +29,22 @@ export function laosDayKey(value) {
   return new Date(date.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+export function laosTodayKey(now = new Date()) {
+  return laosDayKey(now);
+}
+
+export function millisecondsUntilNextLaosDay(now = new Date()) {
+  const [year, month, day] = laosTodayKey(now).split('-').map(Number);
+  const nextMidnight = Date.UTC(year, month - 1, day + 1) - 7 * 60 * 60 * 1000;
+  return Math.max(0, nextMidnight - now.getTime());
+}
+
+export function isLaosDayWithinInclusiveRange(value, startKey, endKey) {
+  if (!startKey || !endKey || startKey > endKey) return false;
+  const key = laosDayKey(value);
+  return Boolean(key && key >= startKey && key <= endKey);
+}
+
 export function formatLaosTime(value) {
   const date = toDate(value);
   return date ? new Intl.DateTimeFormat('lo-LA', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Vientiane' }).format(date) : '—';
