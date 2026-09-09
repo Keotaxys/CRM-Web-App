@@ -14,6 +14,10 @@ service cloud.firestore {
     function sameBranch(data) { return approved() && data.branchId != null && data.branchId == request.auth.token.branchId; }
     function crmRead(data) { return admin() || sameBranch(data); }
     function knownBranch(branchId) { return branchId in ['010','019','020','030','040','050','060','070','080','090','110','120','130','140','150','160','170','180','190','200','210','220']; }
+    function validBirthDate(value) {
+      return value == null
+        || (value is string && value.matches('^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$'));
+    }
     function validCustomerImagePaths(customerId) {
       return (request.resource.data.get('imageStoragePath', null) == null || request.resource.data.imageStoragePath == 'customers/' + customerId + '/customer-photo')
         && (request.resource.data.get('placeImageStoragePath', null) == null || request.resource.data.placeImageStoragePath == 'customers/' + customerId + '/place-photo');
@@ -21,17 +25,18 @@ service cloud.firestore {
     function validCustomerCreate(customerId) {
       return request.resource.data.keys().hasAll([
           'name','phone','address','status','priority','branchId','branch','note','gps','location',
-          'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
+          'birthDate','imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
           'recordState','createdBy','createdAt','updatedBy','updatedAt','archivedBy','archivedAt','deletedBy','deletedAt'
         ])
         && request.resource.data.keys().hasOnly([
           'name','phone','address','status','priority','branchId','branch','note','gps','location',
-          'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
+          'birthDate','imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
           'recordState','createdBy','createdAt','updatedBy','updatedAt','archivedBy','archivedAt','deletedBy','deletedAt'
         ])
         && knownBranch(request.resource.data.branchId)
         && request.resource.data.status in ['ໃໝ່','ຕິດຕາມຕໍ່','ດຳເນີນການແລ້ວ','ຈັດສົ່ງແລ້ວ']
         && (!request.resource.data.keys().hasAll(['priority']) || request.resource.data.priority in ['ທົ່ວໄປ','ດ່ວນ','VIP'])
+        && validBirthDate(request.resource.data.birthDate)
         && validCustomerImagePaths(customerId)
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedBy == request.auth.uid
@@ -68,9 +73,11 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && request.resource.data.status in ['ໃໝ່','ຕິດຕາມຕໍ່','ດຳເນີນການແລ້ວ','ຈັດສົ່ງແລ້ວ']
         && (!request.resource.data.keys().hasAll(['priority']) || request.resource.data.priority in ['ທົ່ວໄປ','ດ່ວນ','VIP'])
+        && validBirthDate(request.resource.data.get('birthDate', null))
         && validCustomerImagePaths(customerId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'name','phone','address','status','priority','note','gps','location',
+          'birthDate',
           'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
           'updatedBy','updatedAt'
         ])

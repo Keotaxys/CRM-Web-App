@@ -25,6 +25,7 @@ describe('Firestore claim and branch matrix', () => {
   const customerCreate = (uid, branchId = '010') => ({
     name: 'New', phone: '020', address: '', status: 'ໃໝ່', priority: 'ທົ່ວໄປ', branchId,
     branch: branchId, note: '', gps: '', location: null, imageUrl: '', placeImageUrl: '',
+    birthDate: null,
     imageStoragePath: null, placeImageStoragePath: null, statusTimestamps: { 'ໃໝ່': serverTimestamp() },
     recordState: 'active', createdBy: uid, createdAt: serverTimestamp(), updatedBy: uid,
     updatedAt: serverTimestamp(), archivedBy: null, archivedAt: null, deletedBy: null, deletedAt: null,
@@ -60,10 +61,18 @@ describe('Firestore claim and branch matrix', () => {
   });
   it('requires canonical customer creation schema and server-owned audit fields', async () => {
     await assertSucceeds(setDoc(doc(actor('staff-a', 'staff', '010'), 'customers/new-a'), customerCreate('staff-a')));
+    await assertSucceeds(setDoc(doc(actor('staff-a', 'staff', '010'), 'customers/with-birth-date'), { ...customerCreate('staff-a'), birthDate: '15-09-1990' }));
     await assertFails(setDoc(doc(actor('staff-a', 'staff', '010'), 'customers/forged'), { ...customerCreate('staff-a'), createdBy: 'someone-else' }));
     await assertFails(setDoc(doc(actor('admin', 'admin', null), 'customers/unknown-branch'), customerCreate('admin', '999')));
     await assertFails(setDoc(doc(actor('admin', 'admin', null), 'customers/extra-field'), { ...customerCreate('admin'), isAdmin: true }));
     await assertFails(setDoc(doc(actor('staff-a', 'staff', '010'), 'customers/bad-image-path'), { ...customerCreate('staff-a'), imageStoragePath: 'customers/a/customer-photo' }));
+  });
+  it('allows own-branch birth-date edits while rejecting malformed, cross-branch, and greeting writes', async () => {
+    await assertSucceeds(updateDoc(doc(actor('staff-a', 'staff', '010'), 'customers/a'), { birthDate: '15-09-1990', updatedBy: 'staff-a', updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(actor('staff-a', 'staff', '010'), 'customers/a'), { birthDate: null, updatedBy: 'staff-a', updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(actor('staff-a', 'staff', '010'), 'customers/a'), { birthDate: '1990-09-15', updatedBy: 'staff-a', updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(actor('staff-b', 'staff', '019'), 'customers/a'), { birthDate: '15-09-1990', updatedBy: 'staff-b', updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(actor('staff-a', 'staff', '010'), 'customers/a'), { birthdayGreeting: { occurrenceYear: 2026, acknowledgedBy: 'staff-a' }, updatedBy: 'staff-a', updatedAt: serverTimestamp() }));
   });
   it('makes activities readable by branch and server-write-only', async () => {
     await assertSucceeds(getDoc(doc(actor('staff-a', 'staff', '010'), 'activities/a')));
