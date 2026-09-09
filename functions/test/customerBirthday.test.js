@@ -67,7 +67,12 @@ function makeServices(customerOverrides = {}) {
 test('acknowledges an eligible own-branch VIP occurrence with server audit fields', async () => {
   const { services, writes } = makeServices();
 
-  const result = await getOperation()(services, staff, { id: 'c1' });
+  const result = await getOperation()(services, staff, {
+    id: 'c1',
+    branchId: '019',
+    daysRemaining: 99,
+    occurrenceYear: 1900,
+  });
 
   assert.deepEqual(result, {
     id: 'c1',
@@ -97,12 +102,28 @@ test('allows Admin across branches but denies a cross-branch Staff actor', async
   assert.equal(allowed.writes[0].birthdayGreeting.acknowledgedBy, 'admin');
 });
 
+test('allows an own-branch Branch Manager', async () => {
+  const { services, writes } = makeServices();
+
+  await getOperation()(
+    services,
+    { ...staff, uid: 'manager-a', role: 'branch_manager' },
+    { id: 'c1' },
+  );
+
+  assert.equal(
+    writes[0].birthdayGreeting.acknowledgedBy,
+    'manager-a',
+  );
+});
+
 test('fails closed for ineligible or out-of-window customers', async () => {
   for (const overrides of [
     { priority: 'ທົ່ວໄປ' },
     { recordState: 'archived' },
     { birthDate: null },
     { birthDate: '31-02-1990' },
+    { birthDate: '15-09-2030' },
     { birthDate: '01-01-1990' },
   ]) {
     const { services, writes } = makeServices(overrides);

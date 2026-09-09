@@ -45,6 +45,33 @@ test('server reminder calculation uses Laos calendar dates and a 14-day window',
     birthdayReminderFor(customer, new Date('2034-12-17T12:00:00+07:00')),
     null,
   );
+
+  for (const [date, daysRemaining] of [
+    ['2034-12-25T12:00:00+07:00', 7],
+    ['2034-12-31T12:00:00+07:00', 1],
+    ['2035-01-01T12:00:00+07:00', 0],
+  ]) {
+    assert.equal(
+      birthdayReminderFor(customer, new Date(date))?.daysRemaining,
+      daysRemaining,
+    );
+  }
+});
+
+test('server reminder observes leap-day birthdays on 28 February in non-leap years', () => {
+  const result = birthdayReminderFor({
+    id: 'leap',
+    priority: 'VIP',
+    recordState: 'active',
+    birthDate: '29-02-2000',
+  }, new Date('2035-02-14T12:00:00+07:00'));
+
+  assert.deepEqual(result, {
+    customerId: 'leap',
+    daysRemaining: 14,
+    occurrenceDate: '2035-02-28',
+    occurrenceYear: 2035,
+  });
 });
 
 test('server reminder calculation excludes ineligible and acknowledged customers', () => {

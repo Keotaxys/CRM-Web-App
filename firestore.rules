@@ -25,7 +25,7 @@ service cloud.firestore {
     function validCustomerCreate(customerId) {
       return request.resource.data.keys().hasAll([
           'name','phone','address','status','priority','branchId','branch','note','gps','location',
-          'birthDate','imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
+          'imageUrl','placeImageUrl','imageStoragePath','placeImageStoragePath','statusTimestamps',
           'recordState','createdBy','createdAt','updatedBy','updatedAt','archivedBy','archivedAt','deletedBy','deletedAt'
         ])
         && request.resource.data.keys().hasOnly([
@@ -36,7 +36,7 @@ service cloud.firestore {
         && knownBranch(request.resource.data.branchId)
         && request.resource.data.status in ['ໃໝ່','ຕິດຕາມຕໍ່','ດຳເນີນການແລ້ວ','ຈັດສົ່ງແລ້ວ']
         && (!request.resource.data.keys().hasAll(['priority']) || request.resource.data.priority in ['ທົ່ວໄປ','ດ່ວນ','VIP'])
-        && validBirthDate(request.resource.data.birthDate)
+        && validBirthDate(request.resource.data.get('birthDate', null))
         && validCustomerImagePaths(customerId)
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedBy == request.auth.uid

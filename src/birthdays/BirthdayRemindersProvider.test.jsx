@@ -130,4 +130,21 @@ describe('BirthdayRemindersProvider', () => {
     view.unmount();
     expect(mocks.unsubscribe).toHaveBeenCalledTimes(1);
   });
+
+  it('recalculates after Laos midnight while the app remains open', async () => {
+    vi.useFakeTimers();
+    const view = render(<BirthdayRemindersProvider><Probe/></BirthdayRemindersProvider>);
+
+    act(() => mocks.onCustomers([eligible({ birthDate: '15-09-1990' })]));
+    expect(screen.getByLabelText('probe-count')).toHaveTextContent('1');
+
+    mocks.todayKey = '2026-09-16';
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_050);
+    });
+    expect(screen.getByLabelText('probe-count')).toHaveTextContent('0');
+
+    view.unmount();
+    vi.useRealTimers();
+  });
 });

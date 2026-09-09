@@ -8,7 +8,11 @@ import GlassCard from '../components/ui/GlassCard';
 import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
 import DateField from '../components/ui/DateField';
-import { birthDateFromInput, birthDateToInput } from '../shared/birthday';
+import {
+  birthDateFromInput,
+  birthDateToInput,
+  isValidBirthDate,
+} from '../shared/birthday';
 import { laosTodayKey } from '../shared/dateTime';
 
 const GOOGLE_MAPS_HOME = 'https://www.google.com/maps';
@@ -31,6 +35,7 @@ export default function CustomerForm({ initial = {}, onSubmit, busy = false, adm
   });
   const [customerPhoto, setCustomerPhoto] = useState(null); const [placePhoto, setPlacePhoto] = useState(null);
   const [locating, setLocating] = useState(false); const [locationStatus, setLocationStatus] = useState(null);
+  const [birthDateError, setBirthDateError] = useState('');
   const field = (name) => ({ value: values[name] ?? '', onChange: (event) => setValues({ ...values, [name]: event.target.value }) });
   const useCurrentLocation = () => {
     setLocationStatus(null);
@@ -66,9 +71,25 @@ export default function CustomerForm({ initial = {}, onSubmit, busy = false, adm
   const mapHref = /^https?:\/\//i.test(values.gps) ? values.gps : GOOGLE_MAPS_HOME;
   const submit = (event) => {
     event.preventDefault();
+    let birthDate;
+
+    try {
+      birthDate = birthDateFromInput(values.birthDateInput);
+    }
+    catch {
+      setBirthDateError('ວັນເກີດບໍ່ຖືກຕ້ອງ');
+      return;
+    }
+
+    if (birthDate && !isValidBirthDate(birthDate, laosTodayKey())) {
+      setBirthDateError('ວັນເກີດຕ້ອງບໍ່ເກີນມື້ນີ້');
+      return;
+    }
+
+    setBirthDateError('');
     const payload = {
       ...values,
-      birthDate: birthDateFromInput(values.birthDateInput),
+      birthDate,
     };
     delete payload.birthDateInput;
     onSubmit(payload, { customerPhoto, placePhoto });
@@ -78,7 +99,7 @@ export default function CustomerForm({ initial = {}, onSubmit, busy = false, adm
     <div className="form-grid"><Input id="customer-name" label="ຊື່ລູກຄ້າ" required {...field('name')}/><Input id="customer-phone" label="ເບີໂທ" required {...field('phone')}/></div>
     {admin && !initial.id && <CustomSelect id="customer-branch" label="ສາຂາ" value={values.branchId} onChange={(nextValue) => setValues({ ...values, branchId: nextValue })} options={branchOptions}/>}
     <Textarea id="customer-address" label="ທີ່ຢູ່" rows="2" {...field('address')}/><div className="form-grid"><CustomSelect id="customer-status" label="ສະຖານະ" value={values.status} onChange={(nextValue) => setValues({ ...values, status: nextValue })} options={statusOptions}/><CustomSelect id="customer-priority" label="ຄວາມສຳຄັນ" value={values.priority} onChange={(nextValue) => setValues({ ...values, priority: nextValue })} options={priorityOptions}/></div>
-    <div className="birth-date-field"><DateField id="customer-birth-date" type="date" label="ວັນເກີດ (ບໍ່ບັງຄັບ)" value={values.birthDateInput} max={laosTodayKey()} onChange={(event) => setValues({ ...values, birthDateInput: event.target.value })}/>{values.birthDateInput && <Button variant="neutral" size="sm" type="button" onClick={() => setValues({ ...values, birthDateInput: '' })}>ລ້າງວັນເກີດ</Button>}</div>
+    <div className="birth-date-field"><DateField id="customer-birth-date" type="date" label="ວັນເກີດ (ບໍ່ບັງຄັບ)" value={values.birthDateInput} max={laosTodayKey()} error={birthDateError} onChange={(event) => { setBirthDateError(''); setValues({ ...values, birthDateInput: event.target.value }); }}/>{values.birthDateInput && <Button variant="neutral" size="sm" type="button" onClick={() => { setBirthDateError(''); setValues({ ...values, birthDateInput: '' }); }}>ລ້າງວັນເກີດ</Button>}</div>
     <Textarea id="customer-note" label="ໝາຍເຫດ" rows="3" {...field('note')}/>
     <div className="location-field"><Input id="customer-gps" label="ລິ້ງແຜນທີ່ / ພິກັດ GPS" type="url" inputMode="url" {...field('gps')}/><div className="location-actions"><Button variant="secondary" disabled={locating} onClick={useCurrentLocation}><span className="material-symbols-outlined" aria-hidden="true">my_location</span>{locating ? 'ກຳລັງດຶງຕຳແໜ່ງ...' : 'ໃຊ້ຕຳແໜ່ງປັດຈຸບັນ'}</Button><a className="ui-button ui-button--neutral ui-button--md" href={mapHref} target="_blank" rel="noreferrer"><span className="material-symbols-outlined" aria-hidden="true">map</span>ເປີດແຜນທີ່</a></div>{locationStatus && <p role={locationStatus.error ? 'alert' : 'status'} className={locationStatus.error ? 'location-message error' : 'location-message success'}>{locationStatus.message}</p>}</div>
     <div className="form-grid"><CameraUpload label="ຮູບລູກຄ້າ" actionLabel="ເລືອກຮູບລູກຄ້າ" changeActionLabel="ປ່ຽນຮູບລູກຄ້າ" file={customerPhoto} onChange={setCustomerPhoto}/><CameraUpload label="ຮູບຮ້ານ / ສະຖານທີ່" actionLabel="ເລືອກຮູບຮ້ານ ຫຼື ສະຖານທີ່" changeActionLabel="ປ່ຽນຮູບຮ້ານ ຫຼື ສະຖານທີ່" file={placePhoto} onChange={setPlacePhoto}/></div>

@@ -94,6 +94,17 @@ describe('CustomerForm image and branch policy', () => {
       expect.any(Object),
     );
   });
+
+  it('fails closed with a Lao validation message if a future value reaches submit', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CustomerForm initial={{ name: 'VIP Customer', phone: '020', birthDate: '10-09-2026' }} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('ວັນເກີດຕ້ອງບໍ່ເກີນມື້ນີ້');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
 
 describe('CustomerForm location actions', () => {
