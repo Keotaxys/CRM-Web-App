@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,10 +14,15 @@ vi.mock('../components/Navbar', () => ({ default: () => null }));
 vi.mock('../auth/useAuth', () => ({ useAuth: () => identity }));
 vi.mock('../services/activitiesService', () => ({ subscribeActivities: serviceMocks.subscribeActivities }));
 vi.mock('../services/usersService', () => ({ subscribeAssignableUsers: serviceMocks.subscribeAssignableUsers }));
+vi.mock('../shared/dateTime', async (importOriginal) => ({
+  ...(await importOriginal()),
+  laosTodayKey: () => '2026-09-09',
+}));
 
 const activities = [
-  { id: 'a', type: 'appointment', status: 'in_progress', title: 'Meeting A', startAt: '2026-08-26T02:00:00.000Z', assignedStaffIds: ['u1'] },
-  { id: 'b', type: 'event', status: 'planned', title: 'Meeting B', startAt: '2026-08-25T02:00:00.000Z', assignedStaffIds: ['u2'] },
+  { id: 'a', type: 'appointment', status: 'in_progress', title: 'Meeting A', startAt: '2026-09-09T02:00:00.000Z', assignedStaffIds: ['u1'] },
+  { id: 'b', type: 'event', status: 'planned', title: 'Meeting B', startAt: '2026-09-08T02:00:00.000Z', assignedStaffIds: ['u2'] },
+  { id: 'c', type: 'customer_visit', status: 'confirmed', title: 'Meeting C', startAt: '2026-09-10T02:00:00.000Z', assignedStaffIds: ['u2'] },
 ];
 
 describe('ActivitiesPage shared filters', () => {
@@ -44,6 +49,9 @@ describe('ActivitiesPage shared filters', () => {
     const user = userEvent.setup();
     render(<MemoryRouter><ActivitiesPage /></MemoryRouter>);
 
+    const dateModes = screen.getByRole('group', { name: 'ຕົວກອງວັນທີ' });
+    await user.click(within(dateModes).getByRole('button', { name: 'ທັງໝົດ' }));
+
     const scope = screen.getByRole('combobox', { name: 'ຂອບເຂດກິດຈະກຳ' });
     await user.click(scope);
     expect(screen.getByRole('option', { name: 'ກິດຈະກຳຂອງສາຂາ' })).toHaveAttribute('aria-selected', 'true');
@@ -68,57 +76,55 @@ describe('ActivitiesPage shared filters', () => {
     expect(serviceMocks.subscribeAssignableUsers).toHaveBeenCalledTimes(1);
   });
 
-  it('uses the custom date picker with Laos day-key filtering', async () => {
+  it('defaults to today in Laos and can show all dates', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><ActivitiesPage /></MemoryRouter>);
-    const date = screen.getByLabelText('ວັນທີກິດຈະກຳ');
-
-    expect(date).toHaveAttribute('type', 'text');
-    expect(date).toHaveAttribute('readonly');
-
-    await user.click(screen.getByRole('button', {
-      name: 'ເປີດປະຕິທິນ ວັນທີກິດຈະກຳ',
-    }));
-
-    expect(screen.getByRole('dialog', {
-      name: 'ເລືອກວັນທີ ວັນທີກິດຈະກຳ',
-    })).toBeInTheDocument();
-
-    /*
-     * ActivitiesPage starts with an empty date filter.
-     * DateField therefore opens on the current month.
-     * Navigate until August 2026 is visible before selecting the test day.
-     */
-    const targetMonth = 'ສິງຫາ 2026';
-
-    for (let count = 0; count < 120; count += 1) {
-      if (screen.queryByText(targetMonth)) break;
-
-      const monthTitle = document.querySelector('.ui-date-picker__month-title');
-
-      if (!monthTitle) {
-        throw new Error('Custom date picker month title not found');
-      }
-
-      const text = monthTitle.textContent ?? '';
-      const yearMatch = text.match(/(\d{4})$/);
-      const currentYear = yearMatch ? Number(yearMatch[1]) : 0;
-
-      if (currentYear > 2026 || (currentYear === 2026 && !text.includes('ສິງຫາ'))) {
-        await user.click(screen.getByRole('button', { name: 'ເດືອນກ່ອນໜ້າ' }));
-      } else {
-        await user.click(screen.getByRole('button', { name: 'ເດືອນຖັດໄປ' }));
-      }
-    }
-
-    expect(screen.getByText(targetMonth)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'ເລືອກ 2026-08-26' }));
-    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນ' }));
 
     expect(screen.getByText('Meeting A')).toBeInTheDocument();
     expect(screen.queryByText('Meeting B')).not.toBeInTheDocument();
-    expect(date).toHaveValue('26/08/2026');
+    expect(screen.queryByText('Meeting C')).not.toBeInTheDocument();
+
+    const dateModes = screen.getByRole('group', { name: 'ຕົວກອງວັນທີ' });
+    expect(within(dateModes).getByRole('button', { name: 'ມື້ນີ້' })).toHaveClass('active');
+
+    await user.click(within(dateModes).getByRole('button', { name: 'ທັງໝົດ' }));
+    expect(screen.getByText('Meeting A')).toBeInTheDocument();
+    expect(screen.getByText('Meeting B')).toBeInTheDocument();
+    expect(screen.getByText('Meeting C')).toBeInTheDocument();
+  });
+
+  it('uses an inclusive custom date range and constrains its endpoints', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><ActivitiesPage /></MemoryRouter>);
+    const dateModes = screen.getByRole('group', { name: 'ຕົວກອງວັນທີ' });
+
+    await user.click(within(dateModes).getByRole('button', { name: 'ກຳນົດເອງ' }));
+
+    const from = screen.getByLabelText('ຈາກວັນທີ');
+    const to = screen.getByLabelText('ເຖິງວັນທີ');
+    expect(from).toHaveValue('09/09/2026');
+    expect(to).toHaveValue('09/09/2026');
+
+    await user.click(screen.getByRole('button', { name: 'ເປີດປະຕິທິນ ຈາກວັນທີ' }));
+    await user.click(screen.getByRole('button', { name: 'ເລືອກ 2026-09-08' }));
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນ' }));
+
+    await user.click(screen.getByRole('button', { name: 'ເປີດປະຕິທິນ ເຖິງວັນທີ' }));
+    await user.click(screen.getByRole('button', { name: 'ເລືອກ 2026-09-10' }));
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນ' }));
+
+    expect(screen.getByText('Meeting A')).toBeInTheDocument();
+    expect(screen.getByText('Meeting B')).toBeInTheDocument();
+    expect(screen.getByText('Meeting C')).toBeInTheDocument();
+    expect(from).toHaveValue('08/09/2026');
+    expect(to).toHaveValue('10/09/2026');
+
+    await user.click(screen.getByRole('button', { name: 'ເປີດປະຕິທິນ ຈາກວັນທີ' }));
+    expect(screen.getByRole('button', { name: 'ເລືອກ 2026-09-11' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'ປິດ' }));
+
+    await user.click(screen.getByRole('button', { name: 'ເປີດປະຕິທິນ ເຖິງວັນທີ' }));
+    expect(screen.getByRole('button', { name: 'ເລືອກ 2026-09-07' })).toBeDisabled();
   });
 
   it('announces an asynchronous loading failure with the Orange error presentation', async () => {
