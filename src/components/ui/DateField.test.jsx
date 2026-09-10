@@ -188,6 +188,143 @@ describe('DateField', () => {
     ).toBeInTheDocument();
   });
 
+  it('jumps directly to a distant month and year without changing the date value contract', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <DateField
+        id="birth-date"
+        type="date"
+        label="ວັນເກີດ"
+        value="2025-11-23"
+        max="2026-09-10"
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ເປີດປະຕິທິນ ວັນເກີດ',
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ເລືອກເດືອນ ແລະ ປີ ພະຈິກ 2025',
+      }),
+    );
+
+    const yearList =
+      screen.getByRole('listbox', {
+        name: 'ປີ',
+      });
+
+    expect(yearList).toContainElement(
+      screen.getByRole('option', {
+        name: '1900',
+      }),
+    );
+
+    expect(
+      screen.queryByRole('option', {
+        name: '2027',
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('option', {
+        name: '1985',
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ເລືອກເດືອນ ມິຖຸນາ',
+      }),
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'ເລືອກເດືອນ ແລະ ປີ ມິຖຸນາ 1985',
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ເລືອກ 1985-06-15',
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ຢືນຢັນ',
+      }),
+    );
+
+    expect(
+      onChange.mock.calls[0][0].target.value,
+    ).toBe('1985-06-15');
+  });
+
+  it('keeps month and year navigation inside the configured date bounds', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <DateField
+        id="birth-date"
+        type="date"
+        label="ວັນເກີດ"
+        value="2026-09-10"
+        min="1900-01-01"
+        max="2026-09-10"
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ເປີດປະຕິທິນ ວັນເກີດ',
+      }),
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'ເດືອນຖັດໄປ',
+      }),
+    ).toBeDisabled();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ເລືອກເດືອນ ແລະ ປີ ກັນຍາ 2026',
+      }),
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'ເລືອກເດືອນ ຕຸລາ',
+      }),
+    ).toBeDisabled();
+
+    await user.click(
+      screen.getByRole('option', {
+        name: '1900',
+      }),
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'ເລືອກເດືອນ ມັງກອນ',
+      }),
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'ເດືອນກ່ອນໜ້າ',
+      }),
+    ).toBeDisabled();
+  });
+
   it('does not change the value when the custom picker is cancelled', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

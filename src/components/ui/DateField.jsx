@@ -32,6 +32,10 @@ const WEEKDAY_NAMES = [
   'ສ',
 ];
 
+const DEFAULT_MIN_YEAR = 1900;
+
+const DEFAULT_FUTURE_YEAR_SPAN = 100;
+
 function pad2(value) {
   return String(value).padStart(2, '0');
 }
@@ -224,6 +228,41 @@ function isDateDisabled(
   return false;
 }
 
+function isMonthDisabled(
+  year,
+  month,
+  min,
+  max,
+) {
+  const firstDay =
+    toDateValue({
+      year,
+      month,
+      day: 1,
+    });
+
+  const lastDay =
+    toDateValue({
+      year,
+      month,
+      day: daysInMonth(
+        year,
+        month,
+      ),
+    });
+
+  const minDate =
+    dateOnlyBoundary(min);
+
+  const maxDate =
+    dateOnlyBoundary(max);
+
+  return Boolean(
+    (minDate && lastDay < minDate)
+    || (maxDate && firstDay > maxDate),
+  );
+}
+
 function makeChangeEvent(
   id,
   value,
@@ -263,8 +302,16 @@ const DateField =
     const dialogRef =
       useRef(null);
 
+    const yearListRef =
+      useRef(null);
+
     const [open, setOpen] =
       useState(false);
+
+    const [
+      choosingMonthYear,
+      setChoosingMonthYear,
+    ] = useState(false);
 
     const initialDate =
       datePartsFromValue(value)
@@ -310,6 +357,14 @@ const DateField =
 
     const isDateTime =
       type === 'datetime-local';
+
+    const pickerMin =
+      dateOnlyBoundary(min)
+      ?? `${DEFAULT_MIN_YEAR}-01-01`;
+
+    const pickerMax =
+      dateOnlyBoundary(max)
+      ?? `${todayParts().year + DEFAULT_FUTURE_YEAR_SPAN}-12-31`;
 
     const setInputRef =
       useCallback(
@@ -359,6 +414,10 @@ const DateField =
         setDraftMinute(
           nextTime.minute,
         );
+
+        setChoosingMonthYear(
+          false,
+        );
       }, [value]);
 
     const openPicker = () => {
@@ -371,8 +430,33 @@ const DateField =
     };
 
     const closePicker = () => {
+      setChoosingMonthYear(false);
       setOpen(false);
     };
+
+    const selectableYears =
+      useMemo(() => {
+        const minYear =
+          datePartsFromValue(
+            pickerMin,
+          ).year;
+
+        const maxYear =
+          datePartsFromValue(
+            pickerMax,
+          ).year;
+
+        return Array.from(
+          {
+            length:
+              maxYear
+              - minYear
+              + 1,
+          },
+          (_, index) =>
+            maxYear - index,
+        );
+      }, [pickerMax, pickerMin]);
 
     useEffect(() => {
       if (!open) {
@@ -421,6 +505,31 @@ const DateField =
         );
       };
     }, [open]);
+
+    useEffect(() => {
+      if (!choosingMonthYear) {
+        return undefined;
+      }
+
+      const frame =
+        requestAnimationFrame(
+          () => {
+            yearListRef.current
+              ?.querySelector(
+                '[aria-selected="true"]',
+              )
+              ?.scrollIntoView?.({
+                block: 'center',
+              });
+          },
+        );
+
+      return () => {
+        cancelAnimationFrame(
+          frame,
+        );
+      };
+    }, [choosingMonthYear]);
 
     const calendarDays =
       useMemo(() => {
@@ -493,7 +602,49 @@ const DateField =
         viewYear,
       ]);
 
+    const previousView = {
+      year:
+        viewMonth === 1
+          ? viewYear - 1
+          : viewYear,
+      month:
+        viewMonth === 1
+          ? 12
+          : viewMonth - 1,
+    };
+
+    const nextView = {
+      year:
+        viewMonth === 12
+          ? viewYear + 1
+          : viewYear,
+      month:
+        viewMonth === 12
+          ? 1
+          : viewMonth + 1,
+    };
+
+    const previousMonthDisabled =
+      isMonthDisabled(
+        previousView.year,
+        previousView.month,
+        pickerMin,
+        pickerMax,
+      );
+
+    const nextMonthDisabled =
+      isMonthDisabled(
+        nextView.year,
+        nextView.month,
+        pickerMin,
+        pickerMax,
+      );
+
     const previousMonth = () => {
+      if (previousMonthDisabled) {
+        return;
+      }
+
       if (viewMonth === 1) {
         setViewMonth(12);
         setViewYear(
@@ -508,6 +659,10 @@ const DateField =
     };
 
     const nextMonth = () => {
+      if (nextMonthDisabled) {
+        return;
+      }
+
       if (viewMonth === 12) {
         setViewMonth(1);
         setViewYear(
@@ -712,6 +867,9 @@ const DateField =
                   onClick={
                     previousMonth
                   }
+                  disabled={
+                    previousMonthDisabled
+                  }
                 >
                   <span
                     className="material-symbols-outlined"
@@ -721,14 +879,36 @@ const DateField =
                   </span>
                 </button>
 
-                <strong className="ui-date-picker__month-title">
+                <button
+                  type="button"
+                  className="ui-date-picker__month-title"
+                  aria-label={`ເລືອກເດືອນ ແລະ ປີ ${MONTH_NAMES[viewMonth - 1]} ${viewYear}`}
+                  aria-expanded={
+                    choosingMonthYear
+                  }
+                  onClick={() => {
+                    setChoosingMonthYear(
+                      (current) =>
+                        !current,
+                    );
+                  }}
+                >
                   {
                     MONTH_NAMES[
                       viewMonth - 1
                     ]
                   }{' '}
                   {viewYear}
-                </strong>
+
+                  <span
+                    className="material-symbols-outlined"
+                    aria-hidden="true"
+                  >
+                    {choosingMonthYear
+                      ? 'expand_less'
+                      : 'expand_more'}
+                  </span>
+                </button>
 
                 <button
                   type="button"
@@ -736,6 +916,9 @@ const DateField =
                   aria-label="ເດືອນຖັດໄປ"
                   onClick={
                     nextMonth
+                  }
+                  disabled={
+                    nextMonthDisabled
                   }
                 >
                   <span
@@ -747,81 +930,185 @@ const DateField =
                 </button>
               </div>
 
-              <div className="ui-date-picker__weekdays">
-                {WEEKDAY_NAMES.map(
-                  (
-                    weekday,
-                    index,
-                  ) => (
-                    <span
-                      key={`${weekday}-${index}`}
+              {choosingMonthYear ? (
+                <section
+                  className="ui-date-picker__month-year"
+                  aria-label="ເລືອກເດືອນ ແລະ ປີ"
+                >
+                  <div className="ui-date-picker__year-field">
+                    <span>ປີ</span>
+
+                    <div
+                      ref={yearListRef}
+                      className="ui-date-picker__year-list"
+                      role="listbox"
+                      aria-label="ປີ"
                     >
-                      {weekday}
-                    </span>
-                  ),
-                )}
-              </div>
+                      {selectableYears.map(
+                        (year) => (
+                          <button
+                            key={year}
+                            type="button"
+                            role="option"
+                            className={[
+                              'ui-date-picker__year-option',
+                              year
+                                === viewYear
+                                ? 'is-selected'
+                                : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            aria-selected={
+                              year
+                              === viewYear
+                            }
+                            onClick={() => {
+                              setViewYear(
+                                year,
+                              );
+                            }}
+                          >
+                            {year}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </div>
 
-              <div className="ui-date-picker__calendar">
-                {calendarDays.map(
-                  (item) => {
-                    if (
-                      item.blank
-                    ) {
-                      return (
-                        <span
-                          key={
-                            item.key
-                          }
-                          className="ui-date-picker__blank"
-                          aria-hidden="true"
-                        />
-                      );
-                    }
+                  <div className="ui-date-picker__month-grid">
+                    {MONTH_NAMES.map(
+                      (
+                        monthName,
+                        index,
+                      ) => {
+                        const month =
+                          index + 1;
 
-                    const selected =
-                      item.value
-                      === draftDate;
-
-                    return (
-                      <button
-                        key={
-                          item.key
-                        }
-                        type="button"
-                        className={[
-                          'ui-date-picker__day',
-                          selected
-                            ? 'is-selected'
-                            : '',
-                        ]
-                          .filter(
-                            Boolean,
-                          )
-                          .join(' ')}
-                        aria-label={
-                          `ເລືອກ ${item.value}`
-                        }
-                        aria-pressed={
-                          selected
-                        }
-                        disabled={
-                          item.disabled
-                        }
-                        onClick={() => {
-                          setDraftDate(
-                            item.value,
+                        const unavailable =
+                          isMonthDisabled(
+                            viewYear,
+                            month,
+                            pickerMin,
+                            pickerMax,
                           );
-                        }}
-                      >
-                        {item.day}
-                      </button>
-                    );
-                  },
-                )}
-              </div>
 
-              {isDateTime ? (
+                        return (
+                          <button
+                            key={monthName}
+                            type="button"
+                            className={[
+                              'ui-date-picker__month-option',
+                              month
+                                === viewMonth
+                                ? 'is-selected'
+                                : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            aria-label={`ເລືອກເດືອນ ${monthName}`}
+                            aria-pressed={
+                              month
+                              === viewMonth
+                            }
+                            disabled={
+                              unavailable
+                            }
+                            onClick={() => {
+                              setViewMonth(
+                                month,
+                              );
+                              setChoosingMonthYear(
+                                false,
+                              );
+                            }}
+                          >
+                            {monthName}
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                </section>
+              ) : (
+                <>
+                  <div className="ui-date-picker__weekdays">
+                    {WEEKDAY_NAMES.map(
+                      (
+                        weekday,
+                        index,
+                      ) => (
+                        <span
+                          key={`${weekday}-${index}`}
+                        >
+                          {weekday}
+                        </span>
+                      ),
+                    )}
+                  </div>
+
+                  <div className="ui-date-picker__calendar">
+                    {calendarDays.map(
+                      (item) => {
+                        if (
+                          item.blank
+                        ) {
+                          return (
+                            <span
+                              key={
+                                item.key
+                              }
+                              className="ui-date-picker__blank"
+                              aria-hidden="true"
+                            />
+                          );
+                        }
+
+                        const selected =
+                          item.value
+                          === draftDate;
+
+                        return (
+                          <button
+                            key={
+                              item.key
+                            }
+                            type="button"
+                            className={[
+                              'ui-date-picker__day',
+                              selected
+                                ? 'is-selected'
+                                : '',
+                            ]
+                              .filter(
+                                Boolean,
+                              )
+                              .join(' ')}
+                            aria-label={
+                              `ເລືອກ ${item.value}`
+                            }
+                            aria-pressed={
+                              selected
+                            }
+                            disabled={
+                              item.disabled
+                            }
+                            onClick={() => {
+                              setDraftDate(
+                                item.value,
+                              );
+                            }}
+                          >
+                            {item.day}
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                </>
+              )}
+
+              {isDateTime && !choosingMonthYear ? (
                 <div className="ui-date-picker__time">
                   <div className="ui-date-picker__time-heading">
                     <span
