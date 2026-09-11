@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SalesPage from './SalesPage';
 
@@ -6,6 +7,7 @@ const authMock = vi.hoisted(() => ({ identity: null }));
 vi.mock('../auth/useAuth', () => ({ useAuth: () => authMock.identity }));
 vi.mock('../components/Navbar', () => ({ default: ({ title }) => <header>{title}</header> }));
 vi.mock('./DailySalesForm', () => ({ default: () => <div>ENTRY FORM</div> }));
+vi.mock('./SalesReportPanel', () => ({ default: () => <div>REPORT PANEL</div> }));
 
 function renderSalesPage(role) {
   authMock.identity = { user: { uid: 'u1' }, claims: { role, branchId: 'VTE' } };
@@ -23,5 +25,12 @@ describe('SalesPage', () => {
   it('hides self-entry and shows product management for Admin', () => {
     expect(renderSalesPage('admin').queryByRole('button', { name: 'ບັນທຶກມື້ນີ້' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ຈັດການຜະລິດຕະພັນ' })).toBeInTheDocument();
+    expect(screen.getByText('REPORT PANEL')).toBeInTheDocument();
+  });
+
+  it('opens the shared report panel from the report tab', async () => {
+    renderSalesPage('staff');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'ລາຍງານຍອດຂາຍ' }));
+    expect(screen.getByText('REPORT PANEL')).toBeInTheDocument();
   });
 });
