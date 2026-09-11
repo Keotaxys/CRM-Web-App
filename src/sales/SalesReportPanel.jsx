@@ -10,6 +10,7 @@ import DateField from '../components/ui/DateField';
 import GlassCard from '../components/ui/GlassCard';
 import SearchableSelect from '../components/ui/SearchableSelect';
 import { buildSalesReport, salesDateRange } from './salesReport';
+import SalesCorrectionSheet from './SalesCorrectionSheet';
 
 const PRESETS = [
   ['today', 'ມື້ນີ້'],
@@ -30,6 +31,7 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
   const [filters, setFilters] = useState({ productId: '', staffUid: '', branchId: '' });
   const [queryError, setQueryError] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const rangeState = useMemo(() => {
     if (preset === 'custom' && (!custom.startKey || !custom.endKey)) {
@@ -53,11 +55,10 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
 
   useEffect(() => {
     if (!rangeState.range) return undefined;
-    setLoaded(false);
-    setQueryError('');
     return subscribeDailySales(identity, rangeState.range, (nextRecords) => {
       setRecords(nextRecords);
       setLoaded(true);
+      setQueryError('');
     }, () => {
       setLoaded(true);
       setQueryError('ບໍ່ສາມາດໂຫຼດລາຍງານ');
@@ -120,9 +121,10 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
         <h2>ຍອດປະຈຳວັນ</h2>
         <table><tbody>{report.days.flatMap((day) => day.rows.map((row) => {
           const record = filteredRecords.find((item) => item.dateKey === day.dateKey && item.staffUid === row.staffUid);
-          return <tr key={`${day.dateKey}-${row.staffUid}`}><td>{day.dateKey}</td><td>{row.staffName}</td><td>{row.totalQuantity}</td><td>{onCorrect && role !== 'staff' ? <Button variant="neutral" onClick={() => onCorrect(record)}>ແກ້ໄຂຍອດ {day.dateKey} {row.staffName}</Button> : null}</td></tr>;
+          return <tr key={`${day.dateKey}-${row.staffUid}`}><td>{day.dateKey}</td><td>{row.staffName}</td><td>{row.totalQuantity}</td><td>{role !== 'staff' ? <Button variant="neutral" onClick={() => { setSelectedRecord(record); onCorrect?.(record); }}>ແກ້ໄຂຍອດ {day.dateKey} {row.staffName}</Button> : null}</td></tr>;
         }))}</tbody></table>
       </GlassCard>
     </> : null}
+    {selectedRecord ? <SalesCorrectionSheet record={selectedRecord} products={products} onClose={() => setSelectedRecord(null)} /> : null}
   </section>;
 }

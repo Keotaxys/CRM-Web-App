@@ -7,6 +7,7 @@ const serviceMocks = vi.hoisted(() => ({
   subscribeDailySales: vi.fn(),
   subscribeAllSalesProducts: vi.fn(),
   subscribeAssignableUsers: vi.fn(),
+  amendDailySales: vi.fn(),
   dailyError: null,
 }));
 const authMock = vi.hoisted(() => ({ identity: null }));
@@ -16,6 +17,7 @@ vi.mock('../shared/dateTime', async (original) => ({ ...await original(), laosTo
 vi.mock('../services/salesService', () => ({
   subscribeDailySales: serviceMocks.subscribeDailySales,
   subscribeAllSalesProducts: serviceMocks.subscribeAllSalesProducts,
+  amendDailySales: serviceMocks.amendDailySales,
 }));
 vi.mock('../services/usersService', () => ({ subscribeAssignableUsers: serviceMocks.subscribeAssignableUsers }));
 vi.mock('../components/ui/DateField', () => ({
@@ -50,6 +52,7 @@ describe('SalesReportPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     serviceMocks.dailyError = null;
+    serviceMocks.amendDailySales.mockResolvedValue({});
   });
 
   it('queries preset ranges and renders Monday-Sunday labels, totals, and ranking', async () => {
@@ -113,5 +116,20 @@ describe('SalesReportPanel', () => {
     arrange('staff');
     expect(screen.getByRole('alert')).toHaveTextContent('ບໍ່ສາມາດໂຫຼດລາຍງານ');
     expect(screen.queryByText('ຍອດລວມ 0')).not.toBeInTheDocument();
+  });
+
+  it('allows Manager and Admin to open corrections for returned records but never Staff', async () => {
+    let view = arrange('staff');
+    expect(screen.queryByRole('button', { name: 'ແກ້ໄຂຍອດ 2026-09-11 Staff A' })).not.toBeInTheDocument();
+    view.unmount();
+
+    view = arrange('branch_manager', [records[0]]);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'ແກ້ໄຂຍອດ 2026-09-11 Staff A' }));
+    expect(screen.getByRole('dialog', { name: 'ແກ້ໄຂຍອດຂາຍ' })).toBeInTheDocument();
+    view.unmount();
+
+    arrange('admin');
+    expect(screen.getByRole('button', { name: 'ແກ້ໄຂຍອດ 2026-09-10 Staff B' })).toBeInTheDocument();
   });
 });
