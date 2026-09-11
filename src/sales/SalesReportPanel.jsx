@@ -29,8 +29,8 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
   const [products, setProducts] = useState([]);
   const [users, setUsers] = useState([]);
   const [filters, setFilters] = useState({ productId: '', staffUid: '', branchId: '' });
-  const [queryError, setQueryError] = useState('');
-  const [loaded, setLoaded] = useState(false);
+  const [queryFailureKey, setQueryFailureKey] = useState('');
+  const [completedRangeKey, setCompletedRangeKey] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   const rangeState = useMemo(() => {
@@ -43,10 +43,11 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
       return { range: null, error: 'ຊ່ວງວັນທີບໍ່ຖືກຕ້ອງ' };
     }
   }, [custom, preset]);
+  const rangeKey = rangeState.range ? `${rangeState.range.startKey}|${rangeState.range.endKey}` : '';
 
   useEffect(() => {
-    const unsubscribeProducts = subscribeAllSalesProducts(setProducts, () => setQueryError('ບໍ່ສາມາດໂຫຼດລາຍງານ'));
-    const unsubscribeUsers = role === 'staff' ? undefined : subscribeAssignableUsers(identity, setUsers, () => setQueryError('ບໍ່ສາມາດໂຫຼດລາຍງານ'));
+    const unsubscribeProducts = subscribeAllSalesProducts(setProducts, () => setQueryFailureKey('*'));
+    const unsubscribeUsers = role === 'staff' ? undefined : subscribeAssignableUsers(identity, setUsers, () => setQueryFailureKey('*'));
     return () => {
       unsubscribeProducts?.();
       unsubscribeUsers?.();
@@ -55,15 +56,16 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
 
   useEffect(() => {
     if (!rangeState.range) return undefined;
+    const subscriptionRangeKey = rangeKey;
     return subscribeDailySales(identity, rangeState.range, (nextRecords) => {
       setRecords(nextRecords);
-      setLoaded(true);
-      setQueryError('');
+      setCompletedRangeKey(subscriptionRangeKey);
+      setQueryFailureKey((current) => current === '*' ? current : '');
     }, () => {
-      setLoaded(true);
-      setQueryError('ບໍ່ສາມາດໂຫຼດລາຍງານ');
+      setCompletedRangeKey(subscriptionRangeKey);
+      setQueryFailureKey(subscriptionRangeKey);
     });
-  }, [identity, rangeState.range]);
+  }, [identity, rangeKey, rangeState.range]);
 
   const filteredRecords = useMemo(() => records
     .filter((record) => !filters.branchId || record.branchId === filters.branchId)
@@ -82,6 +84,8 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
   const staffOptions = [{ value: '', label: 'ທັງໝົດ' }, ...availableUsers.map((user) => ({ value: user.uid, label: user.name ?? user.displayName ?? user.uid }))];
   const branchOptions = [{ value: '', label: 'ທັງໝົດ' }, ...BRANCHES.map((branch) => ({ value: branch.id, label: branch.label }))];
   const metadata = rangeState.range ? { ...rangeState.range, preset, filters } : null;
+  const queryError = Boolean(queryFailureKey && (queryFailureKey === '*' || queryFailureKey === rangeKey));
+  const loaded = Boolean(rangeKey && completedRangeKey === rangeKey);
 
   return <section className="form-stack" aria-label="ລາຍງານຍອດຂາຍ">
     <GlassCard padded className="filter-panel">
@@ -99,7 +103,7 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
         {role !== 'staff' ? <SearchableSelect id="sales-staff" label="ພະນັກງານ" value={filters.staffUid} options={staffOptions} onChange={(staffUid) => setFilters((current) => ({ ...current, staffUid }))} searchPlaceholder="ຄົ້ນຫາພະນັກງານ" /> : null}
       </div>
     </GlassCard>
-    {queryError ? <div className="error-banner" role="alert">{queryError}</div> : null}
+    {queryError ? <div className="error-banner" role="alert">ບໍ່ສາມາດໂຫຼດລາຍງານ</div> : null}
     {!queryError && loaded && rangeState.range ? <>
       <div className="summary-grid">
         <GlassCard padded><span>ຍອດລວມ {report.totalQuantity}</span></GlassCard>

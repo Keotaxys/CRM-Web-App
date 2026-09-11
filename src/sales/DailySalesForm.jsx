@@ -18,6 +18,8 @@ export default function DailySalesForm() {
   const identity = useAuth();
   const [products, setProducts] = useState([]);
   const [record, setRecord] = useState(null);
+  const [productsLoaded, setProductsLoaded] = useState(false);
+  const [salesLoaded, setSalesLoaded] = useState(false);
   const [quantities, setQuantities] = useState({});
   const [feedback, setFeedback] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -28,11 +30,19 @@ export default function DailySalesForm() {
 
   useEffect(() => {
     if (!canEnter) return undefined;
-    const unsubscribeProducts = subscribeActiveSalesProducts(setProducts, () => setFeedback({ kind: 'error', text: salesErrorMessage() }));
+    const unsubscribeProducts = subscribeActiveSalesProducts((nextProducts) => {
+      setProducts(nextProducts);
+      setProductsLoaded(true);
+    }, () => setFeedback({ kind: 'error', text: salesErrorMessage() }));
     const unsubscribeSales = subscribeDailySales(
       identity,
       { startKey: todayKey, endKey: todayKey },
-      (records) => setRecord(records[0] ?? null),
+      (records) => {
+        const ownRecord = records.find((item) => item.staffUid === identity.user.uid)
+          ?? (identity.claims.role === 'staff' ? records[0] : null);
+        setRecord(ownRecord ?? null);
+        setSalesLoaded(true);
+      },
       () => setFeedback({ kind: 'error', text: salesErrorMessage() }),
     );
     return () => {
@@ -50,11 +60,11 @@ export default function DailySalesForm() {
   }, [products, record]);
 
   useEffect(() => {
-    if (hydratedRef.current || (!products.length && !record)) return;
+    if (hydratedRef.current || !productsLoaded || !salesLoaded) return;
     const existing = Object.fromEntries((record?.items ?? []).map((item) => [item.productId, String(item.quantity)]));
     setQuantities(Object.fromEntries(rows.map((product) => [product.id, existing[product.id] ?? '0'])));
     hydratedRef.current = true;
-  }, [products, record, rows]);
+  }, [products, productsLoaded, record, rows, salesLoaded]);
 
   if (!canEnter) return null;
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SalesReportPanel from './SalesReportPanel';
@@ -68,6 +68,23 @@ describe('SalesReportPanel', () => {
     expect(screen.getByText('2026-09-07 – 2026-09-13')).toBeInTheDocument();
     expect(screen.getByText('ຍອດລວມ 7')).toBeInTheDocument();
     expect(screen.getByRole('row', { name: /1 BCEL One 5/ })).toBeInTheDocument();
+  });
+
+  it('does not label stale records as the newly selected range while it is loading', async () => {
+    authMock.identity = { user: { uid: 'staff-a' }, claims: { role: 'staff', branchId: '010' } };
+    serviceMocks.subscribeAllSalesProducts.mockImplementation((onData) => { onData(products); return vi.fn(); });
+    const callbacks = [];
+    serviceMocks.subscribeDailySales.mockImplementation((_identity, range, onData) => {
+      callbacks.push({ range, onData });
+      if (callbacks.length === 1) onData(records);
+      return vi.fn();
+    });
+    render(<SalesReportPanel />);
+    expect(screen.getByText('ຍອດລວມ 7')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'ອາທິດນີ້' }));
+    expect(screen.queryByText('ຍອດລວມ 7')).not.toBeInTheDocument();
+    act(() => callbacks[1].onData([records[0]]));
+    expect(await screen.findByText('ຍອດລວມ 5')).toBeInTheDocument();
   });
 
   it('uses a valid custom range and refuses incomplete or reversed dates before querying', async () => {

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DailySalesForm from './DailySalesForm';
@@ -43,6 +43,22 @@ describe('DailySalesForm', () => {
     ]);
     expect(screen.getByLabelText('ຈຳນວນ ATM')).toHaveValue(3);
     expect(screen.getByLabelText('ຈຳນວນ ຜະລິດຕະພັນເກົ່າ')).toHaveValue(2);
+  });
+
+  it('waits for both subscriptions and loads only the current manager entry', async () => {
+    authMock.identity = { user: { uid: 'staff-a' }, profile: { name: 'Staff A' }, claims: { role: 'branch_manager', branchId: '010' } };
+    let publishProducts;
+    let publishSales;
+    serviceMocks.subscribeActiveSalesProducts.mockImplementation((onData) => { publishProducts = onData; return vi.fn(); });
+    serviceMocks.subscribeDailySales.mockImplementation((_identity, _range, onData) => { publishSales = onData; return vi.fn(); });
+    render(<DailySalesForm />);
+    act(() => publishProducts(activeProducts));
+    expect(await screen.findByLabelText('ຈຳນວນ BCEL One')).toHaveValue(0);
+    act(() => publishSales([
+      { id: 'today_staff-b', staffUid: 'staff-b', items: [{ productId: 'bcel', productNameSnapshot: 'BCEL One', quantity: 9 }] },
+      { id: 'today_staff-a', staffUid: 'staff-a', items: [{ productId: 'bcel', productNameSnapshot: 'BCEL One', quantity: 2 }] },
+    ]));
+    await waitFor(() => expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toHaveValue(2));
   });
 
   it('keeps controls whole and nonnegative while allowing a cleared controlled input', async () => {
