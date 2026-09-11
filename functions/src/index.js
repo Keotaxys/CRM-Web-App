@@ -10,7 +10,7 @@ import { approveUserOperation, disableUserOperation, reactivateUserOperation, up
 import { cleanupExpiredActivities, completeFollowUpOperation, permanentlyDeleteActivityOperation, restoreActivityOperation, trashActivityOperation, upsertActivityOperation } from './activityAdmin.js';
 import { abortCustomerUploadsOperation, acknowledgeBirthdayGreetingOperation, archiveCustomerOperation, changeCustomerStatusOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, rollbackCustomerCreateOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
 import { syncLegacyCustomerOperation } from './legacyWebhook.js';
-import { createSalesProductOperation, updateSalesProductOperation } from './salesAdmin.js';
+import { amendDailySalesOperation, createSalesProductOperation, saveDailySalesOperation, updateSalesProductOperation } from './salesAdmin.js';
 import { SalesOperationError } from './salesDomain.js';
 
 initializeApp();
@@ -67,6 +67,8 @@ export const restoreCustomer = callable(restoreCustomerOperation);
 export const permanentlyDeleteCustomer = callable(permanentlyDeleteCustomerOperation);
 export const createSalesProduct = callable(createSalesProductOperation);
 export const updateSalesProduct = callable(updateSalesProductOperation);
+export const saveDailySales = callable(saveDailySalesOperation);
+export const amendDailySales = callable(amendDailySalesOperation);
 
 export const cleanupExpiredTrash = callable(async (currentServices, actor) => {
   assertAdmin(actor); const now = new Date();
