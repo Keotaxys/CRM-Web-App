@@ -63,6 +63,39 @@ Do not proceed unless the Firestore export is restorable and the chosen Storage 
 
 This order prevents frontend/schema/Rules races and recognizes one material runtime dependency: before migration and Admin bootstrap, no account can safely pass both canonical-profile and approved-claim checks, so the first positive webhook-stub invocation must occur after verified Admin token refresh. Functions may be deployed earlier, but only negative/health checks are valid at that point.
 
+## Daily-sales release gates
+
+The daily-sales feature is a backend-first rollout. These are future approval-gated production actions; do not run them during this preparation task:
+
+```powershell
+firebase.cmd deploy --only functions:createSalesProduct,functions:updateSalesProduct,functions:saveDailySales,functions:amendDailySales --project crm-web-app-97b91
+firebase.cmd deploy --only firestore:indexes --project crm-web-app-97b91
+firebase.cmd deploy --only firestore:rules --project crm-web-app-97b91
+git push origin main
+```
+
+Before any mutation, capture and retain the previous Functions inventory (including callable names, region/runtime, revision, bindings, and source artifact), prior Firestore Rules source/ruleset, complete index inventory/state, current `main`, Vercel deployment ID, and Hosting rollback alias. Deploy and verify Functions, then indexes, then Rules; deploy the frontend/Hosting release last. Wait until all three sales indexes are `READY` before frontend rollout:
+
+- `dailySales(staffUid ASC, dateKey DESC)` — staff own-report query.
+- `dailySales(branchId ASC, dateKey DESC)` — branch-manager branch-report query.
+- `salesProducts(active ASC, sortOrder ASC)` — active catalog ordering.
+
+The Rules gate must confirm `salesProducts` is approved-read-only, `dailySales` and `dailySales/{id}/revisions` are read-only to the permitted actor scope, every direct client sales write is denied, and anonymous/Pending/Disabled/cross-branch access is denied. The frontend gate is `/sales` behind the protected route, with Staff entry and own report/export, Manager branch report/export/correction, and Admin report/export/catalog/correction; verify the 360px iPhone layout, desktop layout, and lazy ExcelJS chunk before accepting Hosting.
+
+### Daily-sales acceptance and rollback evidence
+
+Record actor, account state, branch, date-range preset, browser/viewport, token-refresh time, result, and evidence for each check:
+
+| Actor | Required acceptance |
+|---|---|
+| Staff | Save, retry/idempotency, own report, Excel export, and cross-user denial. |
+| Branch Manager | Own save, same-branch report/export, same-branch correction with reason/audit revision, and cross-branch denial. |
+| Admin | All-branch report/export, catalog management, correction with audit evidence, and no self-entry. |
+| Anonymous / Pending / Disabled | Sales route, reads, and writes denied. |
+| All permitted actors | Daily, Mon–Sun weekly, monthly, yearly, and custom-range totals; Excel three-sheet totals match the UI; 360px iPhone and desktop behavior. |
+
+Rollback evidence must identify the captured frontend/Vercel deployment and alias, prior Rules source/ruleset, prior Functions inventory/source/bindings, and pre-change index inventory/state. Restore frontend and Rules/Functions from those captured versions and re-run the sales actor matrix. Do not delete `salesProducts`, `dailySales`, or revisions; any data removal requires separate human review and approval.
+
 ## Guarded production commands
 
 These commands are examples for the later authorized production window; they must not be run during code remediation.

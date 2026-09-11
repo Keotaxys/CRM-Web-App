@@ -601,6 +601,53 @@ Expected: every required index state is `READY`; `CREATING` means wait, `NEEDS_R
 
 Rollback point: do not delete indexes during an incident unless an index itself caused a proven issue; old frontend can ignore extra ready indexes.
 
+## 15a. Daily-sales backend and frontend gates
+
+This is an approval-gated production procedure. Capture the previous Functions inventory, prior Firestore Rules source/ruleset, complete index inventory/state, current `main`, Vercel deployment ID, and rollback alias before any mutation. Execute the sales rollout backend first: Functions, then indexes, then Firestore Rules, and Hosting/frontend last. Do not seed products or write sales data as part of this documentation task.
+
+**REQUIRES HUMAN APPROVAL — DAILY-SALES FUNCTIONS DEPLOYMENT**
+
+```powershell
+firebase.cmd deploy --only functions:createSalesProduct,functions:updateSalesProduct,functions:saveDailySales,functions:amendDailySales --project crm-web-app-97b91
+```
+
+Expected: exactly these callable names are deployed in the existing Functions region/runtime. Verify each callable's health and unauthenticated rejection before proceeding; retain the deployed revision/source evidence.
+
+**REQUIRES HUMAN APPROVAL — DAILY-SALES INDEX DEPLOYMENT**
+
+```powershell
+firebase.cmd deploy --only firestore:indexes --project crm-web-app-97b91
+```
+
+Verify these three indexes reach `READY` before frontend rollout: `dailySales(staffUid ASC, dateKey DESC)`, `dailySales(branchId ASC, dateKey DESC)`, and `salesProducts(active ASC, sortOrder ASC)`. Preserve the before/after index inventories and do not delete preexisting indexes.
+
+**REQUIRES HUMAN APPROVAL — DAILY-SALES FIRESTORE RULES DEPLOYMENT**
+
+```powershell
+firebase.cmd deploy --only firestore:rules --project crm-web-app-97b91
+```
+
+Rules gate: `salesProducts` is approved-read-only; `dailySales` and `dailySales/{dailySalesId}/revisions` are read-only to Admin, same-branch Manager, and the owning approved Staff/Manager as applicable; all direct client creates/updates/deletes are denied. Anonymous, Pending, Disabled, and cross-branch reads/writes remain denied.
+
+**Frontend/Hosting gate (after all backend gates)**
+
+Verify protected route `/sales`, Staff save/retry/own report/export, Manager same-branch report/export/correction, Admin all-branch report/export/catalog/correction, no Admin self-entry, the 360px iPhone and desktop layouts, and that the ExcelJS export is a lazy chunk. Confirm Vercel deployment ID and rollback alias against the evidence captured before mutation, then deploy Hosting only after all three indexes are `READY`.
+
+### Daily-sales acceptance and rollback matrix
+
+Record actor, account state, branch, date-range preset, browser/viewport, token-refresh time, result, and evidence:
+
+| Scenario | Acceptance evidence |
+|---|---|
+| Staff | Save and retry are idempotent; own report/export works; another user's report/write is denied. |
+| Branch Manager | Own save and branch report/export work; same-branch correction requires reason and creates an immutable audit revision; cross-branch access is denied. |
+| Admin | All-branch report/export and catalog management work; correction creates audit evidence; Admin cannot self-enter daily sales. |
+| Anonymous/Pending/Disabled | `/sales`, reads, and all writes are denied. |
+| Ranges and export | Daily, Mon–Sun weekly, monthly, yearly, and custom-range totals are correct; Excel's three sheets match UI totals. |
+| Devices | 360px iPhone has no clipped/hidden controls; desktop navigation/forms/report/correction/catalog remain usable. |
+
+Rollback evidence must include the captured frontend/Vercel deployment and alias, prior Rules source/ruleset, prior Functions inventory/source/bindings, and index inventory/state. Restore frontend and Rules/Functions from those captured versions, then re-run the matrix. Never delete `salesProducts`, `dailySales`, or revisions during this rollback; any data removal requires a separate human review and approval.
+
 ## 16. Execute Option C legacy-image copy migration
 
 This is a separate copy-first migration. It stores Customer IDs, object paths, metadata evidence, and reference digests in a private artifact; it never stores the bearer download URL/token, never deletes a source, and omits Firebase download-token metadata from new managed copies.
