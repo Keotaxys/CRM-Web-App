@@ -31,12 +31,13 @@ describe('Storage branch and file policy', () => {
     await assertFails(getBytes(ref(authStorage('p','staff','010','pending'), 'customers/a/customer-photo')));
     await assertFails(getBytes(ref(authStorage('a','staff','019'), 'customers/a/customer-photo')));
   });
-  it('accepts only two managed image slots, image MIME, and <=1MB', async () => {
+  it('accepts only two managed image slots, image MIME, and <=5MB', async () => {
     const storage = authStorage('a','staff','010');
     await assertSucceeds(uploadBytes(ref(storage, 'customers/a/place-photo'), new Uint8Array([1]), { contentType: 'image/webp' }));
     await assertFails(uploadBytes(ref(storage, 'customers/a/gallery-photo'), new Uint8Array([1]), { contentType: 'image/jpeg' }));
     await assertFails(uploadBytes(ref(storage, 'customers/a/place-photo'), new Uint8Array([1]), { contentType: 'text/plain' }));
-    await assertFails(uploadBytes(ref(storage, 'customers/a/place-photo'), new Uint8Array(1_000_001), { contentType: 'image/jpeg' }));
+    await assertSucceeds(uploadBytes(ref(storage, 'customers/a/place-photo'), new Uint8Array(5_000_000), { contentType: 'image/jpeg' }));
+    await assertFails(uploadBytes(ref(storage, 'customers/a/place-photo'), new Uint8Array(5_000_001), { contentType: 'image/jpeg' }));
   });
   it('allows avatar writes only to the owner', async () => {
     await assertSucceeds(uploadBytes(ref(authStorage('a','staff','010'), 'profiles/a/avatar'), new Uint8Array([1]), { contentType: 'image/png' }));
