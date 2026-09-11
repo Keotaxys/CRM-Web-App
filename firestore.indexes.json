@@ -7,7 +7,10 @@
     { "collectionGroup": "activities", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "customerId", "order": "ASCENDING" }, { "fieldPath": "startAt", "order": "DESCENDING" } ] },
     { "collectionGroup": "activities", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "recordState", "order": "ASCENDING" }, { "fieldPath": "deletedAt", "order": "DESCENDING" } ] },
     { "collectionGroup": "users", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "accountStatus", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "users", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "accountStatus", "order": "ASCENDING" }, { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "name", "order": "ASCENDING" } ] }
+    { "collectionGroup": "users", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "accountStatus", "order": "ASCENDING" }, { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "name", "order": "ASCENDING" } ] },
+    { "collectionGroup": "dailySales", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "staffUid", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
+    { "collectionGroup": "dailySales", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
+    { "collectionGroup": "salesProducts", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "active", "order": "ASCENDING" }, { "fieldPath": "sortOrder", "order": "ASCENDING" } ] }
   ],
   "fieldOverrides": []
 }

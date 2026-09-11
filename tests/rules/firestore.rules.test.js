@@ -1,7 +1,19 @@
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 
 let env;
 const actor = (uid, role, branchId, accountStatus = 'approved') => env.authenticatedContext(uid, { role, branchId, accountStatus }).firestore();
@@ -18,6 +30,10 @@ beforeEach(async () => { await env.clearFirestore(); await env.withSecurityRules
   await setDoc(doc(context.firestore(), 'users/admin'), { branchId: null, role: 'admin', accountStatus: 'approved' });
   await setDoc(doc(context.firestore(), 'users/pending'), { branchId: '010', role: 'staff', accountStatus: 'pending' });
   await setDoc(doc(context.firestore(), 'users/disabled'), { branchId: '010', role: 'staff', accountStatus: 'disabled' });
+  await setDoc(doc(context.firestore(), 'salesProducts/bcel'), { name: 'BCEL One', active: true, sortOrder: 10 });
+  await setDoc(doc(context.firestore(), 'dailySales/2026-09-11_staff-a'), { dateKey: '2026-09-11', staffUid: 'staff-a', branchId: '010', items: [], totalQuantity: 0 });
+  await setDoc(doc(context.firestore(), 'dailySales/2026-09-11_staff-b'), { dateKey: '2026-09-11', staffUid: 'staff-b', branchId: '019', items: [], totalQuantity: 0 });
+  await setDoc(doc(context.firestore(), 'dailySales/2026-09-11_staff-a/revisions/change-1'), { changedBy: 'manager-a', changedAt: new Date() });
 }); });
 afterAll(async () => env?.cleanup());
 
@@ -84,5 +100,80 @@ describe('Firestore claim and branch matrix', () => {
     await assertSucceeds(getDoc(doc(actor('staff-a', 'staff', '010'), 'activities/a')));
     await assertFails(getDoc(doc(actor('staff-b', 'staff', '019'), 'activities/a')));
     await assertFails(updateDoc(doc(actor('staff-a', 'staff', '010'), 'activities/a'), { status: 'completed' }));
+  });
+});
+
+describe('Firestore daily sales actor matrix', () => {
+  it('denies anonymous, pending, and disabled sales reads', async () => {
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'salesProducts/bcel')));
+    await assertFails(getDoc(doc(actor('pending', 'staff', '010', 'pending'), 'dailySales/2026-09-11_staff-a')));
+    await assertFails(getDoc(doc(actor('disabled', 'staff', '010', 'disabled'), 'dailySales/2026-09-11_staff-a')));
+  });
+
+  it('lets staff read only their own daily sales', async () => {
+    const db = actor('staff-a', 'staff', '010');
+    await assertSucceeds(getDoc(doc(db, 'dailySales/2026-09-11_staff-a')));
+    await assertFails(getDoc(doc(db, 'dailySales/2026-09-11_staff-b')));
+  });
+
+  it('lets branch managers read their branch and their own record only', async () => {
+    const managerA = actor('manager-a', 'branch_manager', '010');
+    const managerB = actor('manager-b', 'branch_manager', '019');
+    await assertSucceeds(getDoc(doc(managerA, 'dailySales/2026-09-11_staff-a')));
+    await assertFails(getDoc(doc(managerB, 'dailySales/2026-09-11_staff-a')));
+  });
+
+  it('lets admins read daily sales from every branch', async () => {
+    const db = actor('admin', 'admin', null);
+    await assertSucceeds(getDoc(doc(db, 'dailySales/2026-09-11_staff-a')));
+    await assertSucceeds(getDoc(doc(db, 'dailySales/2026-09-11_staff-b')));
+  });
+
+  it('applies parent sales scope to revision reads', async () => {
+    const revisionPath = 'dailySales/2026-09-11_staff-a/revisions/change-1';
+    await assertSucceeds(getDoc(doc(actor('staff-a', 'staff', '010'), revisionPath)));
+    await assertSucceeds(getDoc(doc(actor('manager-a', 'branch_manager', '010'), revisionPath)));
+    await assertFails(getDoc(doc(actor('staff-b', 'staff', '019'), revisionPath)));
+    await assertFails(getDoc(doc(actor('manager-b', 'branch_manager', '019'), revisionPath)));
+    await assertSucceeds(getDoc(doc(actor('admin', 'admin', null), revisionPath)));
+  });
+
+  it('lets every approved actor read products', async () => {
+    await assertSucceeds(getDoc(doc(actor('staff-a', 'staff', '010'), 'salesProducts/bcel')));
+    await assertSucceeds(getDoc(doc(actor('manager-a', 'branch_manager', '010'), 'salesProducts/bcel')));
+    await assertSucceeds(getDoc(doc(actor('admin', 'admin', null), 'salesProducts/bcel')));
+  });
+
+  it('requires staff queries to prove ownership and denies same-branch team queries', async () => {
+    const staffDb = actor('staff-a', 'staff', '010');
+    const staffQuery = query(collection(staffDb, 'dailySales'), where('staffUid', '==', 'staff-a'), where('dateKey', '>=', '2026-09-01'), where('dateKey', '<=', '2026-09-30'), orderBy('dateKey', 'desc'));
+    await assertSucceeds(getDocs(staffQuery));
+    await assertFails(getDocs(query(collection(staffDb, 'dailySales'), where('branchId', '==', '010'))));
+  });
+
+  it('supports branch-scoped manager queries and unrestricted admin date queries', async () => {
+    const managerDb = actor('manager-a', 'branch_manager', '010');
+    const managerQuery = query(collection(managerDb, 'dailySales'), where('branchId', '==', '010'), where('dateKey', '>=', '2026-09-01'), where('dateKey', '<=', '2026-09-30'), orderBy('dateKey', 'desc'));
+    await assertSucceeds(getDocs(managerQuery));
+    await assertFails(getDocs(query(collection(managerDb, 'dailySales'), where('branchId', '==', '019'))));
+
+    const adminDb = actor('admin', 'admin', null);
+    const adminQuery = query(collection(adminDb, 'dailySales'), where('dateKey', '>=', '2026-09-01'), where('dateKey', '<=', '2026-09-30'), orderBy('dateKey', 'desc'));
+    await assertSucceeds(getDocs(adminQuery));
+  });
+
+  it('denies all direct sales catalog, daily record, and revision writes', async () => {
+    const db = actor('admin', 'admin', null);
+    await assertFails(setDoc(doc(db, 'salesProducts/ibank'), { name: 'iBank', active: true, sortOrder: 20 }));
+    await assertFails(updateDoc(doc(db, 'salesProducts/bcel'), { name: 'Renamed' }));
+    await assertFails(deleteDoc(doc(db, 'salesProducts/bcel')));
+
+    await assertFails(setDoc(doc(db, 'dailySales/new'), { dateKey: '2026-09-12', staffUid: 'admin', branchId: null, items: [], totalQuantity: 0 }));
+    await assertFails(updateDoc(doc(db, 'dailySales/2026-09-11_staff-a'), { totalQuantity: 1 }));
+    await assertFails(deleteDoc(doc(db, 'dailySales/2026-09-11_staff-a')));
+
+    await assertFails(setDoc(doc(db, 'dailySales/2026-09-11_staff-a/revisions/change-2'), { changedBy: 'admin', changedAt: new Date() }));
+    await assertFails(updateDoc(doc(db, 'dailySales/2026-09-11_staff-a/revisions/change-1'), { changedBy: 'admin' }));
+    await assertFails(deleteDoc(doc(db, 'dailySales/2026-09-11_staff-a/revisions/change-1')));
   });
 });

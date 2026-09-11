@@ -13,6 +13,17 @@ service cloud.firestore {
     function staff() { return approved() && request.auth.token.role == 'staff'; }
     function sameBranch(data) { return approved() && data.branchId != null && data.branchId == request.auth.token.branchId; }
     function crmRead(data) { return admin() || sameBranch(data); }
+    function ownSales(data) {
+      return approved()
+        && request.auth.token.role in ['staff', 'branch_manager']
+        && data.staffUid == request.auth.uid;
+    }
+    function managerSales(data) {
+      return manager() && data.branchId == request.auth.token.branchId;
+    }
+    function salesRead(data) {
+      return admin() || ownSales(data) || managerSales(data);
+    }
     function knownBranch(branchId) { return branchId in ['010','019','020','030','040','050','060','070','080','090','110','120','130','140','150','160','170','180','190','200','210','220']; }
     function validBirthDate(value) {
       return value == null
@@ -93,6 +104,21 @@ service cloud.firestore {
     match /branches/{branchId} {
       allow read: if approved();
       allow write: if false;
+    }
+
+    match /salesProducts/{productId} {
+      allow read: if approved();
+      allow create, update, delete: if false;
+    }
+
+    match /dailySales/{dailySalesId} {
+      allow read: if salesRead(resource.data);
+      allow create, update, delete: if false;
+
+      match /revisions/{revisionId} {
+        allow read: if salesRead(get(/databases/$(database)/documents/dailySales/$(dailySalesId)).data);
+        allow create, update, delete: if false;
+      }
     }
 
     match /{document=**} { allow read, write: if false; }
