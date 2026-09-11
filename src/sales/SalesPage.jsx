@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Button from '../components/ui/Button';
 import DailySalesForm from './DailySalesForm';
 import SalesReportPanel from './SalesReportPanel';
+import SalesProductAdmin from './SalesProductAdmin';
 
 export default function SalesPage() {
   const identity = useAuth();
@@ -20,7 +21,7 @@ export default function SalesPage() {
       </div>
       {tab === 'entry' ? <DailySalesForm /> : null}
       {tab === 'report' ? <SalesReportPanel /> : null}
-      {tab === 'products' ? <div className="page-state">ຈັດການຜະລິດຕະພັນ</div> : null}
+      {tab === 'products' ? <SalesProductAdmin /> : null}
     </main>
   </>;
 }
