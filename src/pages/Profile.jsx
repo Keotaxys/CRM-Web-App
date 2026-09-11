@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useInRouterContext } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../auth/useAuth';
 import { profileImagePath } from '../shared/imagePaths';
@@ -13,6 +14,7 @@ import Input from '../components/ui/Input';
 
 export default function Profile() {
   const identity = useAuth();
+  const inRouter = useInRouterContext();
   const [values, setValues] = useState({ name: identity.profile?.name ?? '', phone: identity.profile?.phone ?? '', photoURL: identity.profile?.photoURL ?? '', photoStoragePath: identity.profile?.photoStoragePath ?? '' });
   const [avatar, setAvatar] = useState(null); const [feedback, setFeedback] = useState(null); const [busy, setBusy] = useState(false);
   const save = async (event) => {
@@ -32,6 +34,6 @@ export default function Profile() {
       <Input id="profile-phone" label="ເບີໂທ" value={values.phone} onChange={(event) => setValues({ ...values, phone: event.target.value })}/>
       <div className="read-only-field"><span>ບົດບາດ</span><strong>{roleLabel(identity.claims.role)}</strong></div><div className="read-only-field"><span>ສາຂາ</span><strong>{identity.claims.branchId || 'ທຸກສາຂາ'}</strong></div>
       {feedback && <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={feedback.kind === 'error' ? 'error-banner' : 'status-message'}>{feedback.text}</p>}<Button type="submit" busy={busy}>ບັນທຶກ</Button>
-      {identity.claims.role === 'admin' && <a className="btn-secondary text-center" href="/admin">ສູນບໍລິຫານລະບົບ</a>}
+      {inRouter ? <Link className="btn-secondary text-center" to="/sales">ຍອດຂາຍ ແລະລາຍງານ</Link> : <a className="btn-secondary text-center" href="/sales">ຍອດຂາຍ ແລະລາຍງານ</a>}{identity.claims.role === 'admin' && <a className="btn-secondary text-center" href="/admin">ສູນບໍລິຫານລະບົບ</a>}
     </form></GlassCard></main></>;
 }
