@@ -11,6 +11,7 @@ import GlassCard from '../components/ui/GlassCard';
 import SearchableSelect from '../components/ui/SearchableSelect';
 import { buildSalesReport, salesDateRange } from './salesReport';
 import SalesCorrectionSheet from './SalesCorrectionSheet';
+import { downloadSalesWorkbook } from './salesExport';
 
 const PRESETS = [
   ['today', 'ມື້ນີ້'],
@@ -32,6 +33,8 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
   const [queryFailureKey, setQueryFailureKey] = useState('');
   const [completedRangeKey, setCompletedRangeKey] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportFeedback, setExportFeedback] = useState('');
 
   const rangeState = useMemo(() => {
     if (preset === 'custom' && (!custom.startKey || !custom.endKey)) {
@@ -86,6 +89,12 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
   const metadata = rangeState.range ? { ...rangeState.range, preset, filters } : null;
   const queryError = Boolean(queryFailureKey && (queryFailureKey === '*' || queryFailureKey === rangeKey));
   const loaded = Boolean(rangeKey && completedRangeKey === rangeKey);
+  const exportReport = async () => {
+    setExporting(true); setExportFeedback('');
+    try { await (onExport ? onExport(report, metadata) : downloadSalesWorkbook(report, metadata)); setExportFeedback('ສົ່ງອອກ Excel ສຳເລັດ'); }
+    catch (error) { console.error(error); setExportFeedback('ສົ່ງອອກບໍ່ສຳເລັດ'); }
+    finally { setExporting(false); }
+  };
 
   return <section className="form-stack" aria-label="ລາຍງານຍອດຂາຍ">
     <GlassCard padded className="filter-panel">
@@ -109,7 +118,8 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
         <GlassCard padded><span>ຍອດລວມ {report.totalQuantity}</span></GlassCard>
         <GlassCard padded><span>{rangeState.range.startKey} – {rangeState.range.endKey}</span></GlassCard>
       </div>
-      {onExport ? <Button variant="secondary" onClick={() => onExport(report, metadata)}>ສົ່ງອອກ Excel</Button> : null}
+      <Button variant="secondary" busy={exporting} onClick={exportReport}>ສົ່ງອອກ Excel</Button>
+      {exportFeedback ? <p role={exportFeedback.includes('ບໍ່') ? 'alert' : 'status'} className={exportFeedback.includes('ບໍ່') ? 'error-banner' : 'status-message'}>{exportFeedback}</p> : null}
       <GlassCard as="section" padded>
         <h2>ອັນດັບຜະລິດຕະພັນ</h2>
         <table><thead><tr><th>ອັນດັບ</th><th>ຜະລິດຕະພັນ</th><th>ຍອດ</th></tr></thead><tbody>
