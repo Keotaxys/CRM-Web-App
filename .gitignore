@@ -21,6 +21,7 @@ ui-debug.log
 functions/node_modules
 functions/.env
 artifacts/private/
+.worktrees/
 
 # Editor directories and files
 .vscode/*
