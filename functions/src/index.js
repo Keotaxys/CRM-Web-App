@@ -10,11 +10,22 @@ import { approveUserOperation, disableUserOperation, reactivateUserOperation, up
 import { cleanupExpiredActivities, completeFollowUpOperation, permanentlyDeleteActivityOperation, restoreActivityOperation, trashActivityOperation, upsertActivityOperation } from './activityAdmin.js';
 import { abortCustomerUploadsOperation, acknowledgeBirthdayGreetingOperation, archiveCustomerOperation, changeCustomerStatusOperation, cleanupExpiredCustomers, permanentlyDeleteCustomerOperation, restoreCustomerOperation, rollbackCustomerCreateOperation, transferCustomerOperation, trashCustomerOperation } from './customerAdmin.js';
 import { syncLegacyCustomerOperation } from './legacyWebhook.js';
+import { createSalesProductOperation, updateSalesProductOperation } from './salesAdmin.js';
+import { SalesOperationError } from './salesDomain.js';
 
 initializeApp();
 setGlobalOptions({ region: 'asia-southeast1', maxInstances: 10 });
 const services = { db: getFirestore(), auth: getAuth(), get bucket() { return getStorage().bucket(); } };
 const legacyWebhookUrl = defineSecret('LEGACY_WEBHOOK_URL');
+const CALLABLE_ERROR_CODES = new Set([
+  'already-exists',
+  'failed-precondition',
+  'internal',
+  'invalid-argument',
+  'not-found',
+  'permission-denied',
+  'unauthenticated',
+]);
 
 function callable(operation, options = {}) {
   return onCall(options, async (request) => {
@@ -26,6 +37,9 @@ function callable(operation, options = {}) {
     }
     catch (error) {
       console.error('Callable rejected', { operation: operation.name, message: error.message });
+      if (error instanceof SalesOperationError && CALLABLE_ERROR_CODES.has(error.code)) {
+        throw new HttpsError(error.code, error.message);
+      }
       if (/Authenticated/.test(error.message)) throw new HttpsError('unauthenticated', error.message);
       if (/permission|denied|Admin|Cross-branch|Approved/.test(error.message)) throw new HttpsError('permission-denied', error.message);
       throw new HttpsError('failed-precondition', error.message);
@@ -51,6 +65,8 @@ export const rollbackCustomerCreate = callable(rollbackCustomerCreateOperation);
 export const transferCustomer = callable(transferCustomerOperation);
 export const restoreCustomer = callable(restoreCustomerOperation);
 export const permanentlyDeleteCustomer = callable(permanentlyDeleteCustomerOperation);
+export const createSalesProduct = callable(createSalesProductOperation);
+export const updateSalesProduct = callable(updateSalesProductOperation);
 
 export const cleanupExpiredTrash = callable(async (currentServices, actor) => {
   assertAdmin(actor); const now = new Date();
