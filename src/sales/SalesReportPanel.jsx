@@ -150,7 +150,7 @@ export default function SalesReportPanel({ onExport, onCorrect } = {}) {
         <h2>ອັນດັບຜະລິດຕະພັນ</h2>
         <ReportTable title="ອັນດັບຜະລິດຕະພັນ" columns={['ອັນດັບ', 'ຜະລິດຕະພັນ', 'ຍອດ', 'ເປີເຊັນ']}>
           {report.products.map((product) => <tr key={product.productId}>
-            <td>{product.rank}</td><td>{product.name}</td><td>{product.totalQuantity}</td>
+            <td>{product.totalQuantity > 0 ? product.rank : '—'}</td><td>{product.name}</td><td>{product.totalQuantity}</td>
             <td>{product.percentage.toFixed(2)}%</td>
           </tr>)}
         </ReportTable>

@@ -16,8 +16,8 @@ it.each([true, false])('preserves active=%s when editing catalog name and order'
   await user.click(screen.getByRole('button', { name: 'ແກ້ໄຂ' }));
   await user.clear(screen.getByLabelText('ຊື່'));
   await user.type(screen.getByLabelText('ຊື່'), 'Renamed');
-  await user.clear(screen.getByLabelText('ລຳດັບ'));
-  await user.type(screen.getByLabelText('ລຳດັບ'), '20');
+  await user.clear(screen.getByLabelText('ລຳດັບສະແດງ'));
+  await user.type(screen.getByLabelText('ລຳດັບສະແດງ'), '20');
   await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
   expect(mocks.update).toHaveBeenCalledWith('bcel', { name: 'Renamed', sortOrder: 20, active });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -49,3 +49,9 @@ it('maps catalog toggle errors to Lao without exposing backend text', async () =
 });
 
 describe('SalesProductAdmin', () => { it('shows catalog controls without delete', () => { render(<SalesProductAdmin />); expect(screen.getByText('BCEL One')).toBeInTheDocument(); expect(screen.queryByRole('button', { name: /ລຶບ/ })).not.toBeInTheDocument(); }); });
+
+it('names sortOrder as the product display order', async () => {
+  render(<SalesProductAdmin />);
+  await userEvent.setup().click(screen.getByRole('button', { name: 'ແກ້ໄຂ' }));
+  expect(screen.getByLabelText('ລຳດັບສະແດງ')).toHaveValue(1);
+});

@@ -7,7 +7,7 @@ import ModalSheet from '../components/ui/ModalSheet';
 function catalogError(error) {
   const code = error?.code?.replace('functions/', '');
   if (code === 'already-exists') return 'ຊື່ຜະລິດຕະພັນນີ້ມີແລ້ວ ກະລຸນາໃຊ້ຊື່ອື່ນ';
-  if (code === 'invalid-argument') return 'ກະລຸນາກວດຊື່ ແລະລຳດັບໃຫ້ຖືກຕ້ອງ';
+  if (code === 'invalid-argument') return 'ກະລຸນາກວດຊື່ ແລະລຳດັບສະແດງໃຫ້ຖືກຕ້ອງ';
   if (code === 'permission-denied') return 'ທ່ານບໍ່ມີສິດຈັດການຜະລິດຕະພັນ';
   if (code === 'unauthenticated') return 'ກະລຸນາເຂົ້າລະບົບໃໝ່';
   return 'ບໍ່ສາມາດບັນທຶກຜະລິດຕະພັນ ກະລຸນາກວດການເຊື່ອມຕໍ່ ແລ້ວລອງໃໝ່';
@@ -88,7 +88,7 @@ export default function SalesProductAdmin() {
           />
           <Input
             id="sales-product-sort"
-            label="ລຳດັບ"
+            label="ລຳດັບສະແດງ"
             type="number"
             required
             value={values.sortOrder}
