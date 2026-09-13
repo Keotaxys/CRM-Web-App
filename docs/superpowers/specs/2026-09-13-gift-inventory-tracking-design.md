@@ -364,7 +364,7 @@ Log ບໍ່ເກັບ token, ເບີໂທ, ຂໍ້ມູນລູກຄ
 | Anonymous | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ |
 | Pending | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ |
 | Disabled | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ | ປະຕິເສດ |
-| Staff | active catalog ແລະ own-branch stock | read own-branch balance; no inbound/adjust | create/read/amend/cancel own records ຕາມ same-day rule | read active own-branch | ສະເພາະລາຍການຂອງຕົນ |
+| Staff | active catalog ແລະ own-branch stock | read own-branch balance; no inbound/adjust | create/read/amend/cancel own records ຕາມ same-day rule | read active own-branch | ສະເພາະຍອດແຈກຂອງຕົນ ແລະ current stock ທີ່ໃຊ້ໃນ form; ບໍ່ສະແດງຍອດຮັບຂອງສາຂາ |
 | Branch Manager | catalog ແລະ own-branch stock | receive/confirm/adjust own branch | create/read/amend/cancel own branch | manage own branch | ສາຂາຕົນ |
 | Admin | manage catalog; all stocks | receive/confirm/adjust all branches; create allocations | create/read/amend/cancel all branches | manage all branches | ທຸກສາຂາ |
 
@@ -428,7 +428,8 @@ Filters:
 
 ຜົນສະແດງ:
 
-- KPI cards: ຍອດຮັບ, ຍອດແຈກ, ຈຳນວນລາຍການ low-stock ແລະ current stock.
+- KPI cards ສຳລັບ Manager/Admin: ຍອດຮັບ, ຍອດແຈກ, ຈຳນວນລາຍການ low-stock ແລະ current stock.
+- KPI cards ສຳລັບ Staff: ຍອດແຈກຂອງຕົນ ແລະ current stock ທີ່ຕ້ອງໃຊ້ໃນ form; ບໍ່ສະແດງຍອດຮັບ, adjustment ຫຼື audit ຂອງຄົນອື່ນເປັນຄ່າ 0 ທີ່ຊວນໃຫ້ເຂົ້າໃຈຜິດ.
 - ສະຫຼຸບຕາມ gift, branch, staff, customer ແລະ Campaign.
 - ລາຍການ movements ຕາມເວລາ.
 - Export Excel ສະເພາະ scope, date range ແລະ filters ທີ່ຜູ້ໃຊ້ເລືອກ.
@@ -490,6 +491,8 @@ Workbook ສ້າງໃນ browser ຈາກຂໍ້ມູນ role-scoped ທ�
 - ຊ່ວງວັນທີ ແລະ filter scope
 - gift, branch, received units, distributed net units, current units ແລະ low-stock status
 - summary ຕາມ staff, customer ແລະ Campaign ຕາມ filter ທີ່ເລືອກ
+
+Staff export ສະແດງສະເພາະຍອດແຈກຂອງຕົນ ແລະ current stock ທີ່ມີສິດອ່ານ. ຊ່ອງຍອດຮັບ/adjustment ຂອງສາຂາຈະຖືກລະເວັ້ນ ບໍ່ໃສ່ 0 ແທນຂໍ້ມູນທີ່ Staff ບໍ່ມີສິດເຫັນ.
 
 ### 11.2 ແຜ່ນ `ລາຍການເຄື່ອນໄຫວ`
 
