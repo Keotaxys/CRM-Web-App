@@ -54,3 +54,27 @@ test('normalizes gift names and rejects blank names or invalid document ids', ()
   assert.throws(() => normalizeGiftName('   '), /required/i);
   assert.throws(() => assertDocumentId('bad/id', 'Gift'), /invalid/i);
 });
+
+test('rejects unsafe quantities, pack sizes, and arithmetic overflow', () => {
+  assert.throws(() => normalizeGiftLines([
+    { giftId: 'umbrella', packs: Number.MAX_SAFE_INTEGER + 1, looseUnits: 0 },
+  ], catalog), /integer|safe/i);
+  assert.throws(() => normalizeGiftLines([
+    { giftId: 'umbrella', packs: 0, looseUnits: Number.MAX_SAFE_INTEGER + 1 },
+  ], catalog), /integer|safe/i);
+  assert.throws(() => normalizeGiftLines([
+    { giftId: 'umbrella', packs: 1, looseUnits: 0 },
+  ], new Map([['umbrella', {
+    id: 'umbrella', name: 'Umbrella', active: true, unitsPerPack: Number.MAX_SAFE_INTEGER + 1,
+  }]])), /integer|safe/i);
+  assert.throws(() => normalizeGiftLines([
+    { giftId: 'umbrella', packs: 900719925474099, looseUnits: 2 },
+  ], catalog), /safe|overflow/i);
+  assert.throws(() => normalizeGiftLines([
+    { giftId: 'umbrella', packs: Number.MAX_SAFE_INTEGER, looseUnits: 0 },
+    { giftId: 'mug', packs: Number.MAX_SAFE_INTEGER, looseUnits: 0 },
+  ], new Map([
+    ['umbrella', { id: 'umbrella', name: 'Umbrella', active: true, unitsPerPack: 1 }],
+    ['mug', { id: 'mug', name: 'Mug', active: true, unitsPerPack: 1 }],
+  ])), /safe|overflow/i);
+});

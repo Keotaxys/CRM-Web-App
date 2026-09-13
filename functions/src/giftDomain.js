@@ -81,19 +81,27 @@ export function normalizeGiftLines(lines, catalogById) {
     seen.add(giftId);
     const packs = Number(line?.packs ?? 0);
     const looseUnits = Number(line?.looseUnits ?? 0);
-    if (!Number.isInteger(packs) || packs < 0 || !Number.isInteger(looseUnits) || looseUnits < 0) {
-      throw new GiftOperationError('invalid-argument', 'Gift quantities must be nonnegative integers');
+    if (!Number.isSafeInteger(packs) || packs < 0
+      || !Number.isSafeInteger(looseUnits) || looseUnits < 0) {
+      throw new GiftOperationError('invalid-argument', 'Gift quantities must be nonnegative safe integers');
     }
     const gift = catalogById.get(giftId);
-    if (!gift?.active || !Number.isInteger(gift.unitsPerPack) || gift.unitsPerPack < 1) {
-      throw new GiftOperationError('failed-precondition', 'Active gift with valid pack size required');
+    if (!gift?.active || !Number.isSafeInteger(gift.unitsPerPack) || gift.unitsPerPack < 1) {
+      throw new GiftOperationError('failed-precondition', 'Active gift with valid safe pack size required');
     }
     const totalUnits = packs * gift.unitsPerPack + looseUnits;
+    if (!Number.isSafeInteger(totalUnits)) {
+      throw new GiftOperationError('invalid-argument', 'Gift quantity exceeds safe integer range');
+    }
     if (totalUnits < 1) throw new GiftOperationError('invalid-argument', 'Gift row quantity required');
     return {
       giftId, giftNameSnapshot: gift.name, packs, looseUnits,
       unitsPerPackSnapshot: gift.unitsPerPack, totalUnits,
     };
   });
-  return { items, totalUnits: items.reduce((sum, item) => sum + item.totalUnits, 0) };
+  const totalUnits = items.reduce((sum, item) => sum + item.totalUnits, 0);
+  if (!Number.isSafeInteger(totalUnits)) {
+    throw new GiftOperationError('invalid-argument', 'Gift quantity exceeds safe integer range');
+  }
+  return { items, totalUnits };
 }
