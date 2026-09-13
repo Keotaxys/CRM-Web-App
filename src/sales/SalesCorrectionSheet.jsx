@@ -4,11 +4,13 @@ import Button from '../components/ui/Button';
 import ModalSheet from '../components/ui/ModalSheet';
 import Textarea from '../components/ui/Textarea';
 import { salesItemsFromQuantities } from './salesModel';
+import { salesErrorMessage } from './salesErrors';
 
 export default function SalesCorrectionSheet({ record, products, onClose, onSuccess }) {
   const rows = useMemo(() => {
     const catalogIds = new Set(products.map((product) => product.id));
-    return [...products, ...(record.items ?? [])
+    const snapshots = new Map((record.items ?? []).map((item) => [item.productId, item.productNameSnapshot]));
+    return [...products.map((product) => ({ ...product, name: snapshots.get(product.id) ?? product.name })), ...(record.items ?? [])
       .filter((item) => !catalogIds.has(item.productId))
       .map((item) => ({ id: item.productId, name: item.productNameSnapshot ?? item.productId }))];
   }, [products, record.items]);
@@ -52,8 +54,8 @@ export default function SalesCorrectionSheet({ record, products, onClose, onSucc
       mutationIdRef.current = null;
       onSuccess?.();
       onClose?.();
-    } catch {
-      setError('ບໍ່ສາມາດແກ້ໄຂຍອດ ກະລຸນາລອງໃໝ່');
+    } catch (failure) {
+      setError(salesErrorMessage(failure, 'ບໍ່ສາມາດແກ້ໄຂຍອດ ກະລຸນາລອງໃໝ່'));
     } finally {
       submittingRef.current = false;
       setBusy(false);

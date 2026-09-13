@@ -44,8 +44,8 @@ async function invoke(name, payload) {
   return result.data;
 }
 
-export function saveDailySales(items) {
-  return invoke('saveDailySales', { items });
+export function saveDailySales(items, expectedDateKey) {
+  return invoke('saveDailySales', { items, ...(expectedDateKey ? { expectedDateKey } : {}) });
 }
 
 export function amendDailySales(values) {

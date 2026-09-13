@@ -14,7 +14,7 @@ export default function SalesPage() {
   return <>
     <Navbar title="ຍອດຂາຍຜະລິດຕະພັນ" />
     <main className="page-content">
-      <div className="chip-row mb-5" aria-label="ໜ້າຍອດຂາຍ">
+      <div className="chip-row sales-tabs mb-5" aria-label="ໜ້າຍອດຂາຍ">
         {!admin ? <Button variant="neutral" aria-pressed={tab === 'entry'} onClick={() => setTab('entry')}>ບັນທຶກມື້ນີ້</Button> : null}
         <Button variant="neutral" aria-pressed={tab === 'report'} onClick={() => setTab('report')}>ລາຍງານຍອດຂາຍ</Button>
         {admin ? <Button variant="neutral" aria-pressed={tab === 'products'} onClick={() => setTab('products')}>ຈັດການຜະລິດຕະພັນ</Button> : null}

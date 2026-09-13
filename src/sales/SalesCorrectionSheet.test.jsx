@@ -17,6 +17,20 @@ const record = {
 const products = [{ id: 'bcel', name: 'BCEL One', sortOrder: 1 }];
 
 describe('SalesCorrectionSheet', () => {
+  it('distinguishes permission failures in Lao and preserves correction inputs', async () => {
+    serviceMocks.amendDailySales.mockRejectedValue({ code: 'functions/permission-denied' });
+    render(<SalesCorrectionSheet record={record} products={products} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'Verify');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('ທ່ານບໍ່ມີສິດ');
+    expect(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ')).toHaveValue('Verify');
+  });
+  it('displays the historical snapshot after a catalog rename', () => {
+    render(<SalesCorrectionSheet record={record} products={[{ ...products[0], name: 'Renamed BCEL' }]} />);
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toHaveValue(2);
+    expect(screen.queryByLabelText('ຈຳນວນ Renamed BCEL')).not.toBeInTheDocument();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     serviceMocks.amendDailySales.mockResolvedValue({});

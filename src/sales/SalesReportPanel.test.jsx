@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SalesReportPanel from './SalesReportPanel';
 
 const serviceMocks = vi.hoisted(() => ({
@@ -13,7 +13,6 @@ const serviceMocks = vi.hoisted(() => ({
 const authMock = vi.hoisted(() => ({ identity: null }));
 
 vi.mock('../auth/useAuth', () => ({ useAuth: () => authMock.identity }));
-vi.mock('../shared/dateTime', async (original) => ({ ...await original(), laosTodayKey: () => '2026-09-11' }));
 vi.mock('../services/salesService', () => ({
   subscribeDailySales: serviceMocks.subscribeDailySales,
   subscribeAllSalesProducts: serviceMocks.subscribeAllSalesProducts,
@@ -37,7 +36,7 @@ const users = [
   { uid: 'staff-b', name: 'Staff B', branchId: '019' },
 ];
 
-function arrange(role = 'staff', data = records) {
+function arrange(role = 'staff', data = records, props = {}) {
   authMock.identity = { user: { uid: 'staff-a' }, claims: { role, branchId: '010' } };
   serviceMocks.subscribeAllSalesProducts.mockImplementation((onData) => { onData(products); return vi.fn(); });
   serviceMocks.subscribeAssignableUsers.mockImplementation((_identity, onData) => { onData(users); return vi.fn(); });
@@ -45,14 +44,68 @@ function arrange(role = 'staff', data = records) {
     if (serviceMocks.dailyError) onError(serviceMocks.dailyError); else onData(data);
     return vi.fn();
   });
-  return render(<SalesReportPanel />);
+  return render(<SalesReportPanel {...props} />);
 }
 
 describe('SalesReportPanel', () => {
+  it('uses single-column feature grids and keyboard-scrollable regions for every table', () => {
+    const { container } = arrange('admin');
+    expect(container.querySelector('.sales-summary-grid')).toBeInTheDocument();
+    expect(container.querySelector('.sales-filter-grid')).toBeInTheDocument();
+    for (const table of screen.getAllByRole('table')) {
+      expect(table.parentElement).toHaveClass('sales-report-table-wrap');
+      expect(table.parentElement).toHaveAttribute('tabindex', '0');
+      expect(table.parentElement).toHaveAttribute('aria-label');
+      expect(table.querySelector('thead')).toBeInTheDocument();
+    }
+    expect(screen.getByRole('cell', { name: '71.43%' })).toBeInTheDocument();
+  });
+  it('passes exporter, generation time and readable selected scope to export without querying again', async () => {
+    const onExport = vi.fn().mockResolvedValue();
+    arrange('branch_manager', [records[0]], { onExport });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('ຜະລິດຕະພັນ'));
+    await user.click(screen.getByRole('option', { name: 'BCEL One' }));
+    const queryCount = serviceMocks.subscribeDailySales.mock.calls.length;
+    await user.click(screen.getByRole('button', { name: 'ສົ່ງອອກ Excel' }));
+    expect(onExport).toHaveBeenCalledWith(expect.objectContaining({ totalQuantity: 5 }), expect.objectContaining({
+      exporter: 'staff-a', generatedAt: new Date('2026-09-11T10:00:00Z'),
+      scope: expect.stringContaining('010'), filterLabels: expect.objectContaining({ product: 'BCEL One' }),
+    }));
+    expect(serviceMocks.subscribeDailySales).toHaveBeenCalledTimes(queryCount);
+  });
+  it('corrects the complete authorized record even with a product filter', async () => {
+    arrange('branch_manager', [{ ...records[0], items: [
+      ...records[0].items,
+      { productId: 'atm', productNameSnapshot: 'ATM', quantity: 2 },
+    ] }]);
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('ຜະລິດຕະພັນ'));
+    await user.click(screen.getByRole('option', { name: 'BCEL One' }));
+    await user.click(screen.getByRole('button', { name: 'ແກ້ໄຂຍອດ 2026-09-11 Staff A' }));
+    await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'Verify');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    expect(serviceMocks.amendDailySales).toHaveBeenCalledWith(expect.objectContaining({
+      dailySalesId: '2026-09-11_staff-a',
+      items: [{ productId: 'bcel', quantity: 5 }, { productId: 'atm', quantity: 2 }],
+    }));
+  });
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-11T10:00:00Z'));
     vi.clearAllMocks();
     serviceMocks.dailyError = null;
     serviceMocks.amendDailySales.mockResolvedValue({});
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('refreshes the Today preset on Laos midnight after resuming', () => {
+    vi.setSystemTime(new Date('2026-09-11T16:59:59Z'));
+    arrange();
+    vi.setSystemTime(new Date('2026-09-11T17:00:00Z'));
+    fireEvent(document, new Event('visibilitychange'));
+    expect(serviceMocks.subscribeDailySales).toHaveBeenLastCalledWith(authMock.identity,
+      { startKey: '2026-09-12', endKey: '2026-09-12' }, expect.any(Function), expect.any(Function));
   });
 
   it('queries preset ranges and renders Monday-Sunday labels, totals, and ranking', async () => {

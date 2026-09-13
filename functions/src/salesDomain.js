@@ -36,6 +36,9 @@ export function validateSalesItems(items, catalogById, existingItems = []) {
   const existingQuantities = new Map(
     (Array.isArray(existingItems) ? existingItems : []).map((item) => [item?.productId, item?.quantity]),
   );
+  const existingNames = new Map(
+    (Array.isArray(existingItems) ? existingItems : []).map((item) => [item?.productId, item?.productNameSnapshot]),
+  );
   const seen = new Set();
   const normalizedItems = [];
 
@@ -58,7 +61,7 @@ export function validateSalesItems(items, catalogById, existingItems = []) {
       throw new SalesOperationError('failed-precondition', 'Inactive sales product quantity cannot increase');
     }
     if (quantity > 0) {
-      normalizedItems.push({ productId, productNameSnapshot: product.name, quantity });
+      normalizedItems.push({ productId, productNameSnapshot: existingNames.get(productId) ?? product.name, quantity });
     }
   }
 

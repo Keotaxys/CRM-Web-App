@@ -7,6 +7,12 @@ const screensCss = readFileSync(
   'utf8',
 );
 
+it('constrains sales tables locally and overrides shared grids at 360px', () => {
+  expect(screensCss).toMatch(/\.sales-report-table-wrap\s*\{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow[^}]*auto/s);
+  expect(screensCss).toMatch(/\.sales-report-table-wrap th\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/s);
+  expect(screensCss).toMatch(/@media\s*\(max-width:\s*430px\)\s*\{[^}]*\.summary-grid\.sales-summary-grid[^}]*\.form-grid\.sales-filter-grid[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+});
+
 describe(
   'global screen surface styles',
   () => {

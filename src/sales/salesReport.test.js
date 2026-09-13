@@ -75,7 +75,7 @@ describe('buildSalesReport', () => {
           dateKey: '2026-09-09', totalQuantity: 7,
           rows: [
             {
-              staffUid: 'staff-a', staffName: 'Alice', branchId: '010',
+              staffUid: 'staff-a', staffName: 'Alice', branchId: '010', updatedAt: null,
               items: [
                 { productId: 'bcel', productNameSnapshot: 'BCEL One', quantity: 3 },
                 { productId: 'sms', productNameSnapshot: 'SMS Banking', quantity: 1 },
@@ -83,7 +83,7 @@ describe('buildSalesReport', () => {
               totalQuantity: 4,
             },
             {
-              staffUid: 'staff-c', staffName: 'Carol', branchId: '010',
+              staffUid: 'staff-c', staffName: 'Carol', branchId: '010', updatedAt: null,
               items: [
                 { productId: 'ibank', productNameSnapshot: 'iBank', quantity: 2 },
                 { productId: 'sms', productNameSnapshot: 'SMS Banking', quantity: 1 },
@@ -95,7 +95,7 @@ describe('buildSalesReport', () => {
         {
           dateKey: '2026-09-08', totalQuantity: 3,
           rows: [{
-            staffUid: 'staff-b', staffName: 'Bob', branchId: '019',
+            staffUid: 'staff-b', staffName: 'Bob', branchId: '019', updatedAt: null,
             items: [
               { productId: 'bcel', productNameSnapshot: 'Old BCEL', quantity: 1 },
               { productId: 'ibank', productNameSnapshot: 'iBank', quantity: 2 },

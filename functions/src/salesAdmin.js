@@ -140,6 +140,10 @@ export async function saveDailySalesOperation({ db }, actor, data, now = new Dat
   }
   assertNoServerControlledFields(data);
   const dateKey = laosSalesDateKey(now);
+  // A client draft day is a precondition only; the server still chooses the target day.
+  if (data?.expectedDateKey !== undefined && data.expectedDateKey !== dateKey) {
+    throw new SalesOperationError('failed-precondition', 'Sales draft day has changed');
+  }
   const ref = db.doc(`dailySales/${dailySalesDocumentId(dateKey, actor.uid)}`);
   const savedTotalQuantity = await db.runTransaction(async (transaction) => {
     const [profile, existing, catalog] = await loadSalesContext(transaction, db, actor.uid, ref);

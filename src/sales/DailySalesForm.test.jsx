@@ -1,6 +1,6 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DailySalesForm from './DailySalesForm';
 
 const serviceMocks = vi.hoisted(() => ({
@@ -11,10 +11,6 @@ const serviceMocks = vi.hoisted(() => ({
 const authMock = vi.hoisted(() => ({ identity: null }));
 
 vi.mock('../auth/useAuth', () => ({ useAuth: () => authMock.identity }));
-vi.mock('../shared/dateTime', async (original) => ({
-  ...await original(),
-  laosTodayKey: () => '2026-09-11',
-}));
 vi.mock('../services/salesService', () => serviceMocks);
 
 const activeProducts = [
@@ -31,7 +27,81 @@ function arrange({ role = 'staff', records = [], saveError = null } = {}) {
 }
 
 describe('DailySalesForm', () => {
-  beforeEach(() => vi.clearAllMocks());
+  it.each([
+    ['functions/permission-denied', 'ທ່ານບໍ່ມີສິດ'],
+    ['functions/invalid-argument', 'ກະລຸນາກວດຈຳນວນ'],
+    ['functions/unauthenticated', 'ກະລຸນາເຂົ້າລະບົບໃໝ່'],
+    ['functions/failed-precondition', 'ຂໍ້ມູນປ່ຽນແລ້ວ'],
+  ])('maps %s to actionable Lao and preserves the daily draft', async (code, message) => {
+    const { container } = arrange({ saveError: { code, message: 'Backend English' } });
+    fireEvent.change(screen.getByLabelText('ຈຳນວນ BCEL One'), { target: { value: '4' } });
+    await act(async () => fireEvent.submit(container.querySelector('form')));
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toHaveValue(4);
+  });
+  it.each([0, 2])('keeps a deactivated draft product visible and limits it to its saved quantity %s', (saved) => {
+    const { container } = arrange({ records: saved ? [{ staffUid: 'staff-a', items: [{ productId: 'bcel', productNameSnapshot: 'BCEL One', quantity: saved }] }] : [] });
+    fireEvent.change(screen.getByLabelText('ຈຳນວນ BCEL One'), { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText('ຈຳນວນ ATM'), { target: { value: '3' } });
+    act(() => serviceMocks.subscribeActiveSalesProducts.mock.calls[0][0]([activeProducts[1]]));
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toHaveValue(5);
+    expect(screen.getByText('ປິດນຳໃຊ້')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('ກະລຸນາຫຼຸດຈຳນວນ');
+    fireEvent.submit(container.querySelector('form'));
+    expect(serviceMocks.saveDailySales).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('ຈຳນວນ BCEL One'), { target: { value: String(saved) } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.submit(container.querySelector('form'));
+    expect(serviceMocks.saveDailySales).toHaveBeenCalledWith(
+      saved ? [{ productId: 'bcel', quantity: 2 }, { productId: 'atm', quantity: 3 }] : [{ productId: 'atm', quantity: 3 }],
+      '2026-09-11',
+    );
+  });
+  it.each(['pending', 'failed'])('blocks controls and programmatic submit while daily load is %s', (state) => {
+    arrange().unmount();
+    serviceMocks.subscribeDailySales.mockImplementation((_identity, _range, _onData, onError) => {
+      if (state === 'failed') onError(new Error('offline'));
+      return vi.fn();
+    });
+    const { container } = render(<DailySalesForm />);
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'ບັນທຶກຍອດມື້ນີ້' })).toBeDisabled();
+    fireEvent.submit(container.querySelector('form'));
+    expect(serviceMocks.saveDailySales).not.toHaveBeenCalled();
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-11T10:00:00Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it.each(['focus', 'submit'])('locks yesterday draft after suspended tab resumes through %s and reloads today', (trigger) => {
+    vi.setSystemTime(new Date('2026-09-11T16:59:59Z'));
+    const { container } = arrange({ records: [{ staffUid: 'staff-a', items: [{ productId: 'bcel', quantity: 5 }] }] });
+    vi.setSystemTime(new Date('2026-09-11T17:00:00Z'));
+    if (trigger === 'focus') fireEvent(window, new Event('focus'));
+    else fireEvent.submit(container.querySelector('form'));
+    expect(serviceMocks.saveDailySales).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toBeDisabled();
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toHaveValue(5);
+    serviceMocks.subscribeDailySales.mockImplementation((_identity, _range, onData) => { onData([]); return vi.fn(); });
+    fireEvent.click(screen.getByRole('button', { name: 'ໂຫຼດມື້ໃໝ່' }));
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toHaveValue(0);
+    expect(serviceMocks.subscribeDailySales).toHaveBeenLastCalledWith(authMock.identity,
+      { startKey: '2026-09-12', endKey: '2026-09-12' }, expect.any(Function), expect.any(Function));
+  });
+
+  it('resets hydration for a different identity and ignores old subscription callbacks', () => {
+    const view = arrange({ records: [{ staffUid: 'staff-a', items: [{ productId: 'bcel', quantity: 5 }] }] });
+    const oldCallback = serviceMocks.subscribeDailySales.mock.calls[0][2];
+    authMock.identity = { ...authMock.identity, user: { uid: 'staff-b' } };
+    serviceMocks.subscribeDailySales.mockImplementation(() => vi.fn());
+    view.rerender(<DailySalesForm />);
+    act(() => oldCallback([{ staffUid: 'staff-a', items: [{ productId: 'bcel', quantity: 99 }] }]));
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toHaveValue(0);
+    expect(screen.getByLabelText('ຈຳນວນ BCEL One')).toBeDisabled();
+  });
 
   it('renders active catalog order and a saved inactive historical product with existing quantities', async () => {
     arrange({ records: [{ id: 'today_staff-a', items: [
@@ -85,7 +155,7 @@ describe('DailySalesForm', () => {
     const saveButton = screen.getByRole('button', { name: 'ບັນທຶກຍອດມື້ນີ້' });
     await user.dblClick(saveButton);
     expect(serviceMocks.saveDailySales).toHaveBeenCalledTimes(1);
-    expect(serviceMocks.saveDailySales).toHaveBeenCalledWith([{ productId: 'bcel', quantity: 1 }]);
+    expect(serviceMocks.saveDailySales).toHaveBeenCalledWith([{ productId: 'bcel', quantity: 1 }], '2026-09-11');
     resolveSave();
     expect(await screen.findByRole('status')).toHaveTextContent('ບັນທຶກຍອດຂາຍແລ້ວ');
   });

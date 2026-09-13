@@ -171,7 +171,7 @@ export function buildSalesReport(records = [], products = []) {
       daysByKey.set(date, day);
     }
     day.totalQuantity += recordTotal;
-    day.rows.push({ staffUid, staffName, branchId, items: normalizedItems, totalQuantity: recordTotal });
+    day.rows.push({ id: record.id, staffUid, staffName, branchId, updatedAt: record.updatedAt ?? null, items: normalizedItems, totalQuantity: recordTotal });
   }
 
   // Product totals descend; catalog order and stable product id break ties.

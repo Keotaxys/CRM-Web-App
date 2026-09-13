@@ -10,6 +10,28 @@ const admin = { uid: 'admin-a', role: 'admin', branchId: null, accountStatus: 'a
 const pending = { uid: 'pending-a', role: 'staff', branchId: '010', accountStatus: 'pending' };
 const disabled = { uid: 'disabled-a', role: 'staff', branchId: '010', accountStatus: 'disabled' };
 
+test('rename then amendment preserves existing snapshots and names only new items from catalog', async () => {
+  const { services, documents, revisions } = salesServices({ dailyBranch: '010' });
+  documents.set('salesProducts/bcel', { name: 'Renamed BCEL', active: true });
+  documents.set('salesProducts/atm', { name: 'New ATM', active: true });
+  await amendDailySalesOperation(services, managerA, {
+    dailySalesId: '2026-09-01_staff-a', mutationId: '550e8400-e29b-41d4-a716-446655440000', reason: 'Add ATM',
+    items: [{ productId: 'bcel', quantity: 2 }, { productId: 'atm', quantity: 1, productNameSnapshot: 'Forged' }],
+  });
+  const expected = [{ productId: 'bcel', quantity: 2, productNameSnapshot: 'BCEL One' },
+    { productId: 'atm', quantity: 1, productNameSnapshot: 'New ATM' }];
+  assert.deepEqual(documents.get('dailySales/2026-09-01_staff-a').items, expected);
+  assert.deepEqual([...revisions.values()][0].nextItems, expected);
+});
+
+test('rejects an expected draft day that crossed Laos midnight without writing', async () => {
+  const { services, writes } = salesServices();
+  await assert.rejects(() => saveDailySalesOperation(services, staffA, {
+    expectedDateKey: '2026-09-11', items: [{ productId: 'bcel', quantity: 5 }],
+  }, new Date('2026-09-11T17:00:00Z')), (error) => error.code === 'failed-precondition');
+  assert.equal(writes.length, 0);
+});
+
 function snapshot(ref, value) {
   return { id: ref.id, ref, exists: value !== undefined, data: () => value && ({ ...value }) };
 }
