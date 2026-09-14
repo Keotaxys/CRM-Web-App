@@ -312,3 +312,41 @@ test('exhausted stock version rejects distribution before any writes', async () 
   });
   await unchanged(state, () => record(state.services, staff, input, now), 'failed-precondition');
 });
+
+test('default server clock rejects an uncommitted create retried across Laos midnight', async (t) => {
+  const state = fixture();
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-09-14T16:59:59Z').getTime() });
+  state.retryNextTransaction(() => t.mock.timers.setTime(tomorrow.getTime()));
+  await unchanged(state, () => record(state.services, staff, input), 'failed-precondition');
+});
+
+for (const [label, operation, payload] of [['amendment', amend, change], ['cancellation', cancel, cancellation]]) {
+  test(`default server clock rejects an uncommitted Staff ${label} retried across Laos midnight`, async (t) => {
+    const state = fixture();
+    await record(state.services, staff, input, now);
+    t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-09-14T16:59:59Z').getTime() });
+    state.retryNextTransaction(() => t.mock.timers.setTime(tomorrow.getTime()));
+    await unchanged(state, () => operation(state.services, staff, payload), 'permission-denied');
+  });
+}
+
+test('injected clock is reread on retry and completed results return before reading it', async () => {
+  const state = fixture();
+  let currentTime = new Date('2026-09-14T16:59:59Z');
+  const clock = () => currentTime;
+  state.retryNextTransaction(() => { currentTime = tomorrow; });
+  await unchanged(state, () => record(state.services, staff, input, clock), 'failed-precondition');
+
+  const created = await record(state.services, staff, input, now);
+  const amended = await amend(state.services, staff, change, now);
+  const cancelInput = { ...cancellation, expectedVersion: 2 };
+  const cancelled = await cancel(state.services, staff, cancelInput, now);
+  const before = structuredClone([...state.documents]);
+  const count = state.writes.length;
+  const unavailableClock = () => { throw new Error('Completed retries must not read the clock'); };
+  assert.deepEqual(await record(state.services, staff, input, unavailableClock), created);
+  assert.deepEqual(await amend(state.services, staff, change, unavailableClock), amended);
+  assert.deepEqual(await cancel(state.services, staff, cancelInput, unavailableClock), cancelled);
+  assert.deepEqual([...state.documents], before);
+  assert.equal(state.writes.length, count);
+});

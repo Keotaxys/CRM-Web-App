@@ -4,7 +4,7 @@ function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
 }
 
-function createDatabase(documents, writes) {
+function createDatabase(documents, writes, retry) {
   let nextId = 1;
   let commitVersion = 0;
 
@@ -110,6 +110,12 @@ function createDatabase(documents, writes) {
         if (readVersion !== commitVersion) return this.runTransaction(callback, attempt + 1);
         throw error;
       }
+      if (retry.beforeRetry) {
+        const beforeRetry = retry.beforeRetry;
+        retry.beforeRetry = null;
+        await beforeRetry();
+        return this.runTransaction(callback, attempt + 1);
+      }
       // Retry a conflicted callback with fresh reads, discarding every staged write.
       if (readVersion !== commitVersion) return this.runTransaction(callback, attempt + 1);
       const committed = new Map([...documents.entries()]
@@ -142,5 +148,11 @@ export function fakeGiftFirestore(initialDocuments = {}) {
   const documents = new Map(Object.entries(initialDocuments)
     .map(([path, value]) => [path, clone(value)]));
   const writes = [];
-  return { services: { db: createDatabase(documents, writes) }, documents, writes };
+  const retry = { beforeRetry: null };
+  return {
+    services: { db: createDatabase(documents, writes, retry) }, documents, writes,
+    retryNextTransaction(beforeRetry) {
+      retry.beforeRetry = beforeRetry;
+    },
+  };
 }

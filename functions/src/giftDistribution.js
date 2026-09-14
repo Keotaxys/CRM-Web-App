@@ -112,7 +112,7 @@ function retryResult(snapshot, digest, field) {
   return existing.result;
 }
 
-export async function recordGiftDistributionOperation({ db }, actor, data, now = new Date()) {
+export async function recordGiftDistributionOperation({ db }, actor, data, now = () => new Date()) {
   assertActor(actor);
   allowedFields(data, ['distributionId', 'branchId', 'expectedDateKey', ...CONTENT_FIELDS]);
   const distributionId = assertUuid(data.distributionId, 'Distribution');
@@ -133,7 +133,7 @@ export async function recordGiftDistributionOperation({ db }, actor, data, now =
     ]);
     assertProfile(actor, profile);
     if (existing.exists) return retryResult(existing, payloadDigest, 'payloadDigest');
-    const dateKey = laosGiftDateKey(now);
+    const dateKey = laosGiftDateKey(typeof now === 'function' ? now() : now);
     if (dateKey !== data.expectedDateKey) fail('failed-precondition', 'Laos date changed; refresh before saving');
     const content = await loadContent(transaction, db, request, branchId);
     const result = { distributionId, dateKey, totalUnits: content.totalUnits, version: 1, status: 'active' };
@@ -232,7 +232,7 @@ async function mutateDistribution({ db }, actor, data, now, operation) {
     }
     // Completed retries remain valid after midnight or a subsequent revision.
     if (revision.exists) return retryResult(revision, request.requestDigest, 'requestDigest');
-    const dateKey = laosGiftDateKey(now);
+    const dateKey = laosGiftDateKey(typeof now === 'function' ? now() : now);
     if (actor.role === 'staff' && previous.dateKey !== dateKey) {
       fail('permission-denied', 'Staff corrections must be on the original Laos day');
     }
@@ -281,10 +281,10 @@ async function mutateDistribution({ db }, actor, data, now, operation) {
   });
 }
 
-export async function amendGiftDistributionOperation(services, actor, data, now = new Date()) {
+export async function amendGiftDistributionOperation(services, actor, data, now = () => new Date()) {
   return mutateDistribution(services, actor, data, now, 'amend');
 }
 
-export async function cancelGiftDistributionOperation(services, actor, data, now = new Date()) {
+export async function cancelGiftDistributionOperation(services, actor, data, now = () => new Date()) {
   return mutateDistribution(services, actor, data, now, 'cancel');
 }
