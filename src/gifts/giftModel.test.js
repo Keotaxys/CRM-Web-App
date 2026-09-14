@@ -41,6 +41,8 @@ describe('gift quantity helpers', () => {
     '+2',
     '2.0',
     '1e2',
+    '-0',
+    -0,
   ])('rejects malformed or noncanonical integer value %j', (packs) => {
     expect(() => giftLineTotal({ packs, looseUnits: 1 }, { unitsPerPack: 10 }))
       .toThrow(/integer/i);

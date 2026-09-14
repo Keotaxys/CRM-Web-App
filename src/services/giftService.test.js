@@ -283,6 +283,18 @@ describe('trusted gift callable wrappers', () => {
         reason: 'Count',
         items: [{ giftId: 'umbrella', deltaUnits: '1e2' }],
       }),
+      () => adjustGiftStock({
+        adjustmentId: operationId,
+        branchId: '010',
+        reason: 'Count',
+        items: [{ giftId: 'umbrella', deltaUnits: '-0' }],
+      }),
+      () => adjustGiftStock({
+        adjustmentId: operationId,
+        branchId: '010',
+        reason: 'Count',
+        items: [{ giftId: 'umbrella', deltaUnits: -0 }],
+      }),
       () => amendGiftDistribution({
         distributionId: operationId,
         mutationId,
@@ -300,6 +312,19 @@ describe('trusted gift callable wrappers', () => {
         reason: 'Correction',
         branchId: '010',
       }),
+    ];
+
+    for (const invokeInvalid of invalidCalls) expect(invokeInvalid).toThrow(/integer/i);
+    expect(mocks.httpsCallable).not.toHaveBeenCalled();
+  });
+
+  it('rejects string and numeric negative zero before invoking Functions', () => {
+    const validItem = {
+      name: 'X', unitLabel: 'u', packLabel: 'p', unitsPerPack: 1,
+    };
+    const invalidCalls = [
+      () => createGiftItem({ ...validItem, sortOrder: '-0' }),
+      () => createGiftItem({ ...validItem, sortOrder: -0 }),
     ];
 
     for (const invokeInvalid of invalidCalls) expect(invokeInvalid).toThrow(/integer/i);

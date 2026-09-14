@@ -152,10 +152,13 @@ async function invoke(name, payload) {
 function formInteger(value, { minimum = 0, nonzero = false, label = 'Gift quantity' } = {}) {
   let number;
   if (typeof value === 'number') {
+    if (Object.is(value, -0)) {
+      throw new Error(`${label} must be a safe integer`);
+    }
     number = value;
   } else if (typeof value === 'string') {
     const text = value.trim();
-    if (!/^-?(?:0|[1-9]\d*)$/.test(text)) {
+    if (!/^(?:0|-?[1-9]\d*)$/.test(text)) {
       throw new Error(`${label} must be a safe integer`);
     }
     number = Number(text);
