@@ -180,13 +180,13 @@ describe('trusted gift callable wrappers', () => {
 
   it('uses exact catalog and Campaign callable payloads', async () => {
     await createGiftItem({ name: 'Umbrella', unitLabel: 'unit', packLabel: 'pack', unitsPerPack: '10', sortOrder: '2', active: false, createdBy: 'forged' });
-    await expectLastCall('createGiftItem', { name: 'Umbrella', unitLabel: 'unit', packLabel: 'pack', unitsPerPack: 10, sortOrder: 2 });
+    await expectLastCall('createGiftItem', { name: 'Umbrella', unitLabel: 'unit', packLabel: 'pack', unitsPerPack: 10, sortOrder: 2, active: false });
 
     await updateGiftItem('umbrella', { name: 'Umbrella 2', unitLabel: 'unit', packLabel: 'box', unitsPerPack: 12, sortOrder: 3, active: false, updatedBy: 'forged' });
     await expectLastCall('updateGiftItem', { giftId: 'umbrella', name: 'Umbrella 2', unitLabel: 'unit', packLabel: 'box', unitsPerPack: 12, sortOrder: 3, active: false });
 
     await createGiftCampaign({ name: 'New year', branchId: '010', startDate: '2026-12-01', endDate: '2026-12-31', note: 'Seasonal', active: false });
-    await expectLastCall('createGiftCampaign', { name: 'New year', branchId: '010', startDate: '2026-12-01', endDate: '2026-12-31', note: 'Seasonal' });
+    await expectLastCall('createGiftCampaign', { name: 'New year', branchId: '010', startDate: '2026-12-01', endDate: '2026-12-31', note: 'Seasonal', active: false });
 
     await updateGiftCampaign('campaign-a', { name: 'New year', branchId: '010', startDate: '2026-12-02', endDate: '2026-12-31', note: '', active: false, normalizedName: 'forged' });
     await expectLastCall('updateGiftCampaign', { campaignId: 'campaign-a', name: 'New year', branchId: '010', startDate: '2026-12-02', endDate: '2026-12-31', note: '', active: false });

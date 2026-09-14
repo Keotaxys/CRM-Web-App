@@ -26,4 +26,15 @@ describe('GiftCampaignAdmin', () => {
     await user.click(screen.getByRole('button', { name: /save campaign/i }));
     expect(screen.getByRole('alert')).toHaveTextContent(/date range/i);
   });
+
+  it('clears active and inactive Campaign history when an Admin switches to an empty branch', () => {
+    service.subscribeGiftCampaigns.mockImplementation((_identity, options, onData) => {
+      onData(options.branchId === '010' && options.active ? [{ id: 'campaign-live', name: 'Branch 010 Campaign', branchId: '010', active: true, startDate: '2026-01-01', endDate: '2026-01-02', note: '' }] : []);
+      return vi.fn();
+    });
+    const { rerender } = render(<GiftCampaignAdmin identity={admin} effectiveBranchId="010" />);
+    expect(screen.getByText('Branch 010 Campaign')).toBeInTheDocument();
+    rerender(<GiftCampaignAdmin identity={admin} effectiveBranchId="019" />);
+    expect(screen.queryByText('Branch 010 Campaign')).not.toBeInTheDocument();
+  });
 });

@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { giftLineTotal, giftStockDisplay } from './giftModel';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -7,9 +7,10 @@ const emptyRow = (key) => ({ key, giftId: '', packs: '0', looseUnits: '0' });
 
 // Shared with submit handlers so every pack/unit workflow has one validation rule.
 // eslint-disable-next-line react-refresh/only-export-components
-export function validateGiftItemRows(rows) {
+export function validateGiftItemRows(rows, catalog = []) {
   if (!Array.isArray(rows) || rows.length < 1 || rows.length > 25) return { error: 'Gift items must contain 1 to 25 rows' };
-  const seen = new Set(); const items = [];
+  const giftsById = Object.fromEntries(catalog.map((gift) => [gift.id, gift]));
+  const seen = new Set(); const items = []; let aggregateTotal = 0;
   for (const row of rows) {
     if (!row.giftId) continue;
     if (seen.has(row.giftId)) return { error: 'ລາຍການເຄື່ອງແຈກຊ້ຳ' };
@@ -18,6 +19,11 @@ export function validateGiftItemRows(rows) {
     if (!/^\d+$/.test(row.packs) || !/^\d+$/.test(row.looseUnits)
       || !Number.isSafeInteger(packs) || !Number.isSafeInteger(looseUnits)
       || (!packs && !looseUnits)) return { error: 'ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມບວກ' };
+    try {
+      const total = giftLineTotal({ packs, looseUnits }, giftsById[row.giftId]);
+      aggregateTotal += total;
+      if (!Number.isSafeInteger(aggregateTotal)) return { error: 'Gift quantity must be a safe integer' };
+    } catch { return { error: 'Gift quantity must be a safe integer' }; }
     items.push({ giftId: row.giftId, packs, looseUnits });
   }
   return items.length ? { items } : { error: 'ກະລຸນາເລືອກເຄື່ອງແຈກ' };
@@ -29,7 +35,6 @@ function visibleTotal(row, gift) {
 }
 
 export default function GiftItemRows({ catalog = [], rows, onChange, showStock = false, stocks = {}, maxRows = 25, disabled = false, onValidationIssue }) {
-  const nextKey = useRef(Math.max(0, ...rows.map((row) => Number(row.key) || 0)));
   const byId = useMemo(() => Object.fromEntries(catalog.map((item) => [item.id, item])), [catalog]);
   const duplicates = new Set(rows.filter((row) => row.giftId).map((row) => row.giftId).filter((id, index, ids) => ids.indexOf(id) !== index));
   const update = (key, change) => onChange(rows.map((row) => row.key === key ? { ...row, ...change } : row));
@@ -38,7 +43,7 @@ export default function GiftItemRows({ catalog = [], rows, onChange, showStock =
     onChange(next);
     onValidationIssue?.(giftId && next.some((row) => row.key !== key && row.giftId === giftId) ? 'ລາຍການເຄື່ອງແຈກຊ້ຳ' : '');
   };
-  const add = () => { if (rows.length >= maxRows) return; nextKey.current += 1; onChange([...rows, emptyRow(nextKey.current)]); };
+  const add = () => { if (rows.length >= maxRows) return; onChange([...rows, emptyRow(globalThis.crypto.randomUUID())]); };
   const remove = (key) => onChange(rows.length === 1 ? [emptyRow(key)] : rows.filter((row) => row.key !== key));
   return <div className="gift-item-rows">
     {rows.map((row, index) => {

@@ -205,6 +205,7 @@ export function createGiftItem(values) {
     packLabel: values.packLabel,
     unitsPerPack: formInteger(values.unitsPerPack, { minimum: 1, label: 'Gift units per pack' }),
     sortOrder: formInteger(values.sortOrder, { label: 'Gift sort order' }),
+    active: values.active,
   });
 }
 
@@ -227,6 +228,7 @@ export function createGiftCampaign(values) {
     startDate: values.startDate,
     endDate: values.endDate,
     note: values.note ?? '',
+    active: values.active,
   });
 }
 

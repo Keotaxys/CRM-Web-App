@@ -31,11 +31,10 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
   const [campaigns, setCampaigns] = useState([]);
   const [recipientType, setRecipientType] = useState('');
   const [recipientId, setRecipientId] = useState('');
-  const [rows, setRows] = useState(() => [emptyRow(1)]);
+  const [rows, setRows] = useState(() => [emptyRow(makeUuid())]);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const nextRowRef = useRef(1);
   const operationIdRef = useRef(makeUuid());
   const submittingRef = useRef(false);
 
@@ -53,13 +52,13 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
   const recipientOptions = (recipientType === 'customer' ? customers : campaigns).map((item) => ({
     value: item.id, label: item.name, searchText: item.name,
   }));
-  const reset = () => { nextRowRef.current += 1; setRows([emptyRow(nextRowRef.current)]); setRecipientType(''); setRecipientId(''); setNote(''); setError(''); };
+  const reset = () => { setRows([emptyRow(makeUuid())]); setRecipientType(''); setRecipientId(''); setNote(''); setError(''); };
 
   const submit = async (event) => {
     event.preventDefault();
     if (submittingRef.current || !branchId) return;
     if (!['customer', 'campaign'].includes(recipientType) || !recipientId) { setError('ກະລຸນາເລືອກ ລູກຄ້າ ຫຼື Campaign ຢ່າງໃດໜຶ່ງ'); return; }
-    const result = validateGiftItemRows(rows);
+    const result = validateGiftItemRows(rows, gifts);
     if (result.error) { setError(result.error); return; }
     submittingRef.current = true; setBusy(true); setError('');
     try {

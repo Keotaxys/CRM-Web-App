@@ -114,4 +114,19 @@ describe('GiftDistributionForm', () => {
     await waitFor(() => expect(serviceMocks.recordGiftDistribution).toHaveBeenCalledTimes(2));
     expect(serviceMocks.recordGiftDistribution.mock.calls[1][0].distributionId).toBe(operationId);
   });
+
+  it('allocates independent row keys after a successful reset', async () => {
+    render(<GiftDistributionForm identity={staffIdentity} />);
+    await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'customer');
+    await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
+    await user.click(screen.getByRole('option', { name: 'Customer A' }));
+    await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
+    await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
+    await waitFor(() => expect(serviceMocks.recordGiftDistribution).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole('button', { name: 'ເພີ່ມເຄື່ອງແຈກ' }));
+    const rows = screen.getAllByLabelText('ເຄື່ອງແຈກ');
+    await user.selectOptions(rows[0], 'bag');
+    await user.selectOptions(rows[1], 'umbrella');
+    expect(screen.getAllByLabelText('ເຄື່ອງແຈກ').map((row) => row.value)).toEqual(['bag', 'umbrella']);
+  });
 });

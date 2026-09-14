@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import GiftInboundPanel from './GiftInboundPanel';
@@ -13,7 +13,14 @@ const manager = { uid: 'manager-1', role: 'branch_manager', branchId: '010', acc
 const admin = { uid: 'admin-1', role: 'admin', branchId: null, accountStatus: 'approved' };
 function publish() {
   service.subscribeActiveGiftItems.mockImplementation((onData) => { onData([{ id: 'umbrella', name: 'Umbrella', unitsPerPack: 10, packLabel: 'pack', unitLabel: 'unit', sortOrder: 1 }]); return vi.fn(); });
-  service.subscribeGiftAllocations.mockImplementation((_identity, _options, onData) => { onData([{ id: 'allocation-a', source: 'HQ', status: 'pending', items: [] }]); return vi.fn(); });
+  service.subscribeGiftAllocations.mockImplementation((_identity, options, onData) => {
+    const allocations = {
+      pending: [{ id: 'allocation-a', source: 'HQ', status: 'pending', items: [] }],
+      confirmed: [{ id: 'allocation-confirmed', source: 'Confirmed allocation', status: 'confirmed', items: [] }],
+      cancelled: [{ id: 'allocation-cancelled', source: 'Cancelled allocation', status: 'cancelled', items: [] }],
+    };
+    onData(allocations[options.status]); return vi.fn();
+  });
 }
 
 describe('GiftInboundPanel', () => {
@@ -41,5 +48,18 @@ describe('GiftInboundPanel', () => {
     expect(screen.queryByRole('button', { name: /create allocation/i })).not.toBeInTheDocument();
     rerender(<GiftInboundPanel identity={admin} effectiveBranchId="010" />);
     expect(screen.getByRole('button', { name: /create allocation/i })).toBeInTheDocument();
+  });
+
+  it('renders confirmed and cancelled history as disabled actions and gives cancellation its own dialog', async () => {
+    const user = userEvent.setup(); render(<GiftInboundPanel identity={manager} effectiveBranchId="010" />);
+    expect(screen.getAllByText('Confirmed allocation').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Cancelled allocation').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Confirmed' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancelled' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /^Cancel allocation$/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Cancel allocation' })).toBeInTheDocument();
+    expect(within(dialog).getByText(/does not update stock/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Cancel allocation' })).toBeInTheDocument();
   });
 });
