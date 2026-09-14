@@ -7,6 +7,7 @@ import { laosTodayKey } from '../shared/dateTime';
 import Button from '../components/ui/Button';
 import GlassCard from '../components/ui/GlassCard';
 import Input from '../components/ui/Input';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import Textarea from '../components/ui/Textarea';
 
 const MAX_ROWS = 25;
@@ -22,6 +23,10 @@ function scopedCustomerIdentity(identity, branchId) {
 }
 
 function isWholeNonnegative(value) { return /^\d*$/.test(value); }
+function visibleLineTotal(row, gift) {
+  if (!gift || !/^\d+$/.test(row.packs) || !/^\d+$/.test(row.looseUnits)) return null;
+  try { return giftLineTotal({ packs: row.packs, looseUnits: row.looseUnits }, gift); } catch { return null; }
+}
 
 export default function GiftDistributionForm({ identity, effectiveBranchId }) {
   const current = actor(identity);
@@ -52,7 +57,9 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
 
   const giftsById = useMemo(() => Object.fromEntries(gifts.map((gift) => [gift.id, gift])), [gifts]);
   const stocksByGift = useMemo(() => Object.fromEntries(stocks.map((stock) => [stock.giftId, stock])), [stocks]);
-  const recipientOptions = recipientType === 'customer' ? customers : campaigns;
+  const recipientOptions = (recipientType === 'customer' ? customers : campaigns).map((item) => ({
+    value: item.id, label: item.name, searchText: item.name,
+  }));
   const updateRow = (key, change) => setRows((currentRows) => currentRows.map((row) => row.key === key ? { ...row, ...change } : row));
   const updateQuantity = (key, field, value) => { if (isWholeNonnegative(value)) updateRow(key, { [field]: value }); };
   const selectGift = (key, giftId) => {
@@ -89,13 +96,14 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
 
   return <GlassCard as="section" padded><h2>ແຈກເຄື່ອງ</h2><form className="form-stack" onSubmit={submit}>
     <label>ປະເພດຜູ້ຮັບ<select aria-label="ປະເພດຜູ້ຮັບ" value={recipientType} disabled={busy} onChange={(event) => { setRecipientType(event.target.value); setRecipientId(''); }}><option value="">ເລືອກ</option><option value="customer">ລູກຄ້າ</option><option value="campaign">Campaign</option></select></label>
-    <label>ຜູ້ຮັບ<select aria-label="ຜູ້ຮັບ" value={recipientId} disabled={!recipientType || busy} onChange={(event) => setRecipientId(event.target.value)}><option value="">ເລືອກ</option>{recipientOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-    {rows.map((row, index) => { const gift = giftsById[row.giftId]; const stock = stocksByGift[row.giftId]; return <div key={row.key} className="gift-distribution-row">
+    {recipientType ? <SearchableSelect id="gift-recipient" label="ຜູ້ຮັບ" value={recipientId} options={recipientOptions} placeholder="ເລືອກຜູ້ຮັບ" disabled={busy} onChange={setRecipientId} /> : null}
+    {rows.map((row, index) => { const gift = giftsById[row.giftId]; const stock = stocksByGift[row.giftId]; const lineTotal = visibleLineTotal(row, gift); return <div key={row.key} className="gift-distribution-row">
       <label>ເຄື່ອງແຈກ<select aria-label="ເຄື່ອງແຈກ" value={row.giftId} disabled={busy} onChange={(event) => selectGift(row.key, event.target.value)}><option value="">ເລືອກ</option>{gifts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <Input id={`gift-packs-${row.key}`} label="ຈຳນວນຫໍ່" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || busy} value={row.packs} onChange={(event) => updateQuantity(row.key, 'packs', event.target.value)} />
       <Input id={`gift-units-${row.key}`} label="ຈຳນວນຊິ້ນ" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || busy} value={row.looseUnits} onChange={(event) => updateQuantity(row.key, 'looseUnits', event.target.value)} />
       {gift && stock ? <small>{giftStockDisplay(stock.currentUnits, gift)}</small> : null}
-      {gift ? <small>ລວມ: {giftLineTotal({ packs: row.packs, looseUnits: row.looseUnits }, gift)}</small> : null}
+      {gift ? <small>ລວມ: {lineTotal ?? '—'}</small> : null}
+      {gift && lineTotal === null ? <small className="error-banner">ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມ</small> : null}
       {rows.length > 1 ? <Button variant="neutral" disabled={busy} aria-label={`ລຶບແຖວ ${index + 1}`} onClick={() => removeRow(row.key)}>×</Button> : null}
     </div>; })}
     <Button variant="secondary" disabled={busy || rows.length >= MAX_ROWS} onClick={addRow}>ເພີ່ມເຄື່ອງແຈກ</Button>

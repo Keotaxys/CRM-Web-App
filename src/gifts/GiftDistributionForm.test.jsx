@@ -62,6 +62,31 @@ describe('GiftDistributionForm', () => {
     expect(screen.getByText('ລວມ: 10')).toBeInTheDocument();
   });
 
+  it('keeps editing safe when a selected quantity is cleared and reports it as invalid', async () => {
+    render(<GiftDistributionForm identity={staffIdentity} />);
+    await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
+    await user.clear(screen.getByLabelText('ຈຳນວນຫໍ່'));
+    expect(screen.getByLabelText('ຈຳນວນຫໍ່')).toHaveValue(null);
+    expect(screen.getByText('ລວມ: —')).toBeInTheDocument();
+    expect(screen.getByText('ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມ')).toBeInTheDocument();
+    await submitFormWithoutRecipient();
+    expect(screen.getByRole('alert')).toHaveTextContent('ລູກຄ້າ ຫຼື Campaign');
+  });
+
+  it('uses a searchable branch-scoped recipient selector for Customers and active Campaigns', async () => {
+    serviceMocks.subscribeCustomers.mockImplementation((_identity, onData) => { onData([{ id: 'customer-a', name: 'Customer A', recordState: 'active', branchId: '020' }]); return vi.fn(); });
+    render(<GiftDistributionForm identity={{ ...staffIdentity, role: 'admin', branchId: null }} effectiveBranchId="020" />);
+    expect(serviceMocks.subscribeGiftCampaigns).toHaveBeenCalledWith(expect.anything(), { branchId: '020', active: true }, expect.any(Function), expect.any(Function));
+    expect(serviceMocks.subscribeCustomers.mock.calls[0][0].claims).toMatchObject({ role: 'branch_manager', branchId: '020' });
+    await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'customer');
+    await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
+    expect(screen.getByRole('option', { name: 'Customer A' })).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Customer A' }));
+    await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'campaign');
+    await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
+    expect(screen.getByRole('option', { name: 'Campaign A' })).toBeInTheDocument();
+  });
+
   it('caps at 25 rows and rejects invalid whole quantities', async () => {
     render(<GiftDistributionForm identity={staffIdentity} />);
     for (let index = 1; index < 25; index += 1) fireEvent.click(screen.getByRole('button', { name: 'ເພີ່ມເຄື່ອງແຈກ' }));
@@ -77,7 +102,8 @@ describe('GiftDistributionForm', () => {
     serviceMocks.recordGiftDistribution.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; }));
     render(<GiftDistributionForm identity={staffIdentity} />);
     await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'customer');
-    await user.selectOptions(screen.getByLabelText('ຜູ້ຮັບ'), 'customer-a');
+    await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
+    await user.click(screen.getByRole('option', { name: 'Customer A' }));
     await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
     await user.dblClick(screen.getByRole('button', { name: 'ບັນທຶກ' }));
     expect(serviceMocks.recordGiftDistribution).toHaveBeenCalledTimes(1);

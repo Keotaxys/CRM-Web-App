@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import GiftCorrectionSheet from './GiftCorrectionSheet';
@@ -27,5 +27,66 @@ describe('GiftCorrectionSheet', () => {
     await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການຍົກເລີກ' }));
     expect(serviceMocks.cancelGiftDistribution.mock.calls[0][0]).toMatchObject({ distributionId: 'd1', expectedVersion: 2, reason: 'duplicate' });
     expect(serviceMocks.cancelGiftDistribution.mock.calls[1][0].mutationId).toBe(serviceMocks.cancelGiftDistribution.mock.calls[0][0].mutationId);
+  });
+  it('begins a new mutation after a failed attempt changes, while an unchanged retry retains its id', async () => {
+    serviceMocks.amendGiftDistribution.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({});
+    render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
+    const user = userEvent.setup();
+    const reason = screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ');
+    await user.type(reason, 'first');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    await screen.findByRole('alert');
+    const firstId = serviceMocks.amendGiftDistribution.mock.calls[0][0].mutationId;
+    await user.type(reason, ' revised');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    expect(serviceMocks.amendGiftDistribution.mock.calls[1][0].mutationId).not.toBe(firstId);
+  });
+  it('begins a new mutation after a failed attempt changes an item', async () => {
+    serviceMocks.amendGiftDistribution.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({});
+    render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'first');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    await screen.findByRole('alert');
+    const firstId = serviceMocks.amendGiftDistribution.mock.calls[0][0].mutationId;
+    fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '2' } });
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    expect(serviceMocks.amendGiftDistribution.mock.calls[1][0].mutationId).not.toBe(firstId);
+  });
+  it('begins a new mutation after a failed attempt changes action', async () => {
+    serviceMocks.cancelGiftDistribution.mockRejectedValueOnce(new Error('offline'));
+    render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'ຍົກເລີກລາຍການ' }));
+    await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'first');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການຍົກເລີກ' }));
+    await screen.findByRole('alert');
+    const firstId = serviceMocks.cancelGiftDistribution.mock.calls[0][0].mutationId;
+    await user.click(screen.getByRole('button', { name: 'ແກ້ໄຂລາຍການ' }));
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    expect(serviceMocks.amendGiftDistribution.mock.calls[0][0].mutationId).not.toBe(firstId);
+  });
+  it('does not confirm or invent totals until every referenced gift is loaded', () => {
+    render(<GiftCorrectionSheet distribution={distribution} gifts={[]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('ກຳລັງໂຫຼດ');
+    expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
+  });
+  it('shows the stored old total and recalculates the new total after a quantity edit', () => {
+    render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
+    expect(screen.getByText('ຈຳນວນເກົ່າ: 12 · ຈຳນວນໃໝ່: 12')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '2' } });
+    expect(screen.getByText('ຈຳນວນເກົ່າ: 12 · ຈຳນວນໃໝ່: 22')).toBeInTheDocument();
+  });
+  it('locks payload controls while a correction is in flight', async () => {
+    let resolve;
+    serviceMocks.amendGiftDistribution.mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'wait');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' }));
+    expect(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'ຍົກເລີກລາຍການ' })).toBeDisabled();
+    resolve({});
+    await waitFor(() => expect(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ')).not.toBeDisabled());
   });
 });
