@@ -74,6 +74,40 @@ test('Admin creates one normalized active gift and reserves its name', async () 
   ]);
 });
 
+test('create operations default omitted active state to true', async () => {
+  const state = fakeGiftFirestore({
+    'users/admin-a': { role: 'admin', branchId: null, accountStatus: 'approved' },
+  });
+  const gift = await createGiftItemOperation(state.services, admin, giftInput);
+  const campaign = await createGiftCampaignOperation(state.services, admin, campaignInput);
+  assert.equal(state.documents.get(`giftItems/${gift.id}`).active, true);
+  assert.equal(state.documents.get(`giftCampaigns/${campaign.id}`).active, true);
+});
+
+test('create operations honor an explicit false active state', async () => {
+  const state = fakeGiftFirestore({
+    'users/admin-a': { role: 'admin', branchId: null, accountStatus: 'approved' },
+  });
+  const gift = await createGiftItemOperation(state.services, admin, { ...giftInput, name: 'Inactive gift', active: false });
+  const campaign = await createGiftCampaignOperation(state.services, admin, { ...campaignInput, name: 'Inactive campaign', active: false });
+  assert.equal(state.documents.get(`giftItems/${gift.id}`).active, false);
+  assert.equal(state.documents.get(`giftCampaigns/${campaign.id}`).active, false);
+});
+
+test('create operations reject malformed supplied active state', async () => {
+  const documents = {
+    'users/admin-a': { role: 'admin', branchId: null, accountStatus: 'approved' },
+  };
+  for (const active of [null, 'false', 0, 1, undefined]) {
+    await assert.rejects(() => createGiftItemOperation(fakeGiftFirestore(documents).services, admin, {
+      ...giftInput, name: `Malformed gift ${String(active)}`, active,
+    }), /active state|boolean/i);
+    await assert.rejects(() => createGiftCampaignOperation(fakeGiftFirestore(documents).services, admin, {
+      ...campaignInput, name: `Malformed campaign ${String(active)}`, active,
+    }), /active state|boolean/i);
+  }
+});
+
 test('gift administration denies Anonymous Pending Disabled Staff and duplicate names', async () => {
   const actors = [
     [undefined, {}],

@@ -55,7 +55,8 @@ function giftValues(data, { update = false } = {}) {
   if (!Number.isSafeInteger(data?.sortOrder)) {
     throw operationError('invalid-argument', 'Gift sort order must be a safe integer');
   }
-  if (update && typeof data?.active !== 'boolean') {
+  const hasActive = Object.hasOwn(data ?? {}, 'active');
+  if ((update || hasActive) && typeof data?.active !== 'boolean') {
     throw operationError('invalid-argument', 'Gift active state must be a boolean');
   }
   return {
@@ -65,7 +66,7 @@ function giftValues(data, { update = false } = {}) {
     packLabel,
     unitsPerPack: data.unitsPerPack,
     sortOrder: data.sortOrder,
-    ...(update ? { active: data.active } : {}),
+    active: hasActive ? data.active : true,
   };
 }
 
@@ -91,7 +92,8 @@ function campaignValues(data, { update = false } = {}) {
   if (typeof data?.note !== 'string') {
     throw operationError('invalid-argument', 'Campaign note must be a string');
   }
-  if (update && typeof data?.active !== 'boolean') {
+  const hasActive = Object.hasOwn(data ?? {}, 'active');
+  if ((update || hasActive) && typeof data?.active !== 'boolean') {
     throw operationError('invalid-argument', 'Campaign active state must be a boolean');
   }
   return {
@@ -101,7 +103,7 @@ function campaignValues(data, { update = false } = {}) {
     startDate: data.startDate,
     endDate: data.endDate,
     note: data.note.trim(),
-    ...(update ? { active: data.active } : {}),
+    active: hasActive ? data.active : true,
   };
 }
 
@@ -154,7 +156,6 @@ export async function createGiftItemOperation({ db }, actor, data) {
     transaction.create(itemRef, {
       schemaVersion: 1,
       ...values,
-      active: true,
       createdBy: actor.uid,
       createdAt: timestamp,
       updatedBy: actor.uid,
@@ -162,7 +163,7 @@ export async function createGiftItemOperation({ db }, actor, data) {
     });
   });
 
-  return { id: itemRef.id, ...values, active: true };
+  return { id: itemRef.id, ...values };
 }
 
 export async function updateGiftItemOperation({ db }, actor, data) {
@@ -220,7 +221,6 @@ export async function createGiftCampaignOperation({ db }, actor, data) {
     transaction.create(campaignRef, {
       schemaVersion: 1,
       ...values,
-      active: true,
       createdBy: actor.uid,
       createdAt: timestamp,
       updatedBy: actor.uid,
@@ -228,7 +228,7 @@ export async function createGiftCampaignOperation({ db }, actor, data) {
     });
   });
 
-  return { id: campaignRef.id, ...values, active: true };
+  return { id: campaignRef.id, ...values };
 }
 
 export async function updateGiftCampaignOperation({ db }, actor, data) {
