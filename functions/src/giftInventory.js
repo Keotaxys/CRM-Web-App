@@ -599,10 +599,15 @@ export async function adjustGiftStockOperation({ db }, actor, data, now = new Da
       }
       return { ...item, giftNameSnapshot: gift.name };
     });
-    const totalDeltaUnits = deltas.reduce((sum, item) => sum + item.deltaUnits, 0);
-    if (!Number.isSafeInteger(totalDeltaUnits)) {
+    const exactTotalDeltaUnits = deltas.reduce(
+      (sum, item) => sum + BigInt(item.deltaUnits), 0n,
+    );
+    const maximumSafeUnits = BigInt(Number.MAX_SAFE_INTEGER);
+    if (exactTotalDeltaUnits > maximumSafeUnits
+      || exactTotalDeltaUnits < -maximumSafeUnits) {
       throw operationError('invalid-argument', 'Gift adjustment exceeds safe integer range');
     }
+    const totalDeltaUnits = Number(exactTotalDeltaUnits);
     const result = {
       adjustmentId: request.adjustmentId,
       totalDeltaUnits,

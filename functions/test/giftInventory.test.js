@@ -297,6 +297,47 @@ test('adjustment applies positive and negative deltas with reason and exact retr
   assert.equal(movement.distributionOwnerUid, null);
 });
 
+test('adjustment totals mixed-sign safe deltas without intermediate Number overflow', async () => {
+  const state = fakeGiftFirestore({
+    'users/manager-a': {
+      role: 'branch_manager', branchId: '010', accountStatus: 'approved',
+    },
+    'giftItems/large-in': { name: 'Large in', active: true, unitsPerPack: 1 },
+    'giftItems/small-in': { name: 'Small in', active: true, unitsPerPack: 1 },
+    'giftItems/large-out': { name: 'Large out', active: true, unitsPerPack: 1 },
+    'branchGiftStocks/010_large-in': {
+      branchId: '010', giftId: 'large-in', currentUnits: 0, version: 1,
+    },
+    'branchGiftStocks/010_small-in': {
+      branchId: '010', giftId: 'small-in', currentUnits: 0, version: 1,
+    },
+    'branchGiftStocks/010_large-out': {
+      branchId: '010', giftId: 'large-out',
+      currentUnits: Number.MAX_SAFE_INTEGER, version: 1,
+    },
+  });
+  const input = {
+    adjustmentId: operationId,
+    branchId: '010',
+    reason: 'Exact mixed-sign count',
+    items: [
+      { giftId: 'large-in', deltaUnits: Number.MAX_SAFE_INTEGER },
+      { giftId: 'small-in', deltaUnits: 2 },
+      { giftId: 'large-out', deltaUnits: -Number.MAX_SAFE_INTEGER },
+    ],
+  };
+
+  const result = await adjustGiftStockOperation(state.services, managerA, input, now);
+  const retry = await adjustGiftStockOperation(state.services, managerA, input, now);
+
+  assert.equal(result.totalDeltaUnits, 2);
+  assert.equal(retry.totalDeltaUnits, 2);
+  for (const giftId of ['large-in', 'small-in', 'large-out']) {
+    assert.equal(state.documents.get(`giftStockMovements/${operationId}_${giftId}`)
+      .operationResult.totalDeltaUnits, 2);
+  }
+});
+
 test('adjustment UUID cannot be reused with a different gift set', async () => {
   const state = inventoryState();
   await adjustGiftStockOperation(state.services, managerA, {
