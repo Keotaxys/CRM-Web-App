@@ -12,6 +12,10 @@ import { abortCustomerUploadsOperation, acknowledgeBirthdayGreetingOperation, ar
 import { syncLegacyCustomerOperation } from './legacyWebhook.js';
 import { amendDailySalesOperation, createSalesProductOperation, saveDailySalesOperation, updateSalesProductOperation } from './salesAdmin.js';
 import { SalesOperationError } from './salesDomain.js';
+import { createGiftCampaignOperation, createGiftItemOperation, updateGiftCampaignOperation, updateGiftItemOperation } from './giftCatalog.js';
+import { adjustGiftStockOperation, cancelGiftAllocationOperation, confirmGiftAllocationOperation, createGiftAllocationOperation, receiveGiftStockOperation, setGiftLowStockThresholdOperation } from './giftInventory.js';
+import { amendGiftDistributionOperation, cancelGiftDistributionOperation, recordGiftDistributionOperation } from './giftDistribution.js';
+import { GiftOperationError } from './giftDomain.js';
 
 initializeApp();
 setGlobalOptions({ region: 'asia-southeast1', maxInstances: 10 });
@@ -37,7 +41,8 @@ function callable(operation, options = {}) {
     }
     catch (error) {
       console.error('Callable rejected', { operation: operation.name, message: error.message });
-      if (error instanceof SalesOperationError && CALLABLE_ERROR_CODES.has(error.code)) {
+      if ((error instanceof SalesOperationError || error instanceof GiftOperationError)
+          && CALLABLE_ERROR_CODES.has(error.code)) {
         throw new HttpsError(error.code, error.message);
       }
       if (/Authenticated/.test(error.message)) throw new HttpsError('unauthenticated', error.message);
@@ -69,6 +74,19 @@ export const createSalesProduct = callable(createSalesProductOperation);
 export const updateSalesProduct = callable(updateSalesProductOperation);
 export const saveDailySales = callable(saveDailySalesOperation);
 export const amendDailySales = callable(amendDailySalesOperation);
+export const createGiftItem = callable(createGiftItemOperation);
+export const updateGiftItem = callable(updateGiftItemOperation);
+export const createGiftCampaign = callable(createGiftCampaignOperation);
+export const updateGiftCampaign = callable(updateGiftCampaignOperation);
+export const setGiftLowStockThreshold = callable(setGiftLowStockThresholdOperation);
+export const receiveGiftStock = callable(receiveGiftStockOperation);
+export const createGiftAllocation = callable(createGiftAllocationOperation);
+export const confirmGiftAllocation = callable(confirmGiftAllocationOperation);
+export const cancelGiftAllocation = callable(cancelGiftAllocationOperation);
+export const adjustGiftStock = callable(adjustGiftStockOperation);
+export const recordGiftDistribution = callable(recordGiftDistributionOperation);
+export const amendGiftDistribution = callable(amendGiftDistributionOperation);
+export const cancelGiftDistribution = callable(cancelGiftDistributionOperation);
 
 export const cleanupExpiredTrash = callable(async (currentServices, actor) => {
   assertAdmin(actor); const now = new Date();
