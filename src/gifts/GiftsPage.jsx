@@ -6,6 +6,10 @@ import Button from '../components/ui/Button';
 import CustomSelect from '../components/ui/CustomSelect';
 import GlassCard from '../components/ui/GlassCard';
 import GiftDistributionForm from './GiftDistributionForm';
+import GiftStockPanel from './GiftStockPanel';
+import GiftInboundPanel from './GiftInboundPanel';
+import GiftCatalogAdmin from './GiftCatalogAdmin';
+import GiftCampaignAdmin from './GiftCampaignAdmin';
 
 const managerTabs = [
   ['distribution', 'ແຈກເຄື່ອງ'], ['stock', 'ສະຕັອກ'], ['inbound', 'ຮັບເຂົ້າ'],
@@ -38,7 +42,11 @@ export default function GiftsPage() {
       </div>
       {admin && !effectiveBranchId && tab !== 'catalog' ? <div className="error-banner" role="alert">ກະລຸນາເລືອກສາຂາກ່ອນເຮັດລາຍການ</div> : null}
       {tab === 'distribution' && effectiveBranchId ? <GiftDistributionForm identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
-      {tab !== 'distribution' && (!admin || effectiveBranchId || tab === 'catalog') ? <GlassCard as="section" padded><h2>{tabs.find(([value]) => value === tab)?.[1]}</h2><p>ກຳລັງຈັດກຽມ</p></GlassCard> : null}
+      {tab === 'stock' && effectiveBranchId ? <GiftStockPanel identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
+      {tab === 'inbound' && effectiveBranchId ? <GiftInboundPanel identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
+      {tab === 'campaigns' && effectiveBranchId ? <GiftCampaignAdmin identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
+      {tab === 'catalog' && admin ? <GiftCatalogAdmin identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
+      {tab === 'report' && (!admin || effectiveBranchId) ? <GlassCard as="section" padded><h2>{tabs.find(([value]) => value === tab)?.[1]}</h2><p>ກຳລັງຈັດກຽມ</p></GlassCard> : null}
     </main>
   </>;
 }

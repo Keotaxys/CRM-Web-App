@@ -1,0 +1,23 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { adjustGiftStock, setGiftLowStockThreshold, subscribeActiveGiftItems, subscribeGiftStocks } from '../services/giftService';
+import { giftCallableMessage } from './giftErrors';
+import { giftStockDisplay, isLowGiftStock } from './giftModel';
+import Button from '../components/ui/Button';
+import GlassCard from '../components/ui/GlassCard';
+import Input from '../components/ui/Input';
+import Textarea from '../components/ui/Textarea';
+
+const uuid = () => globalThis.crypto.randomUUID();
+const currentActor = (identity) => ({ role: identity?.claims?.role ?? identity?.role, branchId: identity?.claims?.branchId ?? identity?.branchId });
+const branchFor = (identity, effectiveBranchId) => currentActor(identity).role === 'admin' ? effectiveBranchId : currentActor(identity).branchId;
+
+export default function GiftStockPanel({ identity, effectiveBranchId }) {
+  const branchId = branchFor(identity, effectiveBranchId); const [catalog, setCatalog] = useState([]); const [stocks, setStocks] = useState([]);
+  const [thresholds, setThresholds] = useState({}); const [giftId, setGiftId] = useState(''); const [deltaUnits, setDeltaUnits] = useState(''); const [reason, setReason] = useState('');
+  const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const adjustmentId = useRef(uuid());
+  useEffect(() => { if (!branchId) return undefined; let live = true; const stopCatalog = subscribeActiveGiftItems((items) => live && setCatalog(items), () => live && setError(giftCallableMessage())); const stopStocks = subscribeGiftStocks(identity, { branchId }, (items) => { if (!live) return; setStocks(items); setThresholds(Object.fromEntries(items.map((item) => [item.giftId, String(item.lowStockThresholdUnits ?? 0)]))); }, () => live && setError(giftCallableMessage())); return () => { live = false; stopCatalog?.(); stopStocks?.(); }; }, [branchId, identity]);
+  const gifts = useMemo(() => Object.fromEntries(catalog.map((item) => [item.id, item])), [catalog]);
+  const updateThreshold = async (stock) => { const value = thresholds[stock.giftId] ?? ''; if (!/^\d+$/.test(value)) { setError('Low-stock threshold must be a safe integer'); return; } setBusy(true); setError(''); try { await setGiftLowStockThreshold({ branchId, giftId: stock.giftId, lowStockThresholdUnits: value }); } catch (failure) { setError(giftCallableMessage(failure)); } finally { setBusy(false); } };
+  const adjust = async (event) => { event.preventDefault(); if (!giftId || !/^-?[1-9]\d*$/.test(deltaUnits)) { setError('Adjustment units must be a non-zero safe integer'); return; } if (!reason.trim()) { setError('Adjustment reason is required'); return; } setBusy(true); setError(''); try { await adjustGiftStock({ adjustmentId: adjustmentId.current, branchId, reason: reason.trim(), items: [{ giftId, deltaUnits }] }); adjustmentId.current = uuid(); setDeltaUnits(''); setReason(''); } catch (failure) { setError(giftCallableMessage(failure)); } finally { setBusy(false); } };
+  return <GlassCard as="section" padded><h2>ສະຕັອກ</h2>{stocks.map((stock) => { const gift = gifts[stock.giftId]; if (!gift) return null; return <div key={stock.giftId} className={isLowGiftStock(stock) ? 'gift-stock--low' : ''}><strong>{gift.name}</strong><p>{giftStockDisplay(stock.currentUnits, gift)}</p>{isLowGiftStock(stock) ? <small>Low stock</small> : null}<Input id={`gift-threshold-${stock.giftId}`} label="Low-stock threshold" type="number" min="0" step="1" value={thresholds[stock.giftId] ?? ''} disabled={busy} onChange={(event) => /^\d*$/.test(event.target.value) && setThresholds((current) => ({ ...current, [stock.giftId]: event.target.value }))} /><Button variant="secondary" disabled={busy} onClick={() => updateThreshold(stock)}>Update threshold</Button></div>; })}<form className="form-stack" onSubmit={adjust}><label>Adjustment item<select aria-label="Adjustment item" value={giftId} disabled={busy} onChange={(event) => setGiftId(event.target.value)}><option value="">ເລືອກ</option>{catalog.map((gift) => <option key={gift.id} value={gift.id}>{gift.name}</option>)}</select></label><Input id="gift-adjustment-units" label="Adjustment units" type="text" inputMode="numeric" value={deltaUnits} disabled={busy} onChange={(event) => /^-?\d*$/.test(event.target.value) && setDeltaUnits(event.target.value)} /><Textarea id="gift-adjustment-reason" label="Adjustment reason" value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)} />{error ? <div role="alert" className="error-banner">{error}</div> : null}<Button type="submit" busy={busy} disabled={!branchId}>Adjust stock</Button></form></GlassCard>;
+}
