@@ -84,6 +84,20 @@ describe('GiftCorrectionSheet', () => {
     expect(screen.getByRole('status')).toHaveTextContent('ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມບວກ');
     expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
   });
+  it('treats leading-zero correction quantities as invalid instead of crashing', () => {
+    render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
+    fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '01' } });
+    expect(screen.getByRole('status')).toHaveTextContent('ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມບວກ');
+    expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
+  });
+  it('gates an overflowed correction total instead of crashing', () => {
+    const smallDistribution = { ...distribution, items: [{ ...distribution.items[0], packs: 0, looseUnits: 1, totalUnits: 1 }], totalUnits: 1 };
+    const hugePackGift = [{ ...gifts[0], unitsPerPack: Number.MAX_SAFE_INTEGER }];
+    render(<GiftCorrectionSheet distribution={smallDistribution} gifts={hugePackGift} />);
+    fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '1' } });
+    expect(screen.getByRole('status')).toHaveTextContent('ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມບວກ');
+    expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
+  });
   it('locks payload controls while a correction is in flight', async () => {
     let resolve;
     serviceMocks.amendGiftDistribution.mockImplementationOnce(() => new Promise((done) => { resolve = done; }));

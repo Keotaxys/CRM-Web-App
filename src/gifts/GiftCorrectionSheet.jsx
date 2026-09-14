@@ -7,11 +7,20 @@ import ModalSheet from '../components/ui/ModalSheet';
 import Textarea from '../components/ui/Textarea';
 
 const makeUuid = () => globalThis.crypto.randomUUID();
-function validDraftLine(item) {
-  if (!/^\d+$/.test(item.packs) || !/^\d+$/.test(item.looseUnits)) return false;
-  const packs = Number(item.packs); const looseUnits = Number(item.looseUnits);
-  return Number.isSafeInteger(packs) && Number.isSafeInteger(looseUnits)
-    && packs >= 0 && looseUnits >= 0 && (packs > 0 || looseUnits > 0);
+function correctionDraftTotal(rows, giftMap) {
+  if (!rows.length) return null;
+  try {
+    let total = 0;
+    for (const item of rows) {
+      const lineTotal = giftLineTotal({ packs: item.packs, looseUnits: item.looseUnits }, giftMap[item.giftId]);
+      if (lineTotal <= 0) return null;
+      total += lineTotal;
+      if (!Number.isSafeInteger(total)) return null;
+    }
+    return total;
+  } catch {
+    return null;
+  }
 }
 
 export default function GiftCorrectionSheet({ distribution, gifts = [], onClose, onSuccess }) {
@@ -21,10 +30,11 @@ export default function GiftCorrectionSheet({ distribution, gifts = [], onClose,
   const [reason, setReason] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const mutationIdRef = useRef(makeUuid()); const submittingRef = useRef(false); const attemptedRef = useRef(false);
   const metadataReady = (distribution.items ?? []).every((item) => Boolean(giftMap[item.giftId]));
-  const draftTotalsReady = metadataReady && rows.length > 0 && rows.every(validDraftLine);
+  const draftTotal = metadataReady ? correctionDraftTotal(rows, giftMap) : null;
+  const draftTotalsReady = draftTotal !== null;
   const confirmationReady = metadataReady && (mode === 'cancel' || draftTotalsReady);
   const oldTotal = Number(distribution.totalUnits ?? (distribution.items ?? []).reduce((total, item) => total + Number(item.totalUnits ?? 0), 0));
-  const newTotal = draftTotalsReady ? rows.reduce((total, item) => total + giftLineTotal({ packs: item.packs, looseUnits: item.looseUnits }, giftMap[item.giftId]), 0) : null;
+  const newTotal = draftTotal;
   const beginNewIntent = () => { if (attemptedRef.current) { mutationIdRef.current = makeUuid(); attemptedRef.current = false; } };
   const setAction = (next) => { if (busy || next === mode) return; beginNewIntent(); setMode(next); setError(''); };
   const update = (giftId, field, value) => { if (/^\d*$/.test(value)) { beginNewIntent(); setRows((current) => current.map((item) => item.giftId === giftId ? { ...item, [field]: value } : item)); } };
