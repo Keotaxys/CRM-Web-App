@@ -77,6 +77,13 @@ describe('GiftCorrectionSheet', () => {
     fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '2' } });
     expect(screen.getByText('ຈຳນວນເກົ່າ: 12 · ຈຳນວນໃໝ່: 22')).toBeInTheDocument();
   });
+  it('keeps a cleared draft quantity safe and gates the correction until totals are valid', () => {
+    render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
+    fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '' } });
+    expect(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella')).toHaveValue(null);
+    expect(screen.getByRole('status')).toHaveTextContent('ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມບວກ');
+    expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
+  });
   it('locks payload controls while a correction is in flight', async () => {
     let resolve;
     serviceMocks.amendGiftDistribution.mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
