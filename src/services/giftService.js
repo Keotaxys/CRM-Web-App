@@ -60,9 +60,15 @@ export function subscribeAllGiftItems(identity, onData, onError) {
 }
 
 export function subscribeGiftCampaigns(identity, options, onData, onError) {
-  const branchId = scopedBranch(identity, options?.branchId, ['staff', 'branch_manager', 'admin']);
+  const current = approvedActor(identity, ['staff', 'branch_manager', 'admin']);
   const active = options?.active ?? true;
   if (typeof active !== 'boolean') throw new Error('Gift Campaign active filter is required');
+  if (current.role === 'staff' && !active) {
+    throw new Error('Staff gift Campaigns must be active');
+  }
+  const branchId = current.role === 'admin'
+    ? requiredBranch(options?.branchId)
+    : requiredBranch(current.branchId);
   return subscribeCollection('giftCampaigns', [
     where('branchId', '==', branchId),
     where('active', '==', active),
@@ -144,8 +150,18 @@ async function invoke(name, payload) {
 }
 
 function formInteger(value, { minimum = 0, nonzero = false, label = 'Gift quantity' } = {}) {
-  const text = typeof value === 'string' ? value.trim() : value;
-  const number = text === '' ? 0 : Number(text);
+  let number;
+  if (typeof value === 'number') {
+    number = value;
+  } else if (typeof value === 'string') {
+    const text = value.trim();
+    if (!/^-?(?:0|[1-9]\d*)$/.test(text)) {
+      throw new Error(`${label} must be a safe integer`);
+    }
+    number = Number(text);
+  } else {
+    throw new Error(`${label} must be a safe integer`);
+  }
   if (!Number.isSafeInteger(number) || number < minimum || (nonzero && number === 0)) {
     throw new Error(`${label} must be a safe integer`);
   }

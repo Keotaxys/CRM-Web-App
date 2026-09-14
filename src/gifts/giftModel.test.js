@@ -29,6 +29,23 @@ describe('gift quantity helpers', () => {
     expect(() => giftLineTotal(line, gift)).toThrow(/integer/i);
   });
 
+  it.each([
+    true,
+    [2],
+    { value: 2 },
+    null,
+    undefined,
+    '',
+    ' ',
+    '02',
+    '+2',
+    '2.0',
+    '1e2',
+  ])('rejects malformed or noncanonical integer value %j', (packs) => {
+    expect(() => giftLineTotal({ packs, looseUnits: 1 }, { unitsPerPack: 10 }))
+      .toThrow(/integer/i);
+  });
+
   it('treats equal threshold as low stock', () => {
     expect(isLowGiftStock({ currentUnits: 5, lowStockThresholdUnits: 5 })).toBe(true);
     expect(isLowGiftStock({ currentUnits: 6, lowStockThresholdUnits: 5 })).toBe(false);

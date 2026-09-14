@@ -85,14 +85,30 @@ describe('gift subscriptions', () => {
   });
 
   it('uses explicit branch, active state, and newest start date for Campaigns', () => {
-    subscribeGiftCampaigns(staff, { branchId: 'forged', active: false }, vi.fn(), vi.fn());
+    subscribeGiftCampaigns(staff, { branchId: 'forged' }, vi.fn(), vi.fn());
     expectConstraint('branchId', '==', '010');
-    expectConstraint('active', '==', false);
+    expectConstraint('active', '==', true);
     expect(mocks.orderBy).toHaveBeenCalledWith('startDate', 'desc');
 
     vi.clearAllMocks();
-    subscribeGiftCampaigns(admin, { branchId: '019', active: true }, vi.fn(), vi.fn());
+    subscribeGiftCampaigns(manager, { active: false }, vi.fn(), vi.fn());
+    expectConstraint('branchId', '==', '010');
+    expectConstraint('active', '==', false);
+
+    vi.clearAllMocks();
+    subscribeGiftCampaigns(admin, { branchId: '019', active: false }, vi.fn(), vi.fn());
     expectConstraint('branchId', '==', '019');
+    expectConstraint('active', '==', false);
+  });
+
+  it('fails closed when Staff requests inactive Campaigns', () => {
+    expect(() => subscribeGiftCampaigns(
+      staff,
+      { branchId: '010', active: false },
+      vi.fn(),
+      vi.fn(),
+    )).toThrow(/active/i);
+    expect(mocks.onSnapshot).not.toHaveBeenCalled();
   });
 
   it('locks Staff and Manager stock reads to their claim branch and lets Admin read all', () => {
@@ -242,6 +258,51 @@ describe('trusted gift callable wrappers', () => {
     expect(() => createGiftItem({ name: 'X', unitLabel: 'u', packLabel: 'p', unitsPerPack: '1.5', sortOrder: 1 })).toThrow(/integer/i);
     expect(() => receiveGiftStock({ receiptId: operationId, branchId: '010', source: 'HQ', items: [{ giftId: 'umbrella', packs: -1, looseUnits: 0 }] })).toThrow(/integer/i);
     expect(() => adjustGiftStock({ adjustmentId: operationId, branchId: '010', reason: 'Count', items: [{ giftId: 'umbrella', deltaUnits: 0 }] })).toThrow(/integer/i);
+    expect(mocks.httpsCallable).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed integer types and noncanonical strings before invoking Functions', () => {
+    const validItem = {
+      name: 'X', unitLabel: 'u', packLabel: 'p', unitsPerPack: 1, sortOrder: 1,
+    };
+    const invalidCalls = [
+      () => createGiftItem({ ...validItem, unitsPerPack: true }),
+      () => createGiftItem({ ...validItem, sortOrder: [2] }),
+      () => setGiftLowStockThreshold({
+        branchId: '010', giftId: 'umbrella', lowStockThresholdUnits: null,
+      }),
+      () => receiveGiftStock({
+        receiptId: operationId,
+        branchId: '010',
+        source: 'HQ',
+        items: [{ giftId: 'umbrella', packs: [2], looseUnits: 1 }],
+      }),
+      () => adjustGiftStock({
+        adjustmentId: operationId,
+        branchId: '010',
+        reason: 'Count',
+        items: [{ giftId: 'umbrella', deltaUnits: '1e2' }],
+      }),
+      () => amendGiftDistribution({
+        distributionId: operationId,
+        mutationId,
+        expectedVersion: { value: 2 },
+        reason: 'Correction',
+        branchId: '010',
+        recipientType: 'customer',
+        customerId: 'customer-a',
+        items: [{ giftId: 'umbrella', packs: 0, looseUnits: 1 }],
+      }),
+      () => cancelGiftDistribution({
+        distributionId: operationId,
+        mutationId,
+        expectedVersion: '',
+        reason: 'Correction',
+        branchId: '010',
+      }),
+    ];
+
+    for (const invokeInvalid of invalidCalls) expect(invokeInvalid).toThrow(/integer/i);
     expect(mocks.httpsCallable).not.toHaveBeenCalled();
   });
 });

@@ -17,8 +17,18 @@ function normalizeTimestamps(value) {
 }
 
 function formInteger(value, { minimum = 0, label = 'Gift quantity' } = {}) {
-  const text = typeof value === 'string' ? value.trim() : value;
-  const number = text === '' ? 0 : Number(text);
+  let number;
+  if (typeof value === 'number') {
+    number = value;
+  } else if (typeof value === 'string') {
+    const text = value.trim();
+    if (!/^-?(?:0|[1-9]\d*)$/.test(text)) {
+      throw new Error(`${label} must be a safe integer`);
+    }
+    number = Number(text);
+  } else {
+    throw new Error(`${label} must be a safe integer`);
+  }
   if (!Number.isSafeInteger(number) || number < minimum) {
     throw new Error(`${label} must be a safe integer`);
   }
