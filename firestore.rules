@@ -137,7 +137,8 @@ service cloud.firestore {
     }
 
     match /giftCampaigns/{campaignId} {
-      allow read: if giftBranchRead(resource.data);
+      allow read: if giftManagerRead(resource.data)
+        || (staff() && sameBranch(resource.data) && resource.data.active == true);
       allow create, update, delete: if false;
     }
 

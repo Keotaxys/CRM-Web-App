@@ -45,6 +45,8 @@ describe('Firestore gift inventory actor matrix', () => {
     'branchGiftStocks/019_umbrella': { branchId: '019', giftId: 'umbrella', currentUnits: 30 },
     'giftCampaigns/campaign-a': { branchId: '010', active: true, startDate: '2026-09-01' },
     'giftCampaigns/campaign-b': { branchId: '019', active: true, startDate: '2026-09-01' },
+    'giftCampaigns/retired-a': { branchId: '010', active: false, startDate: '2026-08-01' },
+    'giftCampaigns/retired-b': { branchId: '019', active: false, startDate: '2026-08-01' },
     'giftReceipts/receipt-a': { branchId: '010', receivedDateKey: '2026-09-13', createdBy: 'manager-a' },
     'giftReceipts/receipt-b': { branchId: '019', receivedDateKey: '2026-09-13', createdBy: 'manager-b' },
     'giftAllocations/allocation-a': { targetBranchId: '010', status: 'pending', createdAt: new Date('2026-09-13T00:00:00Z') },
@@ -136,6 +138,38 @@ describe('Firestore gift inventory actor matrix', () => {
     },
   );
 
+  it('denies Staff direct reads of inactive own-branch Campaigns', async () => {
+    await assertFails(getDoc(doc(actor('staff-a', 'staff', '010'), 'giftCampaigns/retired-a')));
+  });
+
+  it('denies Staff own-branch Campaign lists without an active filter', async () => {
+    const db = actor('staff-a', 'staff', '010');
+    await assertFails(getDocs(query(collection(db, 'giftCampaigns'), where('branchId', '==', '010'))));
+  });
+
+  it('denies Staff own-branch Campaign queries for inactive records', async () => {
+    const db = actor('staff-a', 'staff', '010');
+    await assertFails(getDocs(query(collection(db, 'giftCampaigns'), where('branchId', '==', '010'), where('active', '==', false), orderBy('startDate', 'desc'))));
+  });
+
+  it('retains Manager own-branch inactive Campaign history but denies other branches', async () => {
+    const db = actor('manager-a', 'branch_manager', '010');
+    await assertSucceeds(getDoc(doc(db, 'giftCampaigns/retired-a')));
+    await assertFails(getDoc(doc(db, 'giftCampaigns/retired-b')));
+    expect(await ids(query(collection(db, 'giftCampaigns'), where('branchId', '==', '010'), where('active', '==', false), orderBy('startDate', 'desc')))).toEqual(['retired-a']);
+    expect(await ids(query(collection(db, 'giftCampaigns'), where('branchId', '==', '010')))).toEqual(['campaign-a', 'retired-a']);
+    await assertFails(getDocs(query(collection(db, 'giftCampaigns'), where('branchId', '==', '019'), where('active', '==', false), orderBy('startDate', 'desc'))));
+    await assertFails(getDocs(collection(db, 'giftCampaigns')));
+  });
+
+  it('retains Admin inactive Campaign history across branches', async () => {
+    const db = actor('admin', 'admin', null);
+    await assertSucceeds(getDoc(doc(db, 'giftCampaigns/retired-a')));
+    await assertSucceeds(getDoc(doc(db, 'giftCampaigns/retired-b')));
+    expect(await ids(query(collection(db, 'giftCampaigns'), where('active', '==', false)))).toEqual(['retired-a', 'retired-b']);
+    expect(await ids(collection(db, 'giftCampaigns'))).toEqual(['campaign-a', 'campaign-b', 'retired-a', 'retired-b']);
+  });
+
   it('limits Staff distribution and movement reads to the original owner, not the correction actor', async () => {
     const db = actor('staff-a', 'staff', '010');
     for (const path of ['giftDistributions/distribution-a', 'giftStockMovements/movement-a', 'giftStockMovements/correction-a']) {
@@ -210,8 +244,8 @@ describe('Firestore gift inventory actor matrix', () => {
     expect(await ids(query(collection(db, 'giftDistributions'), ...dateRange()))).toEqual(['distribution-a', 'distribution-b', 'distribution-team']);
     expect(await ids(query(collection(db, 'giftStockMovements'), ...dateRange()))).toEqual(['correction-a', 'inbound-a', 'movement-a', 'movement-b', 'movement-team']);
     expect(await ids(query(collection(db, 'giftDistributions'), where('branchId', '==', '019'), ...dateRange()))).toEqual(['distribution-b']);
-    for (const path of ['branchGiftStocks', 'giftCampaigns', 'giftReceipts', 'giftAllocations']) {
-      expect((await ids(collection(db, path))).length).toBe(2);
+    for (const [path, count] of [['branchGiftStocks', 2], ['giftCampaigns', 4], ['giftReceipts', 2], ['giftAllocations', 2]]) {
+      expect((await ids(collection(db, path))).length).toBe(count);
     }
   });
 
