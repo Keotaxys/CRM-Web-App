@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 function clone(value) {
-  return value === undefined ? undefined : { ...value };
+  return value === undefined ? undefined : structuredClone(value);
 }
 
 function createDatabase(documents, writes) {
@@ -82,7 +82,7 @@ function createDatabase(documents, writes) {
           staged.push({ type: 'create', path: ref.path, value: clone(value) });
         },
         set(ref, value, options) {
-          staged.push({ type: 'set', path: ref.path, value: clone(value), options });
+          staged.push({ type: 'set', path: ref.path, value: clone(value), options: clone(options) });
         },
         update(ref, value) {
           staged.push({ type: 'update', path: ref.path, value: clone(value) });
@@ -93,7 +93,8 @@ function createDatabase(documents, writes) {
       };
 
       const result = await callback(transaction);
-      const committed = new Map(documents);
+      const committed = new Map([...documents.entries()]
+        .map(([path, value]) => [path, clone(value)]));
       for (const write of staged) {
         if (write.type === 'create') {
           if (committed.has(write.path)) throw new Error(`Document already exists: ${write.path}`);
@@ -110,15 +111,16 @@ function createDatabase(documents, writes) {
         }
       }
       documents.clear();
-      for (const [path, value] of committed) documents.set(path, value);
-      writes.push(...staged);
+      for (const [path, value] of committed) documents.set(path, clone(value));
+      writes.push(...staged.map((write) => clone(write)));
       return result;
     },
   };
 }
 
 export function fakeGiftFirestore(initialDocuments = {}) {
-  const documents = new Map(Object.entries(initialDocuments));
+  const documents = new Map(Object.entries(initialDocuments)
+    .map(([path, value]) => [path, clone(value)]));
   const writes = [];
   return { services: { db: createDatabase(documents, writes) }, documents, writes };
 }

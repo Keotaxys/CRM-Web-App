@@ -36,6 +36,31 @@ test('fake Firestore stages all transaction writes and discards them when the ca
   assert.deepEqual(state.writes, []);
 });
 
+test('fake Firestore isolates nested input snapshots committed documents and write history', async () => {
+  const initial = { 'things/existing': { nested: { value: 1 } } };
+  const state = fakeGiftFirestore(initial);
+  initial['things/existing'].nested.value = 99;
+  assert.equal(state.documents.get('things/existing').nested.value, 1);
+
+  const stagedValue = { nested: { value: 2 }, rows: [{ count: 3 }] };
+  await state.services.db.runTransaction(async (transaction) => {
+    const existing = await transaction.get(state.services.db.doc('things/existing'));
+    existing.data().nested.value = 98;
+    transaction.create(state.services.db.doc('things/new'), stagedValue);
+    stagedValue.nested.value = 97;
+    stagedValue.rows[0].count = 96;
+  });
+
+  stagedValue.nested.value = 95;
+  assert.equal(state.documents.get('things/existing').nested.value, 1);
+  assert.deepEqual(state.documents.get('things/new'), { nested: { value: 2 }, rows: [{ count: 3 }] });
+  assert.deepEqual(state.writes[0].value, { nested: { value: 2 }, rows: [{ count: 3 }] });
+  state.writes[0].value.nested.value = 94;
+  assert.equal(state.documents.get('things/new').nested.value, 2);
+  state.documents.get('things/new').rows[0].count = 93;
+  assert.equal(state.writes[0].value.rows[0].count, 3);
+});
+
 test('Admin creates one normalized active gift and reserves its name', async () => {
   const state = fakeGiftFirestore({
     'users/admin-a': { role: 'admin', branchId: null, accountStatus: 'approved' },
