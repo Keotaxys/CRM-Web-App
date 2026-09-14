@@ -67,8 +67,12 @@ function createDatabase(documents, writes) {
     collection: collectionRef,
     async runTransaction(callback) {
       const staged = [];
+      let hasWrites = false;
       const transaction = {
         async get(target) {
+          if (hasWrites) {
+            throw new Error('Firestore transaction reads must happen before writes');
+          }
           if (target.kind === 'query' || target.kind === 'collection') {
             return querySnapshot(target.kind === 'collection' ? queryRef(target.path) : target);
           }
@@ -79,15 +83,19 @@ function createDatabase(documents, writes) {
             || staged.some((write) => write.path === ref.path && write.type !== 'delete')) {
             throw new Error(`Document already exists: ${ref.path}`);
           }
+          hasWrites = true;
           staged.push({ type: 'create', path: ref.path, value: clone(value) });
         },
         set(ref, value, options) {
+          hasWrites = true;
           staged.push({ type: 'set', path: ref.path, value: clone(value), options: clone(options) });
         },
         update(ref, value) {
+          hasWrites = true;
           staged.push({ type: 'update', path: ref.path, value: clone(value) });
         },
         delete(ref) {
+          hasWrites = true;
           staged.push({ type: 'delete', path: ref.path });
         },
       };
