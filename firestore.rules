@@ -127,7 +127,7 @@ service cloud.firestore {
     }
 
     match /giftItems/{giftId} {
-      allow read: if approved();
+      allow read: if admin() || manager() || (staff() && resource.data.active == true);
       allow create, update, delete: if false;
     }
 

@@ -40,6 +40,7 @@ afterAll(async () => env?.cleanup());
 describe('Firestore gift inventory actor matrix', () => {
   const giftDocuments = {
     'giftItems/umbrella': { name: 'Umbrella', active: true, sortOrder: 10, unitsPerPack: 10 },
+    'giftItems/retired-mug': { name: 'Retired mug', active: false, sortOrder: 20, unitsPerPack: 6 },
     'branchGiftStocks/010_umbrella': { branchId: '010', giftId: 'umbrella', currentUnits: 20 },
     'branchGiftStocks/019_umbrella': { branchId: '019', giftId: 'umbrella', currentUnits: 30 },
     'giftCampaigns/campaign-a': { branchId: '010', active: true, startDate: '2026-09-01' },
@@ -94,6 +95,28 @@ describe('Firestore gift inventory actor matrix', () => {
       const db = actor(uid, role, branchId);
       await assertSucceeds(getDoc(doc(db, 'giftItems/umbrella')));
       expect(await ids(query(collection(db, 'giftItems'), where('active', '==', true), orderBy('sortOrder', 'asc')))).toEqual(['umbrella']);
+    },
+  );
+
+  it('denies Staff direct reads of inactive gift catalog items', async () => {
+    await assertFails(getDoc(doc(actor('staff-a', 'staff', '010'), 'giftItems/retired-mug')));
+  });
+
+  it('denies Staff unfiltered gift catalog lists', async () => {
+    await assertFails(getDocs(collection(actor('staff-a', 'staff', '010'), 'giftItems')));
+  });
+
+  it('denies Staff gift catalog queries for inactive items', async () => {
+    const db = actor('staff-a', 'staff', '010');
+    await assertFails(getDocs(query(collection(db, 'giftItems'), where('active', '==', false), orderBy('sortOrder', 'asc'))));
+  });
+
+  it.each([['manager-a', 'branch_manager', '010'], ['admin', 'admin', null]])(
+    'retains %s access to inactive and unfiltered gift catalog history', async (uid, role, branchId) => {
+      const db = actor(uid, role, branchId);
+      await assertSucceeds(getDoc(doc(db, 'giftItems/retired-mug')));
+      expect(await ids(query(collection(db, 'giftItems'), where('active', '==', false), orderBy('sortOrder', 'asc')))).toEqual(['retired-mug']);
+      expect(await ids(collection(db, 'giftItems'))).toEqual(['retired-mug', 'umbrella']);
     },
   );
 
