@@ -6,6 +6,7 @@ function clone(value) {
 
 function createDatabase(documents, writes) {
   let nextId = 1;
+  let commitVersion = 0;
 
   const documentRef = (path) => ({
     id: path.split('/').at(-1),
@@ -65,7 +66,9 @@ function createDatabase(documents, writes) {
   return {
     doc: documentRef,
     collection: collectionRef,
-    async runTransaction(callback) {
+    async runTransaction(callback, attempt = 0) {
+      if (attempt >= 5) throw new Error('Firestore transaction contention retry limit exceeded');
+      const readVersion = commitVersion;
       const staged = [];
       let hasWrites = false;
       const transaction = {
@@ -100,7 +103,15 @@ function createDatabase(documents, writes) {
         },
       };
 
-      const result = await callback(transaction);
+      let result;
+      try {
+        result = await callback(transaction);
+      } catch (error) {
+        if (readVersion !== commitVersion) return this.runTransaction(callback, attempt + 1);
+        throw error;
+      }
+      // Retry a conflicted callback with fresh reads, discarding every staged write.
+      if (readVersion !== commitVersion) return this.runTransaction(callback, attempt + 1);
       const committed = new Map([...documents.entries()]
         .map(([path, value]) => [path, clone(value)]));
       for (const write of staged) {
@@ -121,6 +132,7 @@ function createDatabase(documents, writes) {
       documents.clear();
       for (const [path, value] of committed) documents.set(path, clone(value));
       writes.push(...staged.map((write) => clone(write)));
+      if (staged.length > 0) commitVersion += 1;
       return result;
     },
   };

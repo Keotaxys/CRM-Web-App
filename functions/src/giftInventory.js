@@ -222,7 +222,7 @@ export async function applyGiftDeltas(transaction, db, {
     const version = previous.version ?? 0;
     const lowStockThresholdUnits = previous.lowStockThresholdUnits ?? 0;
     if (!Number.isSafeInteger(before) || before < 0
-      || !Number.isSafeInteger(version) || version < 0
+      || !Number.isSafeInteger(version) || version < 0 || version === Number.MAX_SAFE_INTEGER
       || !Number.isSafeInteger(lowStockThresholdUnits) || lowStockThresholdUnits < 0) {
       throw operationError('failed-precondition', 'Gift stock record is invalid');
     }
