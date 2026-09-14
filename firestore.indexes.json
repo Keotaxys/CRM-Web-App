@@ -10,7 +10,15 @@
     { "collectionGroup": "users", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "accountStatus", "order": "ASCENDING" }, { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "name", "order": "ASCENDING" } ] },
     { "collectionGroup": "dailySales", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "staffUid", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
     { "collectionGroup": "dailySales", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
-    { "collectionGroup": "salesProducts", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "active", "order": "ASCENDING" }, { "fieldPath": "sortOrder", "order": "ASCENDING" } ] }
+    { "collectionGroup": "salesProducts", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "active", "order": "ASCENDING" }, { "fieldPath": "sortOrder", "order": "ASCENDING" } ] },
+    { "collectionGroup": "giftItems", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "active", "order": "ASCENDING" }, { "fieldPath": "sortOrder", "order": "ASCENDING" } ] },
+    { "collectionGroup": "giftCampaigns", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "active", "order": "ASCENDING" }, { "fieldPath": "startDate", "order": "DESCENDING" } ] },
+    { "collectionGroup": "branchGiftStocks", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "giftId", "order": "ASCENDING" } ] },
+    { "collectionGroup": "giftDistributions", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "createdBy", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
+    { "collectionGroup": "giftDistributions", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
+    { "collectionGroup": "giftStockMovements", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "distributionOwnerUid", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
+    { "collectionGroup": "giftStockMovements", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "branchId", "order": "ASCENDING" }, { "fieldPath": "dateKey", "order": "DESCENDING" } ] },
+    { "collectionGroup": "giftAllocations", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "targetBranchId", "order": "ASCENDING" }, { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] }
   ],
   "fieldOverrides": []
 }

@@ -24,6 +24,11 @@ service cloud.firestore {
     function salesRead(data) {
       return admin() || ownSales(data) || managerSales(data);
     }
+    function giftBranchRead(data) { return admin() || sameBranch(data); }
+    function giftManagerRead(data) { return admin() || (manager() && sameBranch(data)); }
+    function giftStaffRecord(data) { return staff() && data.createdBy == request.auth.uid; }
+    function giftStaffMovement(data) { return staff() && data.distributionOwnerUid == request.auth.uid; }
+    function giftDistributionRead(data) { return giftManagerRead(data) || giftStaffRecord(data); }
     function knownBranch(branchId) { return branchId in ['010','019','020','030','040','050','060','070','080','090','110','120','130','140','150','160','170','180','190','200','210','220']; }
     function validBirthDate(value) {
       return value == null
@@ -119,6 +124,56 @@ service cloud.firestore {
         allow read: if salesRead(get(/databases/$(database)/documents/dailySales/$(dailySalesId)).data);
         allow create, update, delete: if false;
       }
+    }
+
+    match /giftItems/{giftId} {
+      allow read: if approved();
+      allow create, update, delete: if false;
+    }
+
+    match /branchGiftStocks/{stockId} {
+      allow read: if giftBranchRead(resource.data);
+      allow create, update, delete: if false;
+    }
+
+    match /giftCampaigns/{campaignId} {
+      allow read: if giftBranchRead(resource.data);
+      allow create, update, delete: if false;
+    }
+
+    match /giftReceipts/{receiptId} {
+      allow read: if giftManagerRead(resource.data);
+      allow create, update, delete: if false;
+    }
+
+    match /giftAllocations/{allocationId} {
+      allow read: if admin() || (manager()
+        && resource.data.targetBranchId != null
+        && resource.data.targetBranchId == request.auth.token.branchId);
+      allow create, update, delete: if false;
+    }
+
+    match /giftDistributions/{distributionId} {
+      allow read: if giftDistributionRead(resource.data);
+      allow create, update, delete: if false;
+
+      match /revisions/{revisionId} {
+        allow read: if giftDistributionRead(get(/databases/$(database)/documents/giftDistributions/$(distributionId)).data);
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /giftStockMovements/{movementId} {
+      allow read: if giftManagerRead(resource.data) || giftStaffMovement(resource.data);
+      allow create, update, delete: if false;
+    }
+
+    match /giftItemNameKeys/{nameKey} {
+      allow read, write: if false;
+    }
+
+    match /giftCampaignNameKeys/{nameKey} {
+      allow read, write: if false;
     }
 
     match /{document=**} { allow read, write: if false; }

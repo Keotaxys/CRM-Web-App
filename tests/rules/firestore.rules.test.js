@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import {
@@ -36,6 +36,178 @@ beforeEach(async () => { await env.clearFirestore(); await env.withSecurityRules
   await setDoc(doc(context.firestore(), 'dailySales/2026-09-11_staff-a/revisions/change-1'), { changedBy: 'manager-a', changedAt: new Date() });
 }); });
 afterAll(async () => env?.cleanup());
+
+describe('Firestore gift inventory actor matrix', () => {
+  const giftDocuments = {
+    'giftItems/umbrella': { name: 'Umbrella', active: true, sortOrder: 10, unitsPerPack: 10 },
+    'branchGiftStocks/010_umbrella': { branchId: '010', giftId: 'umbrella', currentUnits: 20 },
+    'branchGiftStocks/019_umbrella': { branchId: '019', giftId: 'umbrella', currentUnits: 30 },
+    'giftCampaigns/campaign-a': { branchId: '010', active: true, startDate: '2026-09-01' },
+    'giftCampaigns/campaign-b': { branchId: '019', active: true, startDate: '2026-09-01' },
+    'giftReceipts/receipt-a': { branchId: '010', receivedDateKey: '2026-09-13', createdBy: 'manager-a' },
+    'giftReceipts/receipt-b': { branchId: '019', receivedDateKey: '2026-09-13', createdBy: 'manager-b' },
+    'giftAllocations/allocation-a': { targetBranchId: '010', status: 'pending', createdAt: new Date('2026-09-13T00:00:00Z') },
+    'giftAllocations/allocation-b': { targetBranchId: '019', status: 'pending', createdAt: new Date('2026-09-13T00:00:00Z') },
+    'giftDistributions/distribution-a': { branchId: '010', createdBy: 'staff-a', dateKey: '2026-09-13' },
+    'giftDistributions/distribution-team': { branchId: '010', createdBy: 'manager-a', dateKey: '2026-09-13' },
+    'giftDistributions/distribution-b': { branchId: '019', createdBy: 'staff-b', dateKey: '2026-09-13' },
+    'giftDistributions/distribution-a/revisions/change-1': { distributionOwnerUid: 'staff-a', actorUid: 'manager-a', changedBy: 'manager-a' },
+    'giftDistributions/distribution-team/revisions/change-1': { distributionOwnerUid: 'manager-a', actorUid: 'staff-a' },
+    'giftDistributions/distribution-b/revisions/change-1': { distributionOwnerUid: 'staff-b', actorUid: 'manager-b' },
+    'giftStockMovements/movement-a': { branchId: '010', giftId: 'umbrella', dateKey: '2026-09-13', actorUid: 'staff-a', distributionOwnerUid: 'staff-a', movementType: 'distribute' },
+    'giftStockMovements/correction-a': { branchId: '010', giftId: 'umbrella', dateKey: '2026-09-14', actorUid: 'manager-a', distributionOwnerUid: 'staff-a', movementType: 'distribution_amend' },
+    'giftStockMovements/movement-team': { branchId: '010', giftId: 'umbrella', dateKey: '2026-09-13', actorUid: 'staff-a', distributionOwnerUid: 'manager-a', movementType: 'distribution_amend' },
+    'giftStockMovements/movement-b': { branchId: '019', giftId: 'umbrella', dateKey: '2026-09-13', actorUid: 'staff-b', distributionOwnerUid: 'staff-b', movementType: 'distribute' },
+    'giftStockMovements/inbound-a': { branchId: '010', giftId: 'umbrella', dateKey: '2026-09-13', actorUid: 'manager-a', distributionOwnerUid: null, movementType: 'receive' },
+    'giftItemNameKeys/umbrella-key': { giftId: 'umbrella', normalizedName: 'umbrella' },
+    'giftCampaignNameKeys/campaign-key': { campaignId: 'campaign-a', branchId: '010' },
+  };
+  const collectionPaths = [
+    ['giftItems', 'umbrella'], ['branchGiftStocks', '010_umbrella'],
+    ['giftCampaigns', 'campaign-a'], ['giftReceipts', 'receipt-a'],
+    ['giftAllocations', 'allocation-a'], ['giftDistributions', 'distribution-a'],
+    ['giftDistributions/distribution-a/revisions', 'change-1'],
+    ['giftStockMovements', 'movement-a'], ['giftItemNameKeys', 'umbrella-key'],
+    ['giftCampaignNameKeys', 'campaign-key'],
+  ];
+  const dateRange = () => [where('dateKey', '>=', '2026-09-01'), where('dateKey', '<=', '2026-09-30'), orderBy('dateKey', 'desc')];
+  const ids = async (request) => (await assertSucceeds(getDocs(request))).docs.map((entry) => entry.id).sort();
+
+  beforeEach(async () => env.withSecurityRulesDisabled(async (context) => {
+    await Promise.all(Object.entries(giftDocuments).map(([path, data]) => setDoc(doc(context.firestore(), path), data)));
+  }));
+
+  it('denies anonymous, pending, disabled and stale-profile gift reads', async () => {
+    const denied = [env.unauthenticatedContext().firestore(), actor('pending', 'staff', '010', 'pending'),
+      actor('disabled', 'staff', '010', 'disabled'), actor('pending', 'staff', '010'),
+      actor('disabled', 'staff', '010'), actor('staff-a', 'staff', '019'), actor('staff-a', 'admin', '010')];
+    for (const db of denied) {
+      for (const [path, id] of collectionPaths) {
+        await assertFails(getDoc(doc(db, path, id)));
+        await assertFails(getDocs(collection(db, path)));
+      }
+    }
+  });
+
+  it.each([['staff-a', 'staff', '010'], ['manager-a', 'branch_manager', '010'], ['admin', 'admin', null]])(
+    'allows %s to read the approved gift catalog query', async (uid, role, branchId) => {
+      const db = actor(uid, role, branchId);
+      await assertSucceeds(getDoc(doc(db, 'giftItems/umbrella')));
+      expect(await ids(query(collection(db, 'giftItems'), where('active', '==', true), orderBy('sortOrder', 'asc')))).toEqual(['umbrella']);
+    },
+  );
+
+  it.each([['staff-a', 'staff'], ['manager-a', 'branch_manager']])(
+    'scopes %s stock and Campaign documents and queries to its branch', async (uid, role) => {
+      const db = actor(uid, role, '010');
+      for (const [path, ownId, otherId, filters] of [
+        ['branchGiftStocks', '010_umbrella', '019_umbrella', [orderBy('giftId', 'asc')]],
+        ['giftCampaigns', 'campaign-a', 'campaign-b', [where('active', '==', true), orderBy('startDate', 'desc')]],
+      ]) {
+        await assertSucceeds(getDoc(doc(db, path, ownId)));
+        await assertFails(getDoc(doc(db, path, otherId)));
+        expect(await ids(query(collection(db, path), where('branchId', '==', '010'), ...filters))).toEqual([ownId]);
+        await assertFails(getDocs(query(collection(db, path), where('branchId', '==', '019'), ...filters)));
+        await assertFails(getDocs(collection(db, path)));
+      }
+    },
+  );
+
+  it('limits Staff distribution and movement reads to the original owner, not the correction actor', async () => {
+    const db = actor('staff-a', 'staff', '010');
+    for (const path of ['giftDistributions/distribution-a', 'giftStockMovements/movement-a', 'giftStockMovements/correction-a']) {
+      await assertSucceeds(getDoc(doc(db, path)));
+    }
+    for (const path of ['giftDistributions/distribution-team', 'giftDistributions/distribution-b',
+      'giftStockMovements/movement-team', 'giftStockMovements/movement-b', 'giftStockMovements/inbound-a']) {
+      await assertFails(getDoc(doc(db, path)));
+    }
+    expect(await ids(query(collection(db, 'giftDistributions'), where('createdBy', '==', 'staff-a'), ...dateRange()))).toEqual(['distribution-a']);
+    expect(await ids(query(collection(db, 'giftStockMovements'), where('distributionOwnerUid', '==', 'staff-a'), ...dateRange()))).toEqual(['correction-a', 'movement-a']);
+    for (const [path, ownerField] of [['giftDistributions', 'createdBy'], ['giftStockMovements', 'distributionOwnerUid']]) {
+      await assertFails(getDocs(query(collection(db, path), where('branchId', '==', '010'), ...dateRange())));
+      await assertFails(getDocs(query(collection(db, path), where(ownerField, '==', 'staff-b'), ...dateRange())));
+      await assertFails(getDocs(query(collection(db, path), ...dateRange())));
+    }
+    await assertFails(getDocs(query(collection(db, 'giftStockMovements'), where('actorUid', '==', 'staff-a'), ...dateRange())));
+  });
+
+  it('allows Manager branch date queries and rejects cross-branch or unscoped reads', async () => {
+    const db = actor('manager-a', 'branch_manager', '010');
+    for (const [path, ownId, otherId, expected] of [
+      ['giftDistributions', 'distribution-a', 'distribution-b', ['distribution-a', 'distribution-team']],
+      ['giftStockMovements', 'correction-a', 'movement-b', ['correction-a', 'inbound-a', 'movement-a', 'movement-team']],
+    ]) {
+      await assertSucceeds(getDoc(doc(db, path, ownId)));
+      await assertFails(getDoc(doc(db, path, otherId)));
+      await assertFails(getDoc(doc(actor('manager-b', 'branch_manager', '019'), path, ownId)));
+      expect(await ids(query(collection(db, path), where('branchId', '==', '010'), ...dateRange()))).toEqual(expected);
+      await assertFails(getDocs(query(collection(db, path), where('branchId', '==', '019'), ...dateRange())));
+      await assertFails(getDocs(query(collection(db, path), ...dateRange())));
+    }
+  });
+
+  it('reserves receipts and allocations for the target Manager or Admin', async () => {
+    for (const [path, ownId, otherId, branchField, filters] of [
+      ['giftReceipts', 'receipt-a', 'receipt-b', 'branchId', []],
+      ['giftAllocations', 'allocation-a', 'allocation-b', 'targetBranchId', [where('status', '==', 'pending'), orderBy('createdAt', 'desc')]],
+    ]) {
+      const managerDb = actor('manager-a', 'branch_manager', '010');
+      await assertSucceeds(getDoc(doc(managerDb, path, ownId)));
+      await assertFails(getDoc(doc(managerDb, path, otherId)));
+      expect(await ids(query(collection(managerDb, path), where(branchField, '==', '010'), ...filters))).toEqual([ownId]);
+      await assertFails(getDocs(query(collection(managerDb, path), where(branchField, '==', '019'), ...filters)));
+      await assertFails(getDocs(collection(managerDb, path)));
+      const staffDb = actor('staff-a', 'staff', '010');
+      await assertFails(getDoc(doc(staffDb, path, ownId)));
+      await assertFails(getDocs(query(collection(staffDb, path), where(branchField, '==', '010'), ...filters)));
+    }
+  });
+
+  it('applies parent distribution ownership and branch scope to revision get and list', async () => {
+    const ownPath = 'giftDistributions/distribution-a/revisions';
+    for (const db of [actor('staff-a', 'staff', '010'), actor('manager-a', 'branch_manager', '010'), actor('admin', 'admin', null)]) {
+      await assertSucceeds(getDoc(doc(db, ownPath, 'change-1')));
+      expect(await ids(collection(db, ownPath))).toEqual(['change-1']);
+    }
+    for (const [db, path] of [
+      [actor('staff-b', 'staff', '019'), ownPath], [actor('manager-b', 'branch_manager', '019'), ownPath],
+      [actor('staff-a', 'staff', '010'), 'giftDistributions/distribution-team/revisions'],
+    ]) {
+      await assertFails(getDoc(doc(db, path, 'change-1')));
+      await assertFails(getDocs(collection(db, path)));
+    }
+  });
+
+  it('allows Admin all branches and date-only report queries', async () => {
+    const db = actor('admin', 'admin', null);
+    for (const path of Object.keys(giftDocuments).filter((path) => !path.includes('NameKeys/'))) {
+      await assertSucceeds(getDoc(doc(db, path)));
+    }
+    expect(await ids(query(collection(db, 'giftDistributions'), ...dateRange()))).toEqual(['distribution-a', 'distribution-b', 'distribution-team']);
+    expect(await ids(query(collection(db, 'giftStockMovements'), ...dateRange()))).toEqual(['correction-a', 'inbound-a', 'movement-a', 'movement-b', 'movement-team']);
+    expect(await ids(query(collection(db, 'giftDistributions'), where('branchId', '==', '019'), ...dateRange()))).toEqual(['distribution-b']);
+    for (const path of ['branchGiftStocks', 'giftCampaigns', 'giftReceipts', 'giftAllocations']) {
+      expect((await ids(collection(db, path))).length).toBe(2);
+    }
+  });
+
+  it.each([['staff-a', 'staff', '010'], ['manager-a', 'branch_manager', '010'], ['admin', 'admin', null]])(
+    'denies %s all name-reservation reads and direct gift creates, updates and deletes', async (uid, role, branchId) => {
+      const db = actor(uid, role, branchId);
+      for (const [path, id] of collectionPaths) {
+        const data = giftDocuments[`${path}/${id}`];
+        await assertFails(setDoc(doc(db, path, 'client-create'), data));
+        await assertFails(updateDoc(doc(db, path, id), data));
+        await assertFails(deleteDoc(doc(db, path, id)));
+        if (path.includes('NameKeys')) {
+          await assertFails(getDoc(doc(db, path, id)));
+          await assertFails(getDocs(collection(db, path)));
+        }
+      }
+    },
+  );
+});
 
 describe('Firestore claim and branch matrix', () => {
   const customerCreate = (uid, branchId = '010') => ({
