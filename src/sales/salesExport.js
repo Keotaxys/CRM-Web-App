@@ -1,7 +1,6 @@
-export function sanitizeSpreadsheetText(value) {
-  const text = String(value ?? '');
-  return /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text;
-}
+import { sanitizeSpreadsheetText } from '../shared/spreadsheet';
+
+export { sanitizeSpreadsheetText } from '../shared/spreadsheet';
 
 export function salesExportFilename(startKey, endKey) {
   return `CRM-Sales-${sanitizeSpreadsheetText(startKey)}-to-${sanitizeSpreadsheetText(endKey)}.xlsx`;

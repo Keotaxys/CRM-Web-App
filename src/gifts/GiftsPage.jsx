@@ -10,6 +10,7 @@ import GiftStockPanel from './GiftStockPanel';
 import GiftInboundPanel from './GiftInboundPanel';
 import GiftCatalogAdmin from './GiftCatalogAdmin';
 import GiftCampaignAdmin from './GiftCampaignAdmin';
+import GiftReportPanel from './GiftReportPanel';
 
 const managerTabs = [
   ['distribution', 'ແຈກເຄື່ອງ'], ['stock', 'ສະຕັອກ'], ['inbound', 'ຮັບເຂົ້າ'],
@@ -27,7 +28,9 @@ export default function GiftsPage() {
   const [targetBranchId, setTargetBranchId] = useState('');
   const [tab, setTab] = useState('distribution');
   const effectiveBranchId = admin ? targetBranchId : branchId;
-  const tabs = admin ? [...managerTabs, ['catalog', 'ລາຍການເຄື່ອງແຈກ']] : role === 'branch_manager' ? managerTabs : [['distribution', 'ແຈກເຄື່ອງ']];
+  const tabs = admin ? [...managerTabs, ['catalog', 'ລາຍການເຄື່ອງແຈກ']] : role === 'branch_manager' ? managerTabs : [
+    ['distribution', 'ແຈກເຄື່ອງ'], ['report', 'ລາຍງານ'],
+  ];
 
   return <>
     <Navbar title="ຈັດການເຄື່ອງແຈກ" />
@@ -46,7 +49,7 @@ export default function GiftsPage() {
       {tab === 'inbound' && effectiveBranchId ? <GiftInboundPanel identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
       {tab === 'campaigns' && effectiveBranchId ? <GiftCampaignAdmin identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
       {tab === 'catalog' && admin ? <GiftCatalogAdmin identity={identity} effectiveBranchId={effectiveBranchId} /> : null}
-      {tab === 'report' && (!admin || effectiveBranchId) ? <GlassCard as="section" padded><h2>{tabs.find(([value]) => value === tab)?.[1]}</h2><p>ກຳລັງຈັດກຽມ</p></GlassCard> : null}
+      {tab === 'report' && effectiveBranchId ? <GiftReportPanel effectiveBranchId={effectiveBranchId} /> : null}
     </main>
   </>;
 }

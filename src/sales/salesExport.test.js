@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import { buildSalesWorkbook, sanitizeSpreadsheetText, salesExportFilename } from './salesExport';
+import { sanitizeSpreadsheetText as sharedSanitizeSpreadsheetText } from '../shared/spreadsheet';
 import { buildSalesReport } from './salesReport';
 
 const products = [{ id: 'bcel', name: 'BCEL', sortOrder: 1 }, { id: 'atm', name: '=ATM', sortOrder: 2 }];
@@ -75,5 +76,6 @@ describe('sales export', () => {
 
   it.each(['=SUM(A1)', '+123', '-1', '@value', '  =formula'])('sanitizes formula-like text %s', (value) => {
     expect(sanitizeSpreadsheetText(value)).toBe(`'${value}`);
+    expect(sanitizeSpreadsheetText).toBe(sharedSanitizeSpreadsheetText);
   });
 });
