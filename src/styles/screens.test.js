@@ -13,6 +13,34 @@ it('constrains sales tables locally and overrides shared grids at 360px', () => 
   expect(screensCss).toMatch(/@media\s*\(max-width:\s*430px\)\s*\{[^}]*\.summary-grid\.sales-summary-grid[^}]*\.form-grid\.sales-filter-grid[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
 });
 
+describe('gift responsive and accessibility guards', () => {
+  it('uses compact gift rows on larger screens and a safe single column on small screens', () => {
+    expect(screensCss).toMatch(/\.gift-item-row(?:\s*,\s*\.gift-distribution-row)?\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(10rem,\s*\.55fr\)\s+auto/s);
+    expect(screensCss).toMatch(/@media\s*\(max-width:\s*700px\)[\s\S]*\.gift-item-row\s*,\s*\.gift-distribution-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+  });
+
+  it('wraps gift action groups instead of allowing overflow', () => {
+    expect(screensCss).toMatch(/\.gift-actions\s*,[\s\S]*?\{[^}]*flex-wrap:\s*wrap/s);
+  });
+
+  it('contains gift table scrolling inside report cards', () => {
+    expect(screensCss).toMatch(/\.gift-[\w-]*table-wrap\s*\{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto/s);
+  });
+
+  it('keeps final gift actions clear of the bottom navigation', () => {
+    expect(screensCss).toMatch(/\.gift-[\w-]*(?:form|report|actions)[\w-]*\s*\{[^}]*padding-bottom:\s*calc\([^}]*env\(safe-area-inset-bottom\)/s);
+  });
+
+  it('uses a text or icon indicator for low stock in addition to color', () => {
+    expect(screensCss).toMatch(/\.gift-stock--low\s+small\s*\{[^}]*display:\s*inline-flex/s);
+    expect(screensCss).toMatch(/\.gift-stock--low\s+small::before\s*\{[^}]*content:/s);
+  });
+
+  it('provides visible focus states for gift tabs and actions', () => {
+    expect(screensCss).toMatch(/\.gift-[\w-]*(?:tabs|actions)[^}]*:focus-visible\s*\{[^}]*outline:\s*var\(--focus-outline\)/s);
+  });
+});
+
 describe(
   'global screen surface styles',
   () => {

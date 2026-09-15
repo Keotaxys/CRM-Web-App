@@ -1,5 +1,115 @@
 /* Screen-specific CRM layouts are added by their owning feature tasks. */
 
+/* Gift inventory surfaces: keep rows dense on larger screens while allowing
+   every control to stack comfortably on narrow phones. */
+.gift-item-row,
+.gift-distribution-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, .55fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+  min-width: 0;
+}
+
+.gift-item-row > *,
+.gift-distribution-row > *,
+.gift-item-rows > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gift-actions,
+.gift-form-actions,
+.gift-low-stock-card {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.gift-actions > *,
+.gift-form-actions > *,
+.gift-low-stock-card > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gift-report-table-wrap {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+
+.gift-report-table-wrap > table {
+  min-width: 560px;
+}
+
+.gift-form,
+.gift-report,
+.gift-form-actions {
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.gift-stock--low {
+  border-inline-start: 3px solid var(--orange-600);
+  padding-inline-start: var(--space-3);
+}
+
+.gift-stock--low small {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--orange-700);
+  font-weight: 900;
+}
+
+.gift-stock--low small::before {
+  content: '⚠';
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.gift-tabs:focus-visible,
+.gift-actions:focus-visible,
+.gift-form-actions:focus-visible,
+.gift-low-stock-card .ui-button:focus-visible,
+.gift-distribution-row .ui-button:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
+
+@media (max-width: 700px) {
+  .gift-item-row,
+  .gift-distribution-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gift-actions,
+  .gift-form-actions {
+    width: 100%;
+  }
+
+  .gift-actions > *,
+  .gift-form-actions > * {
+    flex: 1 1 10rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .gift-item-row,
+  .gift-distribution-row {
+    gap: var(--space-2);
+  }
+
+  .gift-actions > *,
+  .gift-form-actions > * {
+    flex-basis: 100%;
+  }
+}
+
 .sales-entry-grid { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
 .sales-tabs { display: flex; gap: var(--space-2); overflow-x: auto; }
 .sales-report { min-width: 0; }
