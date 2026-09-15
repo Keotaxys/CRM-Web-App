@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   catalog: vi.fn(),
   onCatalog: null,
+  onCatalogError: null,
   onStocks: null,
+  onStocksError: null,
   stocks: vi.fn(),
   unsubscribeCatalog: vi.fn(),
   unsubscribeStocks: vi.fn(),
@@ -24,8 +26,8 @@ import GiftLowStockProvider from './GiftLowStockProvider';
 import { useGiftLowStock } from './useGiftLowStock';
 
 function Probe() {
-  const { count, items, loading } = useGiftLowStock();
-  return <><output aria-label="count">{count}</output><output aria-label="items">{items.map((item) => item.giftId).join(',')}</output><output aria-label="loading">{String(loading)}</output></>;
+  const { count, error, items, loading } = useGiftLowStock();
+  return <><output aria-label="count">{count}</output><output aria-label="items">{items.map((item) => item.giftId).join(',')}</output><output aria-label="loading">{String(loading)}</output><output aria-label="error">{error}</output></>;
 }
 
 const gift = (id, active = true) => ({ id, active, name: `Gift ${id}`, unitsPerPack: 1, unitLabel: 'unit', packLabel: 'pack' });
@@ -35,8 +37,8 @@ describe('GiftLowStockProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.identity = { user: { uid: 'manager-1' }, claims: { role: 'branch_manager', branchId: '010', accountStatus: 'approved' } };
-    mocks.catalog.mockImplementation((onData) => { mocks.onCatalog = onData; return mocks.unsubscribeCatalog; });
-    mocks.stocks.mockImplementation((_identity, _options, onData) => { mocks.onStocks = onData; return mocks.unsubscribeStocks; });
+    mocks.catalog.mockImplementation((onData, onError) => { mocks.onCatalog = onData; mocks.onCatalogError = onError; return mocks.unsubscribeCatalog; });
+    mocks.stocks.mockImplementation((_identity, _options, onData, onError) => { mocks.onStocks = onData; mocks.onStocksError = onError; return mocks.unsubscribeStocks; });
   });
 
   it('does not subscribe or expose low-stock data to Staff', () => {
@@ -78,5 +80,25 @@ describe('GiftLowStockProvider', () => {
     expect(screen.getByLabelText('count')).toHaveTextContent('1');
     act(() => mocks.onStocks([stock('umbrella', 6, 5)]));
     expect(screen.getByLabelText('count')).toHaveTextContent('0');
+  });
+
+  it('keeps a catalog failure visible after the stock stream succeeds', () => {
+    render(<GiftLowStockProvider><Probe/></GiftLowStockProvider>);
+    act(() => {
+      mocks.onCatalogError(new Error('catalog offline'));
+      mocks.onStocks([]);
+    });
+    expect(screen.getByLabelText('loading')).toHaveTextContent('false');
+    expect(screen.getByLabelText('error')).toHaveTextContent('ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້');
+  });
+
+  it('keeps a stock failure visible after the catalog stream succeeds', () => {
+    render(<GiftLowStockProvider><Probe/></GiftLowStockProvider>);
+    act(() => {
+      mocks.onStocksError(new Error('stock offline'));
+      mocks.onCatalog([gift('umbrella')]);
+    });
+    expect(screen.getByLabelText('loading')).toHaveTextContent('false');
+    expect(screen.getByLabelText('error')).toHaveTextContent('ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້');
   });
 });

@@ -13,9 +13,8 @@ export default function GiftLowStockProvider({ children }) {
   const role = roleFor(identity);
   const allowed = role === 'branch_manager' || role === 'admin';
   const scope = `${identity?.user?.uid ?? identity?.uid ?? ''}:${role ?? ''}:${identity?.claims?.branchId ?? identity?.branchId ?? ''}`;
-  const [catalogState, setCatalogState] = useState({ items: [], scope: null });
-  const [stockState, setStockState] = useState({ items: [], scope: null });
-  const [errorState, setErrorState] = useState({ message: '', scope: null });
+  const [catalogState, setCatalogState] = useState({ items: [], ready: false, error: '', scope: null });
+  const [stockState, setStockState] = useState({ items: [], ready: false, error: '', scope: null });
 
   useEffect(() => {
     if (!allowed) {
@@ -23,20 +22,22 @@ export default function GiftLowStockProvider({ children }) {
     }
 
     let live = true;
-    const onError = () => {
+    const onCatalogError = () => {
       if (!live) return;
-      setErrorState({ message: 'ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້', scope });
+      setCatalogState((current) => ({ ...current, ready: true, error: 'ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້', scope }));
+    };
+    const onStockError = () => {
+      if (!live) return;
+      setStockState((current) => ({ ...current, ready: true, error: 'ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້', scope }));
     };
     const stopCatalog = subscribeActiveGiftItems((items) => {
       if (!live) return;
-      setCatalogState({ items, scope });
-      setErrorState({ message: '', scope });
-    }, onError);
+      setCatalogState({ items, ready: true, error: '', scope });
+    }, onCatalogError);
     const stopStocks = subscribeGiftStocks(identity, {}, (items) => {
       if (!live) return;
-      setStockState({ items, scope });
-      setErrorState({ message: '', scope });
-    }, onError);
+      setStockState({ items, ready: true, error: '', scope });
+    }, onStockError);
 
     return () => {
       live = false;
@@ -54,8 +55,13 @@ export default function GiftLowStockProvider({ children }) {
       .filter((item) => item.gift);
   }, [allowed, catalogState, scope, stockState]);
 
-  const loading = allowed && (catalogState.scope !== scope || stockState.scope !== scope);
-  const error = allowed && errorState.scope === scope ? errorState.message : '';
+  const loading = allowed && (
+    catalogState.scope !== scope || !catalogState.ready
+    || stockState.scope !== scope || !stockState.ready
+  );
+  const error = allowed && catalogState.scope === scope && stockState.scope === scope
+    ? (catalogState.error || stockState.error)
+    : '';
 
   const value = useMemo(() => ({
     count: items.length,
