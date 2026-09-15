@@ -6,6 +6,10 @@ const screensCss = readFileSync(
   resolve('src/styles/screens.css'),
   'utf8',
 );
+const giftPageSource = readFileSync(resolve('src/gifts/GiftsPage.jsx'), 'utf8');
+const giftDistributionSource = readFileSync(resolve('src/gifts/GiftDistributionForm.jsx'), 'utf8');
+const giftInboundSource = readFileSync(resolve('src/gifts/GiftInboundPanel.jsx'), 'utf8');
+const giftReportSource = readFileSync(resolve('src/gifts/GiftReportPanel.jsx'), 'utf8');
 
 it('constrains sales tables locally and overrides shared grids at 360px', () => {
   expect(screensCss).toMatch(/\.sales-report-table-wrap\s*\{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow[^}]*auto/s);
@@ -15,19 +19,23 @@ it('constrains sales tables locally and overrides shared grids at 360px', () => 
 
 describe('gift responsive and accessibility guards', () => {
   it('uses compact gift rows on larger screens and a safe single column on small screens', () => {
+    expect(giftDistributionSource).toContain('gift-distribution-form');
     expect(screensCss).toMatch(/\.gift-item-row(?:\s*,\s*\.gift-distribution-row)?\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(10rem,\s*\.55fr\)\s+auto/s);
     expect(screensCss).toMatch(/@media\s*\(max-width:\s*700px\)[\s\S]*\.gift-item-row\s*,\s*\.gift-distribution-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
   });
 
   it('wraps gift action groups instead of allowing overflow', () => {
+    expect(giftInboundSource).toContain('gift-actions');
     expect(screensCss).toMatch(/\.gift-actions\s*,[\s\S]*?\{[^}]*flex-wrap:\s*wrap/s);
   });
 
   it('contains gift table scrolling inside report cards', () => {
+    expect(giftReportSource).toContain('gift-report-table-wrap');
     expect(screensCss).toMatch(/\.gift-[\w-]*table-wrap\s*\{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto/s);
   });
 
   it('keeps final gift actions clear of the bottom navigation', () => {
+    expect(giftDistributionSource).toContain('gift-form');
     expect(screensCss).toMatch(/\.gift-[\w-]*(?:form|report|actions)[\w-]*\s*\{[^}]*padding-bottom:\s*calc\([^}]*env\(safe-area-inset-bottom\)/s);
   });
 
@@ -37,6 +45,7 @@ describe('gift responsive and accessibility guards', () => {
   });
 
   it('provides visible focus states for gift tabs and actions', () => {
+    expect(giftPageSource).toContain('gift-tabs');
     expect(screensCss).toMatch(/\.gift-[\w-]*(?:tabs|actions)[^}]*:focus-visible\s*\{[^}]*outline:\s*var\(--focus-outline\)/s);
   });
 });

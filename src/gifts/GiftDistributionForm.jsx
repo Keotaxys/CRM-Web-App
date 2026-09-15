@@ -68,7 +68,7 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
     finally { submittingRef.current = false; setBusy(false); }
   };
 
-  return <GlassCard as="section" padded><h2>ແຈກເຄື່ອງ</h2><form className="form-stack" onSubmit={submit}>
+  return <GlassCard as="section" padded className="gift-distribution-form"><h2>ແຈກເຄື່ອງ</h2><form className="form-stack gift-form" onSubmit={submit}>
     <label>ປະເພດຜູ້ຮັບ<select aria-label="ປະເພດຜູ້ຮັບ" value={recipientType} disabled={busy} onChange={(event) => { setRecipientType(event.target.value); setRecipientId(''); }}><option value="">ເລືອກ</option><option value="customer">ລູກຄ້າ</option><option value="campaign">Campaign</option></select></label>
     {recipientType ? <SearchableSelect id="gift-recipient" label="ຜູ້ຮັບ" value={recipientId} options={recipientOptions} placeholder="ເລືອກຜູ້ຮັບ" disabled={busy} onChange={setRecipientId} /> : null}
     <GiftItemRows catalog={gifts} rows={rows} onChange={setRows} onValidationIssue={setError} showStock stocks={stocksByGift} maxRows={25} disabled={busy} />

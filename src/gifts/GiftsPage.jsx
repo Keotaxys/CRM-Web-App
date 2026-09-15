@@ -34,13 +34,13 @@ export default function GiftsPage() {
 
   return <>
     <Navbar title="ຈັດການເຄື່ອງແຈກ" />
-    <main className="page-content">
+    <main className="page-content gift-page">
       {admin ? <GlassCard padded className="mb-5"><CustomSelect
         id="gift-target-branch" label="ສາຂາເປົ້າໝາຍ" value={targetBranchId}
         options={BRANCHES.map((branch) => ({ value: branch.id, label: branch.label }))}
         placeholder="ເລືອກສາຂາ" onChange={setTargetBranchId}
       /></GlassCard> : null}
-      <div className="chip-row mb-5" aria-label="ໜ້າເຄື່ອງແຈກ">
+      <div className="chip-row gift-tabs mb-5" aria-label="ໜ້າເຄື່ອງແຈກ">
         {tabs.map(([value, label]) => <Button key={value} variant="neutral" aria-pressed={tab === value} onClick={() => setTab(value)}>{label}</Button>)}
       </div>
       {admin && !effectiveBranchId && tab !== 'catalog' ? <div className="error-banner" role="alert">ກະລຸນາເລືອກສາຂາກ່ອນເຮັດລາຍການ</div> : null}

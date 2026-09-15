@@ -19,7 +19,6 @@
 }
 
 .gift-actions,
-.gift-form-actions,
 .gift-low-stock-card {
   display: flex;
   min-width: 0;
@@ -28,7 +27,6 @@
 }
 
 .gift-actions > *,
-.gift-form-actions > *,
 .gift-low-stock-card > * {
   min-width: 0;
   max-width: 100%;
@@ -48,8 +46,7 @@
 }
 
 .gift-form,
-.gift-report,
-.gift-form-actions {
+.gift-report {
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
 }
 
@@ -72,9 +69,8 @@
   line-height: 1;
 }
 
-.gift-tabs:focus-visible,
-.gift-actions:focus-visible,
-.gift-form-actions:focus-visible,
+.gift-tabs .ui-button:focus-visible,
+.gift-actions .ui-button:focus-visible,
 .gift-low-stock-card .ui-button:focus-visible,
 .gift-distribution-row .ui-button:focus-visible {
   outline: var(--focus-outline);
@@ -87,13 +83,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .gift-actions,
-  .gift-form-actions {
+  .gift-actions {
     width: 100%;
   }
 
-  .gift-actions > *,
-  .gift-form-actions > * {
+  .gift-actions > * {
     flex: 1 1 10rem;
   }
 }
@@ -104,8 +98,7 @@
     gap: var(--space-2);
   }
 
-  .gift-actions > *,
-  .gift-form-actions > * {
+  .gift-actions > * {
     flex-basis: 100%;
   }
 }

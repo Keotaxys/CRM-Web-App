@@ -82,7 +82,7 @@ function giftFilterOptions(catalog, movements, stocks) {
 }
 
 function ReportTable({ title, columns, children }) {
-  return <div className="sales-report-table-wrap" role="region" aria-label={title} tabIndex={0}>
+  return <div className="sales-report-table-wrap gift-report-table-wrap" role="region" aria-label={title} tabIndex={0}>
     <table>
       <thead><tr>{columns.map((column) => <th key={column} scope="col">{column}</th>)}</tr></thead>
       <tbody>{children}</tbody>
@@ -303,7 +303,7 @@ export default function GiftReportPanel({ effectiveBranchId: branchOverride, onE
     return <div className="error-banner" role="alert">ກະລຸນາເລືອກສາຂາ</div>;
   }
 
-  return <section className="form-stack sales-report" aria-label="ລາຍງານເຄື່ອງແຈກ">
+  return <section className="form-stack sales-report gift-report" aria-label="ລາຍງານເຄື່ອງແຈກ">
     <GlassCard padded className="filter-panel">
       <div className="chip-row sales-tabs">
         {PRESETS.map(([value, label]) => <Button
