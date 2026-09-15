@@ -85,6 +85,8 @@ test('Manager direct receipt atomically adds normalized units to own branch', as
   assert.equal(movement.balanceBeforeUnits, 5);
   assert.equal(movement.balanceAfterUnits, 30);
   assert.equal(movement.distributionOwnerUid, null);
+  assert.equal(movement.customerNameSnapshot, null);
+  assert.equal(movement.campaignNameSnapshot, null);
 });
 
 test('receipt retry returns the original result and a conflicting retry is denied', async () => {
@@ -202,6 +204,8 @@ test('allocation changes stock only on the first valid confirmation', async () =
   assert.equal(movement.movementType, 'allocation_receive');
   assert.equal(movement.operationType, 'allocation');
   assert.equal(movement.actorUid, 'manager-a');
+  assert.equal(movement.customerNameSnapshot, null);
+  assert.equal(movement.campaignNameSnapshot, null);
 });
 
 test('allocation confirmation enforces target branch and terminal state', async () => {
@@ -295,6 +299,8 @@ test('adjustment applies positive and negative deltas with reason and exact retr
   assert.equal(movement.reason, 'Physical count');
   assert.equal(movement.deltaUnits, -1);
   assert.equal(movement.distributionOwnerUid, null);
+  assert.equal(movement.customerNameSnapshot, null);
+  assert.equal(movement.campaignNameSnapshot, null);
 });
 
 test('adjustment totals mixed-sign safe deltas without intermediate Number overflow', async () => {

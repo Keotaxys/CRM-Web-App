@@ -75,6 +75,8 @@ test('Staff distributes multiple gifts to own Customer with snapshots and owner 
   assert.equal(movement.actorUid, 'staff-a');
   assert.equal(movement.distributionOwnerUid, 'staff-a');
   assert.equal(movement.movementType, 'distribute');
+  assert.equal(movement.customerNameSnapshot, 'Customer A');
+  assert.equal(movement.campaignNameSnapshot, null);
 });
 
 test('Campaign distribution and Admin explicit branch distribution succeed', async () => {
@@ -88,6 +90,9 @@ test('Campaign distribution and Admin explicit branch distribution succeed', asy
     assert.equal(distribution.customerId, null);
     assert.equal(distribution.campaignNameSnapshot, 'Campaign A');
     assert.equal(distribution.createdBy, actor.uid);
+    const movement = state.documents.get(`giftStockMovements/${id}_umbrella`);
+    assert.equal(movement.customerNameSnapshot, null);
+    assert.equal(movement.campaignNameSnapshot, 'Campaign A');
   }
 });
 
@@ -109,6 +114,8 @@ test('invalid recipients, quantities, dates and server fields fail without write
     { items: [{ giftId: 'umbrella', packs: Number.MAX_SAFE_INTEGER }] },
     ...['actorUid', 'createdBy', 'createdAt', 'dateKey', 'occurredAt', 'version',
       'distributionOwnerUid', 'updatedBy', 'status', 'totalUnits'].map((key) => ({ [key]: 'forged' })),
+    { customerNameSnapshot: 'Forged customer' },
+    { campaignNameSnapshot: 'Forged Campaign' },
     { items: [{ giftId: 'umbrella', looseUnits: 1, totalUnits: 1 }] },
   ];
   for (const patch of cases) {
@@ -158,6 +165,8 @@ test('same-day amendment applies net deltas and records one complete revision', 
   assert.equal(revision.changedBy, 'staff-a');
   assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella`).deltaUnits, -2);
   assert.equal(state.documents.get(`giftStockMovements/${mutationId}_shirt`).deltaUnits, 10);
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella`).customerNameSnapshot, null);
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella`).campaignNameSnapshot, 'Campaign A');
 });
 
 test('Staff cannot amend or cancel another owner or after the Laos midnight boundary', async () => {
@@ -187,6 +196,8 @@ test('Manager and Admin later corrections retain original ownership and actual m
       assert.equal(movement.actorUid, actor.uid);
       assert.equal(movement.distributionOwnerUid, 'staff-a');
       assert.equal(movement.dateKey, '2026-09-15');
+      assert.equal(movement.customerNameSnapshot, null);
+      assert.equal(movement.campaignNameSnapshot, 'Campaign A');
     }
     assert.equal(state.documents.get('branchGiftStocks/010_umbrella').currentUnits, 20);
   }
@@ -199,7 +210,8 @@ test('corrections require reason, matching versions and branch access, with atom
     const payload = operation === amend ? change : cancellation;
     for (const patch of [{ reason: '' }, { reason: '  ' }, { expectedVersion: 0 },
       { expectedVersion: 2 }, { expectedVersion: 1.5 }, { expectedVersion: undefined },
-      { createdBy: 'forged' }, { branchId: '019' }]) {
+      { createdBy: 'forged' }, { branchId: '019' },
+      { customerNameSnapshot: 'Forged customer' }, { campaignNameSnapshot: 'Forged Campaign' }]) {
       await unchanged(state, () => operation(state.services, manager, { ...payload, ...patch }, tomorrow));
     }
     state.documents.set('users/manager-a', { ...manager, branchId: '019' });

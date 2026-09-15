@@ -68,14 +68,14 @@ const users = [
   { uid: 'outside', name: 'Outside', branchId: '019' },
 ];
 
-function arrange(role = 'branch_manager', props = {}, data = movements) {
+function arrange(role = 'branch_manager', props = {}, data = movements, source = {}) {
   authMock.identity = {
     user: { uid: role === 'staff' ? 'staff-a' : `${role}-a`, displayName: '' },
     claims: { role, branchId: role === 'admin' ? null : '010', accountStatus: 'approved' },
     profile: { name: role === 'staff' ? 'Staff A' : role === 'admin' ? 'Admin A' : 'Manager A' },
   };
-  serviceMocks.subscribeActiveGiftItems.mockImplementation((onData) => { onData(gifts); return vi.fn(); });
-  serviceMocks.subscribeGiftStocks.mockImplementation((_identity, _options, onData) => { onData(stocks); return vi.fn(); });
+  serviceMocks.subscribeActiveGiftItems.mockImplementation((onData) => { onData(source.gifts ?? gifts); return vi.fn(); });
+  serviceMocks.subscribeGiftStocks.mockImplementation((_identity, _options, onData) => { onData(source.stocks ?? stocks); return vi.fn(); });
   serviceMocks.subscribeAssignableUsers.mockImplementation((_identity, onData) => { onData(users); return vi.fn(); });
   serviceMocks.subscribeGiftMovements.mockImplementation((_identity, _options, onData, onError) => {
     if (serviceMocks.movementMode === 'data') onData(data);
@@ -180,6 +180,41 @@ describe('GiftReportPanel', () => {
       }),
     );
     expect(serviceMocks.subscribeGiftMovements).toHaveBeenCalledTimes(queryCount);
+  });
+
+  it('offers an inactive historical gift from scoped movements and stock for filtered export', async () => {
+    const onExport = vi.fn().mockResolvedValue();
+    const historicalMovement = {
+      id: 'archived-gift-movement', movementType: 'distribute', branchId: '010',
+      giftId: 'archived-mug', giftNameSnapshot: 'Archived Mug', deltaUnits: -4,
+      dateKey: '2026-09-13', actorUid: 'staff-a', actorRole: 'staff',
+      distributionOwnerUid: 'staff-a', customerId: 'customer-a',
+      customerNameSnapshot: 'Customer A', campaignId: null, campaignNameSnapshot: null,
+    };
+    arrange('branch_manager', { onExport }, [historicalMovement], {
+      gifts: [gifts[1], gifts[0]],
+      stocks: [{
+        branchId: '010', giftId: 'archived-mug', giftNameSnapshot: 'Archived Mug',
+        currentUnits: 7, lowStockThresholdUnits: 2,
+      }],
+    });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(screen.getByLabelText('ເຄື່ອງແຈກ'));
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'ທັງໝົດ', 'Umbrella', 'Bag', 'Archived Mug',
+    ]);
+    await user.click(screen.getByRole('option', { name: 'Archived Mug' }));
+    expect(screen.getByText('ຍອດແຈກ 4')).toBeInTheDocument();
+    expect(screen.getByText('Stock ປັດຈຸບັນ 7')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'ສົ່ງອອກ Excel' }));
+    expect(onExport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distributedUnits: 4,
+        gifts: [expect.objectContaining({ giftId: 'archived-mug', giftName: 'Archived Mug' })],
+        movements: [expect.objectContaining({ giftId: 'archived-mug' })],
+      }),
+      expect.objectContaining({ filters: expect.objectContaining({ giftId: 'archived-mug' }) }),
+    );
   });
 
   it('keeps loading and query failure distinct from a successful empty report', () => {

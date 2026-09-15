@@ -17,7 +17,9 @@ function movement(movementType, deltaUnits, overrides = {}) {
     actorRole: 'staff',
     distributionOwnerUid: null,
     customerId: null,
+    customerNameSnapshot: null,
     campaignId: null,
+    campaignNameSnapshot: null,
     ...overrides,
   };
 }

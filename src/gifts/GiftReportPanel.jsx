@@ -49,6 +49,38 @@ function allOption(options) {
   return [{ value: '', label: 'ທັງໝົດ' }, ...options];
 }
 
+function giftFilterOptions(catalog, movements, stocks) {
+  const active = [...catalog]
+    .filter((gift) => gift?.id && gift.active !== false)
+    .sort((left, right) => {
+      const leftOrder = Number.isSafeInteger(left.sortOrder) ? left.sortOrder : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isSafeInteger(right.sortOrder) ? right.sortOrder : Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder || left.id.localeCompare(right.id);
+    })
+    .map((gift) => ({ value: gift.id, label: gift.name ?? gift.id }));
+  const activeIds = new Set(active.map((option) => option.value));
+  const historical = new Map();
+  const remember = (item, sourcePriority, snapshotKey) => {
+    const giftId = item?.giftId;
+    if (!giftId || activeIds.has(giftId)) return;
+    const candidate = {
+      value: giftId,
+      label: item.giftNameSnapshot ?? item.giftName ?? giftId,
+      key: `${sourcePriority}|${snapshotKey}`,
+    };
+    if (!historical.has(giftId) || candidate.key > historical.get(giftId).key) {
+      historical.set(giftId, candidate);
+    }
+  };
+  movements.forEach((item) => remember(item, 1, `${item.dateKey ?? ''}|${item.id ?? ''}`));
+  stocks.forEach((item) => remember(item, 2, `${item.branchId ?? ''}|${item.giftNameSnapshot ?? ''}`));
+  const fallback = [...historical.values()]
+    .sort((left, right) => left.label.localeCompare(right.label)
+      || left.value.localeCompare(right.value))
+    .map(({ value, label }) => ({ value, label }));
+  return allOption([...active, ...fallback]);
+}
+
 function ReportTable({ title, columns, children }) {
   return <div className="sales-report-table-wrap" role="region" aria-label={title} tabIndex={0}>
     <table>
@@ -217,7 +249,7 @@ export default function GiftReportPanel({ effectiveBranchId: branchOverride, onE
     }
   }, [canViewInbound, currentUid, effectiveBranchId, filters, gifts, namedMovements, rangeState.range, role, stocks]);
 
-  const giftOptions = allOption(gifts.map((gift) => ({ value: gift.id, label: gift.name ?? gift.id })));
+  const giftOptions = giftFilterOptions(gifts, namedMovements, stocks);
   const branchUsers = users.filter((user) => user.branchId === effectiveBranchId);
   const staffOptions = allOption(branchUsers.map((user) => ({
     value: user.uid, label: user.name ?? user.displayName ?? user.uid,

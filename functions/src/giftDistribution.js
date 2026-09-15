@@ -140,7 +140,8 @@ export async function recordGiftDistributionOperation({ db }, actor, data, now =
     await applyGiftDeltas(transaction, db, {
       actor, operationId: distributionId, operationType: 'distribution', movementType: 'distribute',
       branchId, dateKey, distributionOwnerUid: actor.uid,
-      customerId: content.customerId, campaignId: content.campaignId,
+      customerId: content.customerId, customerNameSnapshot: content.customerNameSnapshot,
+      campaignId: content.campaignId, campaignNameSnapshot: content.campaignNameSnapshot,
       deltas: content.items.map((item) => ({ ...item, deltaUnits: -item.totalUnits })),
       payloadDigest,
     });
@@ -256,7 +257,9 @@ async function mutateDistribution({ db }, actor, data, now, operation) {
       actor, operationId: request.mutationId, operationType: 'distribution',
       movementType: cancelling ? 'distribution_cancel' : 'distribution_amend',
       branchId: previous.branchId, dateKey, deltas, reason: request.reason,
-      distributionOwnerUid: ownerUid, customerId: next.customerId, campaignId: next.campaignId,
+      distributionOwnerUid: ownerUid,
+      customerId: next.customerId, customerNameSnapshot: next.customerNameSnapshot,
+      campaignId: next.campaignId, campaignNameSnapshot: next.campaignNameSnapshot,
       payloadDigest: request.requestDigest,
     });
     transaction.update(distributionRef, {
