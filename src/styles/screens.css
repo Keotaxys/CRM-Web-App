@@ -2,7 +2,6 @@
 
 /* Gift inventory surfaces: keep rows dense on larger screens while allowing
    every control to stack comfortably on narrow phones. */
-.gift-item-row,
 .gift-distribution-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(10rem, .55fr) auto;
@@ -11,23 +10,20 @@
   min-width: 0;
 }
 
-.gift-item-row > *,
 .gift-distribution-row > *,
 .gift-item-rows > * {
   min-width: 0;
   max-width: 100%;
 }
 
-.gift-actions,
-.gift-low-stock-card {
+.gift-actions {
   display: flex;
   min-width: 0;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-.gift-actions > *,
-.gift-low-stock-card > * {
+.gift-actions > * {
   min-width: 0;
   max-width: 100%;
 }
@@ -71,14 +67,12 @@
 
 .gift-tabs .ui-button:focus-visible,
 .gift-actions .ui-button:focus-visible,
-.gift-low-stock-card .ui-button:focus-visible,
 .gift-distribution-row .ui-button:focus-visible {
   outline: var(--focus-outline);
   outline-offset: var(--focus-offset);
 }
 
 @media (max-width: 700px) {
-  .gift-item-row,
   .gift-distribution-row {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -93,7 +87,6 @@
 }
 
 @media (max-width: 360px) {
-  .gift-item-row,
   .gift-distribution-row {
     gap: var(--space-2);
   }

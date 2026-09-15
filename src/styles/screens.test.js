@@ -8,8 +8,10 @@ const screensCss = readFileSync(
 );
 const giftPageSource = readFileSync(resolve('src/gifts/GiftsPage.jsx'), 'utf8');
 const giftDistributionSource = readFileSync(resolve('src/gifts/GiftDistributionForm.jsx'), 'utf8');
+const giftItemRowsSource = readFileSync(resolve('src/gifts/GiftItemRows.jsx'), 'utf8');
 const giftInboundSource = readFileSync(resolve('src/gifts/GiftInboundPanel.jsx'), 'utf8');
 const giftReportSource = readFileSync(resolve('src/gifts/GiftReportPanel.jsx'), 'utf8');
+const giftStockSource = readFileSync(resolve('src/gifts/GiftStockPanel.jsx'), 'utf8');
 
 it('constrains sales tables locally and overrides shared grids at 360px', () => {
   expect(screensCss).toMatch(/\.sales-report-table-wrap\s*\{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow[^}]*auto/s);
@@ -20,13 +22,14 @@ it('constrains sales tables locally and overrides shared grids at 360px', () => 
 describe('gift responsive and accessibility guards', () => {
   it('uses compact gift rows on larger screens and a safe single column on small screens', () => {
     expect(giftDistributionSource).toContain('gift-distribution-form');
-    expect(screensCss).toMatch(/\.gift-item-row(?:\s*,\s*\.gift-distribution-row)?\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(10rem,\s*\.55fr\)\s+auto/s);
-    expect(screensCss).toMatch(/@media\s*\(max-width:\s*700px\)[\s\S]*\.gift-item-row\s*,\s*\.gift-distribution-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+    expect(giftItemRowsSource).toContain('gift-distribution-row');
+    expect(screensCss).toMatch(/\.gift-distribution-row\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(10rem,\s*\.55fr\)\s+auto/s);
+    expect(screensCss).toMatch(/@media\s*\(max-width:\s*700px\)[\s\S]*\.gift-distribution-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
   });
 
   it('wraps gift action groups instead of allowing overflow', () => {
     expect(giftInboundSource).toContain('gift-actions');
-    expect(screensCss).toMatch(/\.gift-actions\s*,[\s\S]*?\{[^}]*flex-wrap:\s*wrap/s);
+    expect(screensCss).toMatch(/\.gift-actions\s*\{[^}]*flex-wrap:\s*wrap/s);
   });
 
   it('contains gift table scrolling inside report cards', () => {
@@ -40,6 +43,7 @@ describe('gift responsive and accessibility guards', () => {
   });
 
   it('uses a text or icon indicator for low stock in addition to color', () => {
+    expect(giftStockSource).toContain('gift-stock--low');
     expect(screensCss).toMatch(/\.gift-stock--low\s+small\s*\{[^}]*display:\s*inline-flex/s);
     expect(screensCss).toMatch(/\.gift-stock--low\s+small::before\s*\{[^}]*content:/s);
   });
