@@ -101,4 +101,40 @@ describe('GiftLowStockProvider', () => {
     expect(screen.getByLabelText('loading')).toHaveTextContent('false');
     expect(screen.getByLabelText('error')).toHaveTextContent('ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້');
   });
+
+  it('does not expose stale stock data after a Manager scope change', () => {
+    const view = render(<GiftLowStockProvider><Probe/></GiftLowStockProvider>);
+    act(() => {
+      mocks.onCatalog([gift('umbrella')]);
+      mocks.onStocks([stock('umbrella', 2, 5, '010')]);
+    });
+    mocks.identity = { user: { uid: 'manager-1' }, claims: { role: 'branch_manager', branchId: '020', accountStatus: 'approved' } };
+    view.rerender(<GiftLowStockProvider><Probe/></GiftLowStockProvider>);
+    act(() => {
+      mocks.onStocksError(new Error('stock offline'));
+      mocks.onCatalog([gift('umbrella')]);
+    });
+    expect(screen.getByLabelText('count')).toHaveTextContent('0');
+    expect(screen.getByLabelText('items')).toHaveTextContent('');
+    expect(screen.getByLabelText('loading')).toHaveTextContent('false');
+    expect(screen.getByLabelText('error')).toHaveTextContent('ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້');
+  });
+
+  it('does not expose stale catalog data after a Manager scope change', () => {
+    const view = render(<GiftLowStockProvider><Probe/></GiftLowStockProvider>);
+    act(() => {
+      mocks.onCatalog([gift('umbrella')]);
+      mocks.onStocks([stock('umbrella', 2, 5, '010')]);
+    });
+    mocks.identity = { user: { uid: 'manager-1' }, claims: { role: 'branch_manager', branchId: '020', accountStatus: 'approved' } };
+    view.rerender(<GiftLowStockProvider><Probe/></GiftLowStockProvider>);
+    act(() => {
+      mocks.onCatalogError(new Error('catalog offline'));
+      mocks.onStocks([stock('umbrella', 2, 5, '020')]);
+    });
+    expect(screen.getByLabelText('count')).toHaveTextContent('0');
+    expect(screen.getByLabelText('items')).toHaveTextContent('');
+    expect(screen.getByLabelText('loading')).toHaveTextContent('false');
+    expect(screen.getByLabelText('error')).toHaveTextContent('ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້');
+  });
 });

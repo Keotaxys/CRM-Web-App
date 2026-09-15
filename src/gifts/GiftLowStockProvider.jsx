@@ -24,11 +24,11 @@ export default function GiftLowStockProvider({ children }) {
     let live = true;
     const onCatalogError = () => {
       if (!live) return;
-      setCatalogState((current) => ({ ...current, ready: true, error: 'ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້', scope }));
+      setCatalogState({ items: [], ready: true, error: 'ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້', scope });
     };
     const onStockError = () => {
       if (!live) return;
-      setStockState((current) => ({ ...current, ready: true, error: 'ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້', scope }));
+      setStockState({ items: [], ready: true, error: 'ບໍ່ສາມາດໂຫຼດແຈ້ງເຕືອນສະຕັອກໄດ້', scope });
     };
     const stopCatalog = subscribeActiveGiftItems((items) => {
       if (!live) return;
@@ -46,22 +46,26 @@ export default function GiftLowStockProvider({ children }) {
     };
   }, [allowed, identity, scope]);
 
+  const activeCatalogState = useMemo(() => (catalogState.scope === scope
+    ? catalogState
+    : { items: [], ready: false, error: '', scope }), [catalogState, scope]);
+  const activeStockState = useMemo(() => (stockState.scope === scope
+    ? stockState
+    : { items: [], ready: false, error: '', scope }), [scope, stockState]);
+
   const items = useMemo(() => {
-    if (!allowed || catalogState.scope !== scope || stockState.scope !== scope) return [];
-    const gifts = new Map(catalogState.items.filter((gift) => gift?.active === true).map((gift) => [gift.id, gift]));
-    return stockState.items
+    if (!allowed || !activeCatalogState.ready || !activeStockState.ready) return [];
+    const gifts = new Map(activeCatalogState.items.filter((gift) => gift?.active === true).map((gift) => [gift.id, gift]));
+    return activeStockState.items
       .filter(isLowGiftStock)
       .map((stock) => ({ ...stock, gift: gifts.get(stock.giftId) }))
       .filter((item) => item.gift);
-  }, [allowed, catalogState, scope, stockState]);
+  }, [activeCatalogState, activeStockState, allowed]);
 
   const loading = allowed && (
-    catalogState.scope !== scope || !catalogState.ready
-    || stockState.scope !== scope || !stockState.ready
+    !activeCatalogState.ready || !activeStockState.ready
   );
-  const error = allowed && catalogState.scope === scope && stockState.scope === scope
-    ? (catalogState.error || stockState.error)
-    : '';
+  const error = allowed ? (activeCatalogState.error || activeStockState.error) : '';
 
   const value = useMemo(() => ({
     count: items.length,
