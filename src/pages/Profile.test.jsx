@@ -74,4 +74,9 @@ describe('Profile photo control', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     consoleError.mockRestore();
   });
+
+  it('offers the gift management destination from the More profile page', () => {
+    render(<Profile />);
+    expect(screen.getByRole('link', { name: 'ເຄື່ອງແຈກ' })).toHaveAttribute('href', '/gifts');
+  });
 });

@@ -34,6 +34,6 @@ export default function Profile() {
       <Input id="profile-phone" label="ເບີໂທ" value={values.phone} onChange={(event) => setValues({ ...values, phone: event.target.value })}/>
       <div className="read-only-field"><span>ບົດບາດ</span><strong>{roleLabel(identity.claims.role)}</strong></div><div className="read-only-field"><span>ສາຂາ</span><strong>{identity.claims.branchId || 'ທຸກສາຂາ'}</strong></div>
       {feedback && <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={feedback.kind === 'error' ? 'error-banner' : 'status-message'}>{feedback.text}</p>}<Button type="submit" busy={busy}>ບັນທຶກ</Button>
-      {inRouter ? <Link className="btn-secondary text-center" to="/sales">ຍອດຂາຍ ແລະລາຍງານ</Link> : <a className="btn-secondary text-center" href="/sales">ຍອດຂາຍ ແລະລາຍງານ</a>}{identity.claims.role === 'admin' && <a className="btn-secondary text-center" href="/admin">ສູນບໍລິຫານລະບົບ</a>}
+      {inRouter ? <Link className="btn-secondary text-center" to="/sales">ຍອດຂາຍ ແລະລາຍງານ</Link> : <a className="btn-secondary text-center" href="/sales">ຍອດຂາຍ ແລະລາຍງານ</a>}{inRouter ? <Link className="btn-secondary text-center" to="/gifts">ເຄື່ອງແຈກ</Link> : <a className="btn-secondary text-center" href="/gifts">ເຄື່ອງແຈກ</a>}{identity.claims.role === 'admin' && <a className="btn-secondary text-center" href="/admin">ສູນບໍລິຫານລະບົບ</a>}
     </form></GlassCard></main></>;
 }
