@@ -76,10 +76,18 @@ test -n "$ACCESS_TOKEN"
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
   "https://firebaserules.googleapis.com/v1/projects/crm-web-app-97b91/releases/cloud.firestore" \
   > prior-firestore-release.json
-rulesetName="$(jq -er '.rulesetName' prior-firestore-release.json)"
+rulesetName="$(jq -er '.rulesetName | select(type == "string" and length > 0)' prior-firestore-release.json)"
+test -n "$rulesetName"
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
   "https://firebaserules.googleapis.com/v1/$rulesetName" \
   > prior-firestore-ruleset.json
+jq -e --arg rulesetName "$rulesetName" '
+  (.name == $rulesetName)
+  and (.source.files | (type == "array" and length > 0))
+  and (all(.source.files[];
+    (.name | type == "string" and length > 0)
+    and (.content | type == "string")))
+' prior-firestore-ruleset.json
 sha256sum prior-firestore-release.json prior-firestore-ruleset.json \
   | tee prior-firestore-sha256.txt
 unset ACCESS_TOKEN
@@ -315,6 +323,7 @@ announce the incident according to the production incident process, then:
 
    ```bash
    set -euo pipefail
+   test -n "${PRIOR_RULESET_NAME:-}"
    jq -n \
      --arg name "projects/crm-web-app-97b91/releases/cloud.firestore" \
      --arg rulesetName "$PRIOR_RULESET_NAME" \
@@ -329,9 +338,19 @@ announce the incident according to the production incident process, then:
      --data-binary @rollback-firestore-release-patch.json \
      "https://firebaserules.googleapis.com/v1/projects/crm-web-app-97b91/releases/cloud.firestore" \
      > rollback-firestore-release-patch-response.json
+   jq -e \
+     --arg expectedName "projects/crm-web-app-97b91/releases/cloud.firestore" \
+     --arg priorRulesetName "$PRIOR_RULESET_NAME" \
+     '.name == $expectedName and .rulesetName == $priorRulesetName' \
+     rollback-firestore-release-patch-response.json
    curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
      "https://firebaserules.googleapis.com/v1/projects/crm-web-app-97b91/releases/cloud.firestore" \
      > rollback-firestore-release.json
+   jq -e \
+     --arg expectedName "projects/crm-web-app-97b91/releases/cloud.firestore" \
+     --arg priorRulesetName "$PRIOR_RULESET_NAME" \
+     '.name == $expectedName and .rulesetName == $priorRulesetName' \
+     rollback-firestore-release.json
    rollbackRulesetName="$(jq -er '.rulesetName' rollback-firestore-release.json)"
    test "$rollbackRulesetName" = "$PRIOR_RULESET_NAME"
    sha256sum rollback-firestore-release.json | tee rollback-firestore-release-sha256.txt
