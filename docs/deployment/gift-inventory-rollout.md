@@ -69,7 +69,9 @@ before deployment. Save the JSON files and SHA-256 output with the release
 record:
 
 ```bash
+set -euo pipefail
 ACCESS_TOKEN="$(gcloud auth print-access-token)"
+trap 'unset ACCESS_TOKEN' EXIT
 test -n "$ACCESS_TOKEN"
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
   "https://firebaserules.googleapis.com/v1/projects/crm-web-app-97b91/releases/cloud.firestore" \
@@ -158,10 +160,14 @@ Expected evidence and required outcomes for every callable:
 | `amendGiftDistribution` | allowed, any branch | allowed, own branch only | allowed, own distribution on same Laos date only | `unauthenticated` denied |
 | `cancelGiftDistribution` | allowed, any branch | allowed, own branch only | allowed, own distribution on same Laos date only | `unauthenticated` denied |
 
-For all rows, cross-branch access is denied except an Admin operation with an
-explicit target permitted by the contract. Invalid/stale payloads must still
-return the reviewed validation error (`invalid-argument` or
-`failed-precondition`) for every authenticated role.
+For every `allowed` role above, a valid request must succeed within the listed
+scope; an invalid or stale payload must instead return the reviewed validation
+error (`invalid-argument` or `failed-precondition`). For every `denied` role,
+authorization must fail first with `permission-denied` using a well-formed
+payload; do not infer authorization behavior from a malformed request. Every
+unauthenticated request must fail first with `unauthenticated`. Cross-branch
+access is denied except an Admin operation with an explicit target permitted
+by the contract.
 
 Capture callable name, actor role, branch, request result/error code, and time.
 Stop and roll back the Functions release if unauthenticated access succeeds,
@@ -308,12 +314,14 @@ announce the incident according to the production incident process, then:
    do not send a bare Release body or put `updateMask` only in the URL:
 
    ```bash
+   set -euo pipefail
    jq -n \
      --arg name "projects/crm-web-app-97b91/releases/cloud.firestore" \
      --arg rulesetName "$PRIOR_RULESET_NAME" \
      '{release:{name:$name,rulesetName:$rulesetName},updateMask:"rulesetName"}' \
      > rollback-firestore-release-patch.json
    ACCESS_TOKEN="$(gcloud auth print-access-token)"
+   trap 'unset ACCESS_TOKEN' EXIT
    test -n "$ACCESS_TOKEN"
    curl -fsS -X PATCH \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -324,7 +332,8 @@ announce the incident according to the production incident process, then:
    curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
      "https://firebaserules.googleapis.com/v1/projects/crm-web-app-97b91/releases/cloud.firestore" \
      > rollback-firestore-release.json
-   test "$(jq -er '.rulesetName' rollback-firestore-release.json)" = "$PRIOR_RULESET_NAME"
+   rollbackRulesetName="$(jq -er '.rulesetName' rollback-firestore-release.json)"
+   test "$rollbackRulesetName" = "$PRIOR_RULESET_NAME"
    sha256sum rollback-firestore-release.json | tee rollback-firestore-release-sha256.txt
    unset ACCESS_TOKEN
    ```
