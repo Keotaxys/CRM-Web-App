@@ -40,7 +40,8 @@ describe('GiftStockPanel', () => {
     const user = userEvent.setup();
     service.adjustGiftStock.mockRejectedValueOnce({ message: 'insufficient gift stock' });
     render(<GiftStockPanel identity={manager} effectiveBranchId="010" />);
-    await user.selectOptions(screen.getByLabelText('Adjustment item'), 'umbrella');
+    await user.click(screen.getByLabelText('Adjustment item'));
+    await user.click(screen.getByRole('option', { name: 'Umbrella' }));
     await user.clear(screen.getByLabelText('Adjustment units'));
     await user.type(screen.getByLabelText('Adjustment units'), '-1');
     await user.click(screen.getByRole('button', { name: /adjust stock/i }));

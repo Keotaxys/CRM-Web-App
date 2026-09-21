@@ -30,10 +30,14 @@ function publishData() {
 }
 
 async function submitFormWithoutRecipient() { await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' })); }
+async function chooseOption(control, optionName) {
+  await user.click(control);
+  await user.click(screen.getByRole('option', { name: optionName }));
+}
 async function selectSameGiftTwice() {
-  await user.selectOptions(screen.getAllByLabelText('ເຄື່ອງແຈກ')[0], 'umbrella');
+  await chooseOption(screen.getAllByLabelText('ເຄື່ອງແຈກ')[0], 'Umbrella');
   await user.click(screen.getByRole('button', { name: 'ເພີ່ມເຄື່ອງແຈກ' }));
-  await user.selectOptions(screen.getAllByLabelText('ເຄື່ອງແຈກ')[1], 'umbrella');
+  await chooseOption(screen.getAllByLabelText('ເຄື່ອງແຈກ')[1], 'Umbrella');
 }
 
 describe('GiftDistributionForm', () => {
@@ -56,15 +60,16 @@ describe('GiftDistributionForm', () => {
 
   it('sorts gifts and displays current stock in packs and units', async () => {
     render(<GiftDistributionForm identity={staffIdentity} />);
+    await user.click(screen.getByLabelText('ເຄື່ອງແຈກ'));
     expect(screen.getAllByRole('option', { name: /Bag|Umbrella/ }).map((option) => option.textContent)).toEqual(['Bag', 'Umbrella']);
-    await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
+    await user.click(screen.getByRole('option', { name: 'Umbrella' }));
     expect(screen.getByText('1 pack 7 unit')).toBeInTheDocument();
     expect(screen.getByText('ລວມ: 10')).toBeInTheDocument();
   });
 
   it('keeps editing safe when a selected quantity is cleared and reports it as invalid', async () => {
     render(<GiftDistributionForm identity={staffIdentity} />);
-    await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
+    await chooseOption(screen.getByLabelText('ເຄື່ອງແຈກ'), 'Umbrella');
     await user.clear(screen.getByLabelText('ຈຳນວນຫໍ່'));
     expect(screen.getByLabelText('ຈຳນວນຫໍ່')).toHaveValue(null);
     expect(screen.getByText('ລວມ: —')).toBeInTheDocument();
@@ -78,11 +83,11 @@ describe('GiftDistributionForm', () => {
     render(<GiftDistributionForm identity={{ ...staffIdentity, role: 'admin', branchId: null }} effectiveBranchId="020" />);
     expect(serviceMocks.subscribeGiftCampaigns).toHaveBeenCalledWith(expect.anything(), { branchId: '020', active: true }, expect.any(Function), expect.any(Function));
     expect(serviceMocks.subscribeCustomers.mock.calls[0][0].claims).toMatchObject({ role: 'branch_manager', branchId: '020' });
-    await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'customer');
+    await chooseOption(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'ລູກຄ້າ');
     await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
     expect(screen.getByRole('option', { name: 'Customer A' })).toBeInTheDocument();
     await user.click(screen.getByRole('option', { name: 'Customer A' }));
-    await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'campaign');
+    await chooseOption(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'Campaign');
     await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
     expect(screen.getByRole('option', { name: 'Campaign A' })).toBeInTheDocument();
   });
@@ -92,7 +97,7 @@ describe('GiftDistributionForm', () => {
     for (let index = 1; index < 25; index += 1) fireEvent.click(screen.getByRole('button', { name: 'ເພີ່ມເຄື່ອງແຈກ' }));
     expect(screen.getAllByLabelText('ເຄື່ອງແຈກ')).toHaveLength(25);
     expect(screen.getByRole('button', { name: 'ເພີ່ມເຄື່ອງແຈກ' })).toBeDisabled();
-    await user.selectOptions(screen.getAllByLabelText('ເຄື່ອງແຈກ')[0], 'umbrella');
+    await chooseOption(screen.getAllByLabelText('ເຄື່ອງແຈກ')[0], 'Umbrella');
     fireEvent.change(screen.getAllByLabelText('ຈຳນວນຫໍ່')[0], { target: { value: '1.5' } });
     expect(screen.getAllByLabelText('ຈຳນວນຫໍ່')[0]).toHaveValue(1);
   });
@@ -101,10 +106,10 @@ describe('GiftDistributionForm', () => {
     let reject;
     serviceMocks.recordGiftDistribution.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; }));
     render(<GiftDistributionForm identity={staffIdentity} />);
-    await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'customer');
+    await chooseOption(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'ລູກຄ້າ');
     await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
     await user.click(screen.getByRole('option', { name: 'Customer A' }));
-    await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
+    await chooseOption(screen.getByLabelText('ເຄື່ອງແຈກ'), 'Umbrella');
     await user.dblClick(screen.getByRole('button', { name: 'ບັນທຶກ' }));
     expect(serviceMocks.recordGiftDistribution).toHaveBeenCalledTimes(1);
     const operationId = serviceMocks.recordGiftDistribution.mock.calls[0][0].distributionId;
@@ -117,16 +122,17 @@ describe('GiftDistributionForm', () => {
 
   it('allocates independent row keys after a successful reset', async () => {
     render(<GiftDistributionForm identity={staffIdentity} />);
-    await user.selectOptions(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'customer');
+    await chooseOption(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'ລູກຄ້າ');
     await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
     await user.click(screen.getByRole('option', { name: 'Customer A' }));
-    await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
+    await chooseOption(screen.getByLabelText('ເຄື່ອງແຈກ'), 'Umbrella');
     await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
     await waitFor(() => expect(serviceMocks.recordGiftDistribution).toHaveBeenCalledTimes(1));
     await user.click(screen.getByRole('button', { name: 'ເພີ່ມເຄື່ອງແຈກ' }));
     const rows = screen.getAllByLabelText('ເຄື່ອງແຈກ');
-    await user.selectOptions(rows[0], 'bag');
-    await user.selectOptions(rows[1], 'umbrella');
-    expect(screen.getAllByLabelText('ເຄື່ອງແຈກ').map((row) => row.value)).toEqual(['bag', 'umbrella']);
+    await chooseOption(rows[0], 'Bag');
+    await chooseOption(rows[1], 'Umbrella');
+    expect(screen.getAllByLabelText('ເຄື່ອງແຈກ')[0]).toHaveTextContent('Bag');
+    expect(screen.getAllByLabelText('ເຄື່ອງແຈກ')[1]).toHaveTextContent('Umbrella');
   });
 });

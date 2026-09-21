@@ -5,6 +5,7 @@ import GiftItemRows, { validateGiftItemRows } from './GiftItemRows';
 import { giftCallableMessage } from './giftErrors';
 import { laosTodayKey } from '../shared/dateTime';
 import Button from '../components/ui/Button';
+import CustomSelect from '../components/ui/CustomSelect';
 import GlassCard from '../components/ui/GlassCard';
 import Input from '../components/ui/Input';
 import SearchableSelect from '../components/ui/SearchableSelect';
@@ -69,7 +70,7 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
   };
 
   return <GlassCard as="section" padded className="gift-distribution-form"><h2>ແຈກເຄື່ອງ</h2><form className="form-stack gift-form" onSubmit={submit}>
-    <label>ປະເພດຜູ້ຮັບ<select aria-label="ປະເພດຜູ້ຮັບ" value={recipientType} disabled={busy} onChange={(event) => { setRecipientType(event.target.value); setRecipientId(''); }}><option value="">ເລືອກ</option><option value="customer">ລູກຄ້າ</option><option value="campaign">Campaign</option></select></label>
+    <CustomSelect id="gift-recipient-type" label="ປະເພດຜູ້ຮັບ" value={recipientType} disabled={busy} onChange={(value) => { setRecipientType(value); setRecipientId(''); }} placeholder="ເລືອກ" options={[{ value: 'customer', label: 'ລູກຄ້າ' }, { value: 'campaign', label: 'Campaign' }]} />
     {recipientType ? <SearchableSelect id="gift-recipient" label="ຜູ້ຮັບ" value={recipientId} options={recipientOptions} placeholder="ເລືອກຜູ້ຮັບ" disabled={busy} onChange={setRecipientId} /> : null}
     <GiftItemRows catalog={gifts} rows={rows} onChange={setRows} onValidationIssue={setError} showStock stocks={stocksByGift} maxRows={25} disabled={busy} />
     <Textarea id="gift-distribution-note" label="ໝາຍເຫດ" value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} />

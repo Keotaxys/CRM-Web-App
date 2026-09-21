@@ -4,6 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import GiftItemRows, { validateGiftItemRows } from './GiftItemRows';
 
 describe('GiftItemRows', () => {
+  it('uses the shared custom selector for gift choices', () => {
+    render(<GiftItemRows catalog={[{ id: 'umbrella', name: 'Umbrella', unitsPerPack: 10 }]} rows={[{ key: 1, giftId: '', packs: '0', looseUnits: '0' }]} onChange={() => {}} />);
+
+    expect(screen.getByRole('combobox', { name: 'ເຄື່ອງແຈກ' }).tagName).toBe('BUTTON');
+  });
+
   it('limits rows to 25 and rejects fractional quantities while displaying stock', async () => {
     const user = userEvent.setup(); const onChange = vi.fn();
     render(<GiftItemRows catalog={[{ id: 'umbrella', name: 'Umbrella', unitsPerPack: 10, packLabel: 'pack', unitLabel: 'unit' }]} rows={[{ key: 1, giftId: 'umbrella', packs: '1', looseUnits: '0' }]} onChange={onChange} showStock stocks={{ umbrella: { currentUnits: 17 } }} maxRows={1} />);

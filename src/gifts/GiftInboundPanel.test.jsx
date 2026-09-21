@@ -29,7 +29,8 @@ describe('GiftInboundPanel', () => {
   it('receives direct stock with source and optional reference through compact item rows', async () => {
     const user = userEvent.setup(); render(<GiftInboundPanel identity={manager} effectiveBranchId="010" />);
     await user.type(screen.getByLabelText('Receipt source'), 'HQ');
-    await user.selectOptions(screen.getByLabelText('ເຄື່ອງແຈກ'), 'umbrella');
+    await user.click(screen.getByLabelText('ເຄື່ອງແຈກ'));
+    await user.click(screen.getByRole('option', { name: 'Umbrella' }));
     await user.click(screen.getByRole('button', { name: /receive stock/i }));
     expect(service.receiveGiftStock).toHaveBeenCalledWith(expect.objectContaining({ branchId: '010', source: 'HQ', reference: '', items: [{ giftId: 'umbrella', packs: 1, looseUnits: 0 }] }));
   });

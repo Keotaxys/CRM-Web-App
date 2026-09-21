@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { giftLineTotal, giftStockDisplay } from './giftModel';
 import Button from '../components/ui/Button';
+import CustomSelect from '../components/ui/CustomSelect';
 import Input from '../components/ui/Input';
 
 const emptyRow = (key) => ({ key, giftId: '', packs: '0', looseUnits: '0' });
@@ -49,7 +50,7 @@ export default function GiftItemRows({ catalog = [], rows, onChange, showStock =
     {rows.map((row, index) => {
       const gift = byId[row.giftId]; const total = gift ? visibleTotal(row, gift) : null; const stock = stocks[row.giftId];
       return <div key={row.key} className="gift-distribution-row">
-        <label>ເຄື່ອງແຈກ<select aria-label="ເຄື່ອງແຈກ" value={row.giftId} disabled={disabled} onChange={(event) => select(row.key, event.target.value)}><option value="">ເລືອກ</option>{catalog.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <CustomSelect id={`gift-item-${row.key}`} label="ເຄື່ອງແຈກ" value={row.giftId} disabled={disabled} onChange={(value) => select(row.key, value)} placeholder="ເລືອກ" options={catalog.map((item) => ({ value: item.id, label: item.name }))} />
         <Input id={`gift-packs-${row.key}`} label="ຈຳນວນຫໍ່" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || disabled} value={row.packs} onChange={(event) => validQuantity(event.target.value) && update(row.key, { packs: event.target.value })} />
         <Input id={`gift-units-${row.key}`} label="ຈຳນວນຊິ້ນ" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || disabled} value={row.looseUnits} onChange={(event) => validQuantity(event.target.value) && update(row.key, { looseUnits: event.target.value })} />
         {showStock && gift && stock ? <small>{giftStockDisplay(stock.currentUnits, gift)}</small> : null}
