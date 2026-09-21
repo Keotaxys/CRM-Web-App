@@ -51,8 +51,15 @@ describe('GiftInboundPanel', () => {
     expect(screen.getByRole('button', { name: /create allocation/i })).toBeInTheDocument();
   });
 
+  it('keeps Admin-only allocation cancellation hidden from a Manager', () => {
+    render(<GiftInboundPanel identity={manager} effectiveBranchId="010" />);
+
+    expect(screen.getByRole('button', { name: /confirm allocation/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Cancel allocation$/i })).not.toBeInTheDocument();
+  });
+
   it('renders confirmed and cancelled history as disabled actions and gives cancellation its own dialog', async () => {
-    const user = userEvent.setup(); render(<GiftInboundPanel identity={manager} effectiveBranchId="010" />);
+    const user = userEvent.setup(); render(<GiftInboundPanel identity={admin} effectiveBranchId="010" />);
     expect(screen.getAllByText('Confirmed allocation').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cancelled allocation').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Confirmed' })).toBeDisabled();
