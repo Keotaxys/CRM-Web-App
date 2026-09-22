@@ -4,6 +4,17 @@ import { describe, expect, it, vi } from 'vitest';
 import GiftItemRows, { validateGiftItemRows } from './GiftItemRows';
 
 describe('GiftItemRows', () => {
+  it('keeps simultaneous editor control IDs and label associations unique', () => {
+    const props = { catalog: [{ id: 'umbrella', name: 'Umbrella', unitsPerPack: 10 }],
+      rows: [{ key: 1, giftId: 'umbrella', packs: '1', looseUnits: '0' }], onChange: () => {} };
+    const { container } = render(<><GiftItemRows {...props} /><GiftItemRows {...props} /></>);
+    const controls = [...container.querySelectorAll('input[id],button[id]')];
+    expect(new Set(controls.map((control) => control.id)).size).toBe(controls.length);
+    for (const label of container.querySelectorAll('label[for]')) {
+      expect(label.control?.closest('.gift-distribution-row')).toBe(label.closest('.gift-distribution-row'));
+    }
+    expect(screen.getAllByRole('combobox', { name: 'ເຄື່ອງແຈກ' })).toHaveLength(2);
+  });
   it('uses the shared custom selector for gift choices', () => {
     render(<GiftItemRows catalog={[{ id: 'umbrella', name: 'Umbrella', unitsPerPack: 10 }]} rows={[{ key: 1, giftId: '', packs: '0', looseUnits: '0' }]} onChange={() => {}} />);
 

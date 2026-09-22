@@ -11,11 +11,15 @@ vi.mock('../services/giftService', () => service);
 
 const manager = { uid: 'manager-1', role: 'branch_manager', branchId: '010', accountStatus: 'approved' };
 const admin = { uid: 'admin-1', role: 'admin', branchId: null, accountStatus: 'approved' };
-function publish() {
+const pending = { id: 'allocation-a', targetBranchId: '010', reference: 'HQ-2026-001', source: 'HQ', status: 'pending',
+  items: [{ giftId: 'umbrella', giftNameSnapshot: 'Original Umbrella', packs: 2, looseUnits: 3,
+    unitsPerPackSnapshot: 10, totalUnits: 23 }, { giftId: 'shirt', giftNameSnapshot: 'Original Shirt',
+    packs: 1, looseUnits: 2, unitsPerPackSnapshot: 5, totalUnits: 7 }] };
+function publish(pendingItems = [pending]) {
   service.subscribeActiveGiftItems.mockImplementation((onData) => { onData([{ id: 'umbrella', name: 'Umbrella', unitsPerPack: 10, packLabel: 'pack', unitLabel: 'unit', sortOrder: 1 }]); return vi.fn(); });
   service.subscribeGiftAllocations.mockImplementation((_identity, options, onData) => {
     const allocations = {
-      pending: [{ id: 'allocation-a', source: 'HQ', status: 'pending', items: [] }],
+      pending: pendingItems,
       confirmed: [{ id: 'allocation-confirmed', source: 'Confirmed allocation', status: 'confirmed', items: [] }],
       cancelled: [{ id: 'allocation-cancelled', source: 'Cancelled allocation', status: 'cancelled', items: [] }],
     };
@@ -69,5 +73,45 @@ describe('GiftInboundPanel', () => {
     expect(within(dialog).getByRole('heading', { name: 'Cancel allocation' })).toBeInTheDocument();
     expect(within(dialog).getByText(/does not update stock/i)).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Cancel allocation' })).toBeInTheDocument();
+  });
+
+  it.each([manager, admin])('shows branch, reference and snapshot quantities before $role confirms', async (identity) => {
+    const user = userEvent.setup(); render(<GiftInboundPanel identity={identity} effectiveBranchId="010" />);
+    await user.click(screen.getByRole('button', { name: /confirm allocation/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('010 - ສຳນັກງານໃຫຍ່')).toBeInTheDocument();
+    expect(within(dialog).getByText('HQ-2026-001')).toBeInTheDocument();
+    const umbrella = within(dialog).getByRole('listitem', { name: 'Original Umbrella' });
+    expect(umbrella).toHaveTextContent('2 packs × 10 + 3 units = 23 units');
+    expect(within(dialog).getByRole('listitem', { name: 'Original Shirt' })).toHaveTextContent('1 packs × 5 + 2 units = 7 units');
+    expect(within(dialog).getByText('Total: 30 units')).toBeInTheDocument();
+    expect(service.confirmGiftAllocation).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    expect(service.confirmGiftAllocation).toHaveBeenCalledWith(expect.objectContaining({ allocationId: pending.id }));
+  });
+
+  it('distinguishes pending allocations from the same source by reference and ID', () => {
+    publish([pending, { ...pending, id: 'allocation-b', reference: 'HQ-2026-002' }]);
+    render(<GiftInboundPanel identity={manager} effectiveBranchId="010" />);
+    expect(screen.getByRole('group', { name: 'Allocation HQ-2026-001' })).toHaveTextContent('allocation-a');
+    expect(screen.getByRole('group', { name: 'Allocation HQ-2026-002' })).toHaveTextContent('allocation-b');
+  });
+
+  it('rejects a blank cancellation reason and submits the exact reason with a stable retry ID', async () => {
+    service.cancelGiftAllocation.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({});
+    const user = userEvent.setup(); render(<GiftInboundPanel identity={admin} effectiveBranchId="010" />);
+    await user.click(screen.getByRole('button', { name: /^Cancel allocation$/i }));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel allocation' }));
+    expect(service.cancelGiftAllocation).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('reason');
+    const reason = '  Duplicate shipment — HQ-2026-001  ';
+    await user.type(within(dialog).getByLabelText('Cancellation reason'), reason);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel allocation' }));
+    expect(within(dialog).getByLabelText('Cancellation reason')).toHaveValue(reason);
+    const submitted = service.cancelGiftAllocation.mock.calls[0][0];
+    expect(submitted).toMatchObject({ allocationId: 'allocation-a', reason });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel allocation' }));
+    expect(service.cancelGiftAllocation.mock.calls[1][0]).toEqual(submitted);
   });
 });

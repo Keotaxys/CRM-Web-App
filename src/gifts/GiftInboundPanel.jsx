@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { branchName } from '../branches/branches';
 import { cancelGiftAllocation, confirmGiftAllocation, createGiftAllocation, receiveGiftStock, subscribeActiveGiftItems, subscribeGiftAllocations } from '../services/giftService';
 import { giftCallableMessage } from './giftErrors';
 import GiftItemRows, { validateGiftItemRows } from './GiftItemRows';
@@ -6,6 +7,7 @@ import Button from '../components/ui/Button';
 import GlassCard from '../components/ui/GlassCard';
 import Input from '../components/ui/Input';
 import ModalSheet from '../components/ui/ModalSheet';
+import Textarea from '../components/ui/Textarea';
 
 const uuid = () => globalThis.crypto.randomUUID();
 const actor = (identity) => ({ role: identity?.claims?.role ?? identity?.role, branchId: identity?.claims?.branchId ?? identity?.branchId });
@@ -13,11 +15,74 @@ const branchFor = (identity, effective) => actor(identity).role === 'admin' ? ef
 const firstRow = () => [{ key: 1, giftId: '', packs: '0', looseUnits: '0' }];
 
 export default function GiftInboundPanel({ identity, effectiveBranchId }) {
+  const formId = useId();
+  const [cancelReason, setCancelReason] = useState('');
+  const actionSubmitting = useRef(false);
+  const actionAttempted = useRef(false);
   const branchId = branchFor(identity, effectiveBranchId); const admin = actor(identity).role === 'admin'; const [catalog, setCatalog] = useState([]); const [allocations, setAllocations] = useState({ pending: [], confirmed: [], cancelled: [] }); const [rows, setRows] = useState(firstRow); const [allocationRows, setAllocationRows] = useState(firstRow); const [source, setSource] = useState(''); const [reference, setReference] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [pendingAction, setPendingAction] = useState(null); const receiptId = useRef(uuid()); const allocationId = useRef(uuid()); const mutationId = useRef(uuid());
   useEffect(() => { if (!branchId) return undefined; let live = true; setAllocations({ pending: [], confirmed: [], cancelled: [] }); const stopCatalog = subscribeActiveGiftItems((items) => live && setCatalog(items), () => live && setError(giftCallableMessage())); const stopPending = subscribeGiftAllocations(identity, { branchId, status: 'pending' }, (items) => live && setAllocations((current) => ({ ...current, pending: items })), () => live && setError(giftCallableMessage())); const stopConfirmed = subscribeGiftAllocations(identity, { branchId, status: 'confirmed' }, (items) => live && setAllocations((current) => ({ ...current, confirmed: items })), () => live && setError(giftCallableMessage())); const stopCancelled = subscribeGiftAllocations(identity, { branchId, status: 'cancelled' }, (items) => live && setAllocations((current) => ({ ...current, cancelled: items })), () => live && setError(giftCallableMessage())); return () => { live = false; stopCatalog?.(); stopPending?.(); stopConfirmed?.(); stopCancelled?.(); }; }, [branchId, identity]);
   const submitReceipt = async (event) => { event.preventDefault(); const result = validateGiftItemRows(rows, catalog); if (!source.trim()) { setError('Receipt source is required'); return; } if (result.error) { setError(result.error); return; } setBusy(true); setError(''); try { await receiveGiftStock({ receiptId: receiptId.current, branchId, source: source.trim(), reference: reference.trim(), items: result.items }); receiptId.current = uuid(); setRows(firstRow()); setSource(''); setReference(''); } catch (failure) { setError(giftCallableMessage(failure)); } finally { setBusy(false); } };
   const submitAllocation = async () => { const result = validateGiftItemRows(allocationRows, catalog); if (!source.trim()) { setError('Allocation source is required'); return; } if (result.error) { setError(result.error); return; } setBusy(true); setError(''); try { await createGiftAllocation({ allocationId: allocationId.current, targetBranchId: branchId, source: source.trim(), reference: reference.trim(), items: result.items }); allocationId.current = uuid(); setAllocationRows(firstRow()); } catch (failure) { setError(giftCallableMessage(failure)); } finally { setBusy(false); } };
-  const confirmAction = async () => { if (!pendingAction) return; setBusy(true); setError(''); try { if (pendingAction.type === 'confirm') await confirmGiftAllocation({ allocationId: pendingAction.id, mutationId: mutationId.current }); else await cancelGiftAllocation({ allocationId: pendingAction.id, mutationId: mutationId.current, reason: 'Cancelled by branch' }); mutationId.current = uuid(); setPendingAction(null); } catch (failure) { setError(giftCallableMessage(failure)); } finally { setBusy(false); } };
+  const openAction = (type, allocation) => {
+    mutationId.current = uuid(); actionAttempted.current = false;
+    setCancelReason(''); setError(''); setPendingAction({ type, allocation });
+  };
+  const closeAction = () => { if (!busy) setPendingAction(null); };
+  const changeReason = (value) => {
+    if (actionAttempted.current) { mutationId.current = uuid(); actionAttempted.current = false; }
+    setCancelReason(value);
+  };
+  const confirmAction = async () => {
+    if (!pendingAction || actionSubmitting.current) return;
+    if (pendingAction.type === 'cancel' && !cancelReason.trim()) {
+      setError('Cancellation reason is required'); return;
+    }
+    actionSubmitting.current = true; actionAttempted.current = true; setBusy(true); setError('');
+    try {
+      const request = { allocationId: pendingAction.allocation.id, mutationId: mutationId.current };
+      if (pendingAction.type === 'confirm') await confirmGiftAllocation(request);
+      else await cancelGiftAllocation({ ...request, reason: cancelReason });
+      setPendingAction(null);
+    } catch (failure) { setError(giftCallableMessage(failure)); }
+    finally { actionSubmitting.current = false; setBusy(false); }
+  };
   const cancelling = pendingAction?.type === 'cancel';
-  return <GlassCard as="section" padded className="gift-inbound-panel"><h2>ຮັບເຂົ້າ</h2><form className="form-stack gift-form" onSubmit={submitReceipt}><Input id="gift-receipt-source" label="Receipt source" value={source} disabled={busy} onChange={(event) => setSource(event.target.value)} /><Input id="gift-receipt-reference" label="Receipt reference" value={reference} disabled={busy} onChange={(event) => setReference(event.target.value)} /><GiftItemRows catalog={catalog} rows={rows} onChange={setRows} maxRows={25} disabled={busy} /><Button type="submit" busy={busy} disabled={!branchId}>Receive stock</Button></form>{admin ? <section><h3>Allocation</h3><GiftItemRows catalog={catalog} rows={allocationRows} onChange={setAllocationRows} maxRows={25} disabled={busy} /><Button disabled={busy || !branchId} onClick={submitAllocation}>Create allocation</Button></section> : null}<section><h3>Pending allocation</h3>{allocations.pending.map((allocation) => <div className="gift-actions" key={allocation.id}><strong>{allocation.source}</strong><Button disabled={busy} onClick={() => setPendingAction({ type: 'confirm', id: allocation.id })}>Confirm allocation</Button>{admin ? <Button variant="neutral" disabled={busy} onClick={() => setPendingAction({ type: 'cancel', id: allocation.id })}>Cancel allocation</Button> : null}</div>)}</section><section><h3>Confirmed allocation</h3>{allocations.confirmed.map((allocation) => <div key={allocation.id}><strong>{allocation.source}</strong><Button disabled>Confirmed</Button></div>)}</section><section><h3>Cancelled allocation</h3>{allocations.cancelled.map((allocation) => <div key={allocation.id}><strong>{allocation.source}</strong><Button disabled>Cancelled</Button></div>)}</section>{error ? <div role="alert" className="error-banner">{error}</div> : null}<ModalSheet open={Boolean(pendingAction)} onClose={() => !busy && setPendingAction(null)} title={cancelling ? 'Cancel allocation' : 'Confirm allocation'} footer={<><Button variant="neutral" disabled={busy} onClick={() => setPendingAction(null)}>Back</Button><Button busy={busy} onClick={confirmAction}>{cancelling ? 'Cancel allocation' : 'Confirm'}</Button></>}><p>{cancelling ? 'Cancelling does not update stock.' : 'Confirming updates stock only after this action.'}</p></ModalSheet></GlassCard>;
+  const selected = pendingAction?.allocation;
+  return <GlassCard as="section" padded className="gift-inbound-panel">
+    <h2>ຮັບເຂົ້າ</h2>
+    <form className="form-stack gift-form" onSubmit={submitReceipt}>
+      <Input id={`${formId}-source`} label="Receipt source" value={source} disabled={busy} onChange={(event) => setSource(event.target.value)} />
+      <Input id={`${formId}-reference`} label="Receipt reference" value={reference} disabled={busy} onChange={(event) => setReference(event.target.value)} />
+      <GiftItemRows catalog={catalog} rows={rows} onChange={setRows} maxRows={25} disabled={busy} />
+      <Button type="submit" busy={busy} disabled={!branchId}>Receive stock</Button>
+    </form>
+    {admin ? <section><h3>Allocation</h3>
+      <GiftItemRows catalog={catalog} rows={allocationRows} onChange={setAllocationRows} maxRows={25} disabled={busy} />
+      <Button disabled={busy || !branchId} onClick={submitAllocation}>Create allocation</Button>
+    </section> : null}
+    <section><h3>Pending allocation</h3>{allocations.pending.map((allocation) => <div className="gift-actions" key={allocation.id} role="group" aria-label={`Allocation ${allocation.reference || allocation.id}`}>
+      <div><strong>{allocation.source}</strong><p>{allocation.reference || '—'} · {allocation.id}</p><small>{branchName(allocation.targetBranchId) || allocation.targetBranchId}</small></div>
+      <Button disabled={busy} onClick={() => openAction('confirm', allocation)}>Confirm allocation</Button>
+      {admin ? <Button variant="neutral" disabled={busy} onClick={() => openAction('cancel', allocation)}>Cancel allocation</Button> : null}
+    </div>)}</section>
+    <section><h3>Confirmed allocation</h3>{allocations.confirmed.map((allocation) => <div key={allocation.id}><strong>{allocation.source}</strong><Button disabled>Confirmed</Button></div>)}</section>
+    <section><h3>Cancelled allocation</h3>{allocations.cancelled.map((allocation) => <div key={allocation.id}><strong>{allocation.source}</strong><Button disabled>Cancelled</Button></div>)}</section>
+    {error && !pendingAction ? <div role="alert" className="error-banner">{error}</div> : null}
+    <ModalSheet open={Boolean(pendingAction)} onClose={closeAction} title={cancelling ? 'Cancel allocation' : 'Confirm allocation'} footer={<>
+      <Button variant="neutral" disabled={busy} onClick={closeAction}>Back</Button>
+      <Button busy={busy} onClick={confirmAction}>{cancelling ? 'Cancel allocation' : 'Confirm'}</Button>
+    </>}>
+      {selected ? <>
+        <dl><dt>Target branch</dt><dd>{branchName(selected.targetBranchId) || selected.targetBranchId}</dd>
+          <dt>Reference</dt><dd>{selected.reference || '—'}</dd><dt>Allocation</dt><dd>{selected.id}</dd></dl>
+        <ul>{selected.items.map((item) => <li key={item.giftId} aria-label={item.giftNameSnapshot}>
+          <strong>{item.giftNameSnapshot}</strong><p>{item.packs} packs × {item.unitsPerPackSnapshot} + {item.looseUnits} units = {item.totalUnits} units</p>
+        </li>)}</ul>
+        <p>Total: {selected.items.reduce((sum, item) => sum + item.totalUnits, 0)} units</p>
+      </> : null}
+      <p>{cancelling ? 'Cancelling does not update stock.' : 'Confirming updates stock only after this action.'}</p>
+      {cancelling ? <Textarea id={`${formId}-cancel-reason`} label="Cancellation reason" aria-required="true" value={cancelReason} disabled={busy} onChange={(event) => changeReason(event.target.value)} /> : null}
+      {error ? <div role="alert" className="error-banner">{error}</div> : null}
+    </ModalSheet>
+  </GlassCard>;
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { giftLineTotal, giftStockDisplay } from './giftModel';
 import Button from '../components/ui/Button';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -36,6 +36,7 @@ function visibleTotal(row, gift) {
 }
 
 export default function GiftItemRows({ catalog = [], rows, onChange, showStock = false, stocks = {}, maxRows = 25, disabled = false, onValidationIssue }) {
+  const editorId = useId();
   const byId = useMemo(() => Object.fromEntries(catalog.map((item) => [item.id, item])), [catalog]);
   const duplicates = new Set(rows.filter((row) => row.giftId).map((row) => row.giftId).filter((id, index, ids) => ids.indexOf(id) !== index));
   const update = (key, change) => onChange(rows.map((row) => row.key === key ? { ...row, ...change } : row));
@@ -50,9 +51,9 @@ export default function GiftItemRows({ catalog = [], rows, onChange, showStock =
     {rows.map((row, index) => {
       const gift = byId[row.giftId]; const total = gift ? visibleTotal(row, gift) : null; const stock = stocks[row.giftId];
       return <div key={row.key} className="gift-distribution-row">
-        <CustomSelect id={`gift-item-${row.key}`} label="ເຄື່ອງແຈກ" value={row.giftId} disabled={disabled} onChange={(value) => select(row.key, value)} placeholder="ເລືອກ" options={catalog.map((item) => ({ value: item.id, label: item.name }))} />
-        <Input id={`gift-packs-${row.key}`} label="ຈຳນວນຫໍ່" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || disabled} value={row.packs} onChange={(event) => validQuantity(event.target.value) && update(row.key, { packs: event.target.value })} />
-        <Input id={`gift-units-${row.key}`} label="ຈຳນວນຊິ້ນ" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || disabled} value={row.looseUnits} onChange={(event) => validQuantity(event.target.value) && update(row.key, { looseUnits: event.target.value })} />
+        <CustomSelect id={`${editorId}-gift-item-${row.key}`} label="ເຄື່ອງແຈກ" value={row.giftId} disabled={disabled} onChange={(value) => select(row.key, value)} placeholder="ເລືອກ" options={catalog.map((item) => ({ value: item.id, label: item.name }))} />
+        <Input id={`${editorId}-gift-packs-${row.key}`} label="ຈຳນວນຫໍ່" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || disabled} value={row.packs} onChange={(event) => validQuantity(event.target.value) && update(row.key, { packs: event.target.value })} />
+        <Input id={`${editorId}-gift-units-${row.key}`} label="ຈຳນວນຊິ້ນ" type="number" min="0" step="1" inputMode="numeric" disabled={!gift || disabled} value={row.looseUnits} onChange={(event) => validQuantity(event.target.value) && update(row.key, { looseUnits: event.target.value })} />
         {showStock && gift && stock ? <small>{giftStockDisplay(stock.currentUnits, gift)}</small> : null}
         {gift ? <small>ລວມ: {total ?? '—'}</small> : null}
         {gift && total === null ? <small className="error-banner">ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມ</small> : null}
