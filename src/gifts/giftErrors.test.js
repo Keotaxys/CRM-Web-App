@@ -6,7 +6,7 @@ describe('giftCallableMessage', () => {
     expect(giftCallableMessage({
       code: 'functions/failed-precondition',
       message: 'Insufficient gift stock',
-    })).toMatch(/Stock/);
+    })).toMatch(/ສະຕັອກ/);
     expect(giftCallableMessage({ code: 'functions/permission-denied' })).toMatch(/ສິດ/);
   });
 

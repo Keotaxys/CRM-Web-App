@@ -78,6 +78,23 @@
   line-height: 1;
 }
 
+.gift-checkbox {
+  width: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  accent-color: var(--teal-700);
+}
+
+.gift-checkbox-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .gift-tabs .ui-button:focus-visible,
 .gift-actions .ui-button:focus-visible,
 .gift-distribution-row .ui-button:focus-visible {

@@ -9,7 +9,7 @@ const emptyRow = (key) => ({ key, giftId: '', packs: '0', looseUnits: '0' });
 // Shared with submit handlers so every pack/unit workflow has one validation rule.
 // eslint-disable-next-line react-refresh/only-export-components
 export function validateGiftItemRows(rows, catalog = []) {
-  if (!Array.isArray(rows) || rows.length < 1 || rows.length > 25) return { error: 'Gift items must contain 1 to 25 rows' };
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > 25) return { error: 'ລາຍການເຄື່ອງແຈກຕ້ອງມີ 1 ຫາ 25 ແຖວ' };
   const giftsById = Object.fromEntries(catalog.map((gift) => [gift.id, gift]));
   const seen = new Set(); const items = []; let aggregateTotal = 0;
   for (const row of rows) {
@@ -23,8 +23,8 @@ export function validateGiftItemRows(rows, catalog = []) {
     try {
       const total = giftLineTotal({ packs, looseUnits }, giftsById[row.giftId]);
       aggregateTotal += total;
-      if (!Number.isSafeInteger(aggregateTotal)) return { error: 'Gift quantity must be a safe integer' };
-    } catch { return { error: 'Gift quantity must be a safe integer' }; }
+      if (!Number.isSafeInteger(aggregateTotal)) return { error: 'ຈຳນວນເຄື່ອງແຈກຕ້ອງເປັນຈຳນວນເຕັມທີ່ປອດໄພ' };
+    } catch { return { error: 'ຈຳນວນເຄື່ອງແຈກຕ້ອງເປັນຈຳນວນເຕັມທີ່ປອດໄພ' }; }
     items.push({ giftId: row.giftId, packs, looseUnits });
   }
   return items.length ? { items } : { error: 'ກະລຸນາເລືອກເຄື່ອງແຈກ' };

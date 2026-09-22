@@ -12,7 +12,7 @@ export function giftCallableMessage(error) {
   if (code === 'already-exists') return 'ລະຫັດລາຍການນີ້ຖືກນໍາໃຊ້ແລ້ວ';
   if (code === 'not-found') return 'ບໍ່ພົບລາຍການເຄື່ອງແຈກທີ່ຕ້ອງການ';
   if (/insufficient gift stock/i.test(backendMessage)) {
-    return 'Stock ເຄື່ອງແຈກບໍ່ພຽງພໍ';
+    return 'ສະຕັອກເຄື່ອງແຈກບໍ່ພຽງພໍ';
   }
   if (/Laos date changed/i.test(backendMessage)) {
     return 'ວັນທີໄດ້ປ່ຽນແລ້ວ ກະລຸນາໂຫຼດຂໍ້ມູນແລ້ວລອງໃໝ່';

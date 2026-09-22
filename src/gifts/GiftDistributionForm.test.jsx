@@ -53,7 +53,7 @@ describe('GiftDistributionForm', () => {
   it('requires exactly one Customer or Campaign and prevents duplicate gifts', async () => {
     render(<GiftDistributionForm identity={staffIdentity} />);
     await submitFormWithoutRecipient();
-    expect(screen.getByRole('alert')).toHaveTextContent('ລູກຄ້າ ຫຼື Campaign');
+    expect(screen.getByRole('alert')).toHaveTextContent('ລູກຄ້າ ຫຼື ແຄມເປນ');
     await selectSameGiftTwice();
     expect(screen.getByRole('alert')).toHaveTextContent('ຊ້ຳ');
   });
@@ -75,7 +75,7 @@ describe('GiftDistributionForm', () => {
     expect(screen.getByText('ລວມ: —')).toBeInTheDocument();
     expect(screen.getByText('ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມ')).toBeInTheDocument();
     await submitFormWithoutRecipient();
-    expect(screen.getByRole('alert')).toHaveTextContent('ລູກຄ້າ ຫຼື Campaign');
+    expect(screen.getByRole('alert')).toHaveTextContent('ລູກຄ້າ ຫຼື ແຄມເປນ');
   });
 
   it('uses a searchable branch-scoped recipient selector for Customers and active Campaigns', async () => {
@@ -87,7 +87,7 @@ describe('GiftDistributionForm', () => {
     await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
     expect(screen.getByRole('option', { name: 'Customer A' })).toBeInTheDocument();
     await user.click(screen.getByRole('option', { name: 'Customer A' }));
-    await chooseOption(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'Campaign');
+    await chooseOption(screen.getByLabelText('ປະເພດຜູ້ຮັບ'), 'ແຄມເປນ');
     await user.click(screen.getByRole('combobox', { name: 'ຜູ້ຮັບ' }));
     expect(screen.getByRole('option', { name: 'Campaign A' })).toBeInTheDocument();
   });
@@ -114,7 +114,7 @@ describe('GiftDistributionForm', () => {
     expect(serviceMocks.recordGiftDistribution).toHaveBeenCalledTimes(1);
     const operationId = serviceMocks.recordGiftDistribution.mock.calls[0][0].distributionId;
     reject({ message: 'insufficient gift stock' });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Stock');
+    expect(await screen.findByRole('alert')).toHaveTextContent('ສະຕັອກ');
     await user.click(screen.getByRole('button', { name: 'ບັນທຶກ' }));
     await waitFor(() => expect(serviceMocks.recordGiftDistribution).toHaveBeenCalledTimes(2));
     expect(serviceMocks.recordGiftDistribution.mock.calls[1][0].distributionId).toBe(operationId);

@@ -23,16 +23,16 @@ describe('GiftStockPanel', () => {
   it('shows pack and unit stock with equal-threshold low state', () => {
     render(<GiftStockPanel identity={manager} effectiveBranchId="010" />);
     expect(screen.getByText('1 pack 0 unit')).toBeInTheDocument();
-    expect(screen.getByText(/Low stock/i)).toBeInTheDocument();
+    expect(screen.getByText('ສະຕັອກໃກ້ໝົດ', { selector: 'small' })).toBeInTheDocument();
   });
 
   it('updates a threshold and keeps the manager locked to their own branch', async () => {
     const user = userEvent.setup();
     render(<GiftStockPanel identity={manager} effectiveBranchId="019" />);
     expect(service.subscribeGiftStocks).toHaveBeenCalledWith(manager, { branchId: '010' }, expect.any(Function), expect.any(Function));
-    await user.clear(screen.getByLabelText('Low-stock threshold'));
-    await user.type(screen.getByLabelText('Low-stock threshold'), '4');
-    await user.click(screen.getByRole('button', { name: /update threshold/i }));
+    await user.clear(screen.getByLabelText('ຈຳນວນເຕືອນສະຕັອກໃກ້ໝົດ'));
+    await user.type(screen.getByLabelText('ຈຳນວນເຕືອນສະຕັອກໃກ້ໝົດ'), '4');
+    await user.click(screen.getByRole('button', { name: /ອັບເດດຈຳນວນເຕືອນ/i }));
     expect(service.setGiftLowStockThreshold).toHaveBeenCalledWith({ branchId: '010', giftId: 'umbrella', lowStockThresholdUnits: '4' });
   });
 
@@ -40,15 +40,15 @@ describe('GiftStockPanel', () => {
     const user = userEvent.setup();
     service.adjustGiftStock.mockRejectedValueOnce({ message: 'insufficient gift stock' });
     render(<GiftStockPanel identity={manager} effectiveBranchId="010" />);
-    await user.click(screen.getByLabelText('Adjustment item'));
+    await user.click(screen.getByLabelText('ລາຍການປັບສະຕັອກ'));
     await user.click(screen.getByRole('option', { name: 'Umbrella' }));
-    await user.clear(screen.getByLabelText('Adjustment units'));
-    await user.type(screen.getByLabelText('Adjustment units'), '-1');
-    await user.click(screen.getByRole('button', { name: /adjust stock/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/reason/i);
-    await user.type(screen.getByLabelText('Adjustment reason'), 'Count correction');
-    await user.click(screen.getByRole('button', { name: /adjust stock/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Stock/i);
-    expect(screen.getByLabelText('Adjustment reason')).toHaveValue('Count correction');
+    await user.clear(screen.getByLabelText('ຈຳນວນປັບ'));
+    await user.type(screen.getByLabelText('ຈຳນວນປັບ'), '-1');
+    await user.click(screen.getByRole('button', { name: /ບັນທຶກການປັບສະຕັອກ/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/ເຫດຜົນ/i);
+    await user.type(screen.getByLabelText('ເຫດຜົນການປັບ'), 'Count correction');
+    await user.click(screen.getByRole('button', { name: /ບັນທຶກການປັບສະຕັອກ/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/ສະຕັອກ/i);
+    expect(screen.getByLabelText('ເຫດຜົນການປັບ')).toHaveValue('Count correction');
   });
 });

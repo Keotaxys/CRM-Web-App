@@ -15,16 +15,16 @@ describe('GiftCampaignAdmin', () => {
     render(<GiftCampaignAdmin identity={manager} effectiveBranchId="019" />);
     expect(service.subscribeGiftCampaigns).toHaveBeenCalledWith(manager, { branchId: '010', active: false }, expect.any(Function), expect.any(Function));
     expect(screen.getByText('Old Campaign')).toBeInTheDocument();
-    expect(screen.getByLabelText('Campaign branch')).toBeDisabled();
+    expect(screen.getByLabelText('ສາຂາຂອງແຄມເປນ')).toBeDisabled();
   });
   it('requires a valid ordered campaign date range and lets Admin choose the branch', async () => {
     const user = userEvent.setup(); render(<GiftCampaignAdmin identity={admin} effectiveBranchId="010" />);
-    expect(screen.getByLabelText('Campaign branch')).not.toBeDisabled();
-    await user.type(screen.getByLabelText('Campaign name'), 'New Campaign');
-    await user.clear(screen.getByLabelText('Start date')); await user.type(screen.getByLabelText('Start date'), '2026-12-31');
-    await user.clear(screen.getByLabelText('End date')); await user.type(screen.getByLabelText('End date'), '2026-01-01');
-    await user.click(screen.getByRole('button', { name: /save campaign/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/date range/i);
+    expect(screen.getByLabelText('ສາຂາຂອງແຄມເປນ')).not.toBeDisabled();
+    await user.type(screen.getByLabelText('ຊື່ແຄມເປນ'), 'New Campaign');
+    await user.clear(screen.getByLabelText('ວັນເລີ່ມ')); await user.type(screen.getByLabelText('ວັນເລີ່ມ'), '2026-12-31');
+    await user.clear(screen.getByLabelText('ວັນສິ້ນສຸດ')); await user.type(screen.getByLabelText('ວັນສິ້ນສຸດ'), '2026-01-01');
+    await user.click(screen.getByRole('button', { name: /ບັນທຶກແຄມເປນ/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/ຊ່ວງວັນທີ/i);
   });
 
   it('clears active and inactive Campaign history when an Admin switches to an empty branch', () => {

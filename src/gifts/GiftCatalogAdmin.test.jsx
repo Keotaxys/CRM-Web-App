@@ -11,13 +11,13 @@ describe('GiftCatalogAdmin', () => {
 
   it('shows catalog controls to Admin with editable catalog fields and no delete action', () => {
     render(<GiftCatalogAdmin identity={admin} />);
-    ['Name', 'Unit label', 'Pack label', 'Units per pack', 'Sort order', 'Active'].forEach((label) => expect(screen.getByLabelText(label)).toBeInTheDocument());
+    ['ຊື່ລາຍການ', 'ຫົວໜ່ວຍ', 'ຫົວໜ່ວຍຫໍ່', 'ຈຳນວນຊິ້ນຕໍ່ຫໍ່', 'ລຳດັບສະແດງ', 'ໃຊ້ງານ'].forEach((label) => expect(screen.getByLabelText(label)).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
   });
 
   it('does not expose catalog controls outside an Admin page', () => {
     render(<GiftCatalogAdmin identity={{ uid: 'staff-1', role: 'staff', branchId: '010', accountStatus: 'approved' }} />);
-    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('ຊື່ລາຍການ')).not.toBeInTheDocument();
     expect(service.subscribeAllGiftItems).not.toHaveBeenCalled();
   });
 });

@@ -48,6 +48,10 @@ describe('gift responsive and accessibility guards', () => {
     expect(screensCss).toMatch(/\.gift-stock--low\s+small::before\s*\{[^}]*content:/s);
   });
 
+  it('styles gift checkboxes with the CRM teal instead of the browser blue', () => {
+    expect(screensCss).toMatch(/\.gift-checkbox\s*\{[^}]*accent-color:\s*var\(--teal-700\)/s);
+  });
+
   it('provides visible focus states for gift tabs and actions', () => {
     expect(giftPageSource).toContain('gift-tabs');
     expect(screensCss).toMatch(/\.gift-[\w-]*(?:tabs|actions)[^}]*:focus-visible\s*\{[^}]*outline:\s*var\(--focus-outline\)/s);

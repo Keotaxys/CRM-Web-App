@@ -154,12 +154,12 @@ describe('GiftReportPanel', () => {
     arrange();
     expect(screen.getByText('ຍອດຮັບ 20')).toBeInTheDocument();
     expect(screen.getByText('ຍອດແຈກ 12')).toBeInTheDocument();
-    expect(screen.getByText('Stock ປັດຈຸບັນ 22')).toBeInTheDocument();
-    expect(screen.getByText('low-stock 1')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'ສະຫຼຸບຕາມ gift' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'ສະຫຼຸບຕາມ branch' })).toBeInTheDocument();
+    expect(screen.getByText('ສະຕັອກປັດຈຸບັນ 22')).toBeInTheDocument();
+    expect(screen.getByText('ສະຕັອກໃກ້ໝົດ 1')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'ສະຫຼຸບຕາມເຄື່ອງແຈກ' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'ສະຫຼຸບຕາມສາຂາ' })).toBeInTheDocument();
     const table = screen.getByRole('region', { name: 'ລາຍການເຄື່ອນໄຫວ' });
-    expect(within(table).getByRole('row', { name: /2026-09-13 distribute Umbrella -3/ })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: /2026-09-13 ແຈກ Umbrella -3/ })).toBeInTheDocument();
     expect(within(table).getByText('Count correction')).toBeInTheDocument();
   });
 
@@ -205,7 +205,7 @@ describe('GiftReportPanel', () => {
     ]);
     await user.click(screen.getByRole('option', { name: 'Archived Mug' }));
     expect(screen.getByText('ຍອດແຈກ 4')).toBeInTheDocument();
-    expect(screen.getByText('Stock ປັດຈຸບັນ 7')).toBeInTheDocument();
+    expect(screen.getByText('ສະຕັອກປັດຈຸບັນ 7')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'ສົ່ງອອກ Excel' }));
     expect(onExport).toHaveBeenCalledWith(
       expect.objectContaining({

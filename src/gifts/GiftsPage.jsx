@@ -15,7 +15,7 @@ import GiftReportPanel from './GiftReportPanel';
 
 const managerTabs = [
   ['distribution', 'ແຈກເຄື່ອງ'], ['stock', 'ສະຕັອກ'], ['inbound', 'ຮັບເຂົ້າ'],
-  ['report', 'ລາຍງານ'], ['campaigns', 'Campaign'],
+  ['report', 'ລາຍງານ'], ['campaigns', 'ແຄມເປນ'],
 ];
 
 function actor(identity) {

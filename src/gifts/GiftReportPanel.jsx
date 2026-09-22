@@ -15,6 +15,7 @@ import { subscribeAssignableUsers } from '../services/usersService';
 import { useLaosDay } from '../sales/useLaosDay';
 import { downloadGiftWorkbook } from './giftExport';
 import { buildGiftReport, giftDateRange } from './giftReport';
+import { giftLabel, giftMovementLabel } from './giftLabels';
 
 const PRESETS = [
   ['today', 'ມື້ນີ້'],
@@ -262,7 +263,7 @@ export default function GiftReportPanel({ effectiveBranchId: branchOverride, onE
   ));
   const visibleMovementTypes = canViewInbound
     ? MOVEMENT_TYPES : MOVEMENT_TYPES.filter((type) => DISTRIBUTION_TYPES.has(type));
-  const movementOptions = allOption(visibleMovementTypes.map((value) => ({ value, label: value })));
+  const movementOptions = allOption(visibleMovementTypes.map((value) => ({ value, label: giftMovementLabel(value) })));
   const queryError = errors.catalog || errors.stocks || errors.users
     || Boolean(errors.movements && errors.movements === rangeKey) || reportState.error;
   const loaded = Boolean(effectiveBranchId && rangeKey && catalogLoaded && stocksLoaded
@@ -331,10 +332,10 @@ export default function GiftReportPanel({ effectiveBranchId: branchOverride, onE
         <SearchableSelect id="gift-report-customer" label="ລູກຄ້າ" value={filters.customerId}
           options={customerOptions}
           onChange={(customerId) => setFilters((current) => ({ ...current, customerId }))} />
-        <SearchableSelect id="gift-report-campaign" label="Campaign" value={filters.campaignId}
+        <SearchableSelect id="gift-report-campaign" label={giftLabel('campaign')} value={filters.campaignId}
           options={campaignOptions}
           onChange={(campaignId) => setFilters((current) => ({ ...current, campaignId }))} />
-        <CustomSelect id="gift-report-movement" label="movement type" value={filters.movementType}
+        <CustomSelect id="gift-report-movement" label={giftLabel('movementType')} value={filters.movementType}
           options={movementOptions}
           onChange={(movementType) => setFilters((current) => ({ ...current, movementType }))} />
       </div>
@@ -347,8 +348,8 @@ export default function GiftReportPanel({ effectiveBranchId: branchOverride, onE
       <div className="summary-grid sales-summary-grid">
         {report.canViewInbound ? <GlassCard padded><span>ຍອດຮັບ {report.receivedUnits}</span></GlassCard> : null}
         <GlassCard padded><span>ຍອດແຈກ {report.distributedUnits}</span></GlassCard>
-        <GlassCard padded><span>Stock ປັດຈຸບັນ {report.currentUnits}</span></GlassCard>
-        <GlassCard padded><span>low-stock {report.lowStockCount}</span></GlassCard>
+        <GlassCard padded><span>{giftLabel('currentStock')} {report.currentUnits}</span></GlassCard>
+        <GlassCard padded><span>{giftLabel('lowStock')} {report.lowStockCount}</span></GlassCard>
         <GlassCard padded><span>{rangeState.range.startKey} – {rangeState.range.endKey}</span></GlassCard>
       </div>
       <Button variant="secondary" busy={exporting} onClick={exportReport}>ສົ່ງອອກ Excel</Button>
@@ -357,24 +358,24 @@ export default function GiftReportPanel({ effectiveBranchId: branchOverride, onE
         className={exportFeedback.includes('ບໍ່') ? 'error-banner' : 'status-message'}
       >{exportFeedback}</p> : null}
 
-      <SummaryTable title="ສະຫຼຸບຕາມ gift" rows={report.gifts}
+      <SummaryTable title={giftLabel('giftSummary')} rows={report.gifts}
         idField="giftId" nameField="giftName" />
-      <SummaryTable title="ສະຫຼຸບຕາມ branch" rows={report.branches}
+      <SummaryTable title={giftLabel('branchSummary')} rows={report.branches}
         idField="branchId" nameField="branchName" />
-      <SummaryTable title="ສະຫຼຸບຕາມ staff" rows={report.staff}
+      <SummaryTable title={giftLabel('staffSummary')} rows={report.staff}
         idField="staffUid" nameField="staffName" />
-      <SummaryTable title="ສະຫຼຸບຕາມ customer" rows={report.customers}
+      <SummaryTable title={giftLabel('customerSummary')} rows={report.customers}
         idField="customerId" nameField="customerName" />
-      <SummaryTable title="ສະຫຼຸບຕາມ Campaign" rows={report.campaigns}
+      <SummaryTable title={giftLabel('campaignSummary')} rows={report.campaigns}
         idField="campaignId" nameField="campaignName" />
       <GlassCard as="section" padded>
         <h2>ລາຍການເຄື່ອນໄຫວ</h2>
         {report.movements.length ? <ReportTable
           title="ລາຍການເຄື່ອນໄຫວ"
-          columns={['ວັນທີ', 'movement type', 'gift', 'delta', 'ສາຂາ', 'ຜູ້ແຈກ', 'actor', 'ຜູ້ຮັບ', 'ເຫດຜົນ']}
+          columns={['ວັນທີ', giftLabel('movementType'), giftLabel('gift'), giftLabel('delta'), 'ສາຂາ', 'ຜູ້ແຈກ', giftLabel('actor'), 'ຜູ້ຮັບ', giftLabel('reason')]}
         >
           {report.movements.map((row) => <tr key={row.id}>
-            <td>{row.dateKey}</td><td>{row.movementType}</td><td>{row.giftName}</td>
+            <td>{row.dateKey}</td><td>{giftMovementLabel(row.movementType)}</td><td>{row.giftName}</td>
             <td>{row.deltaUnits}</td><td>{row.branchId}</td>
             <td>{row.distributionOwnerName || '—'}</td><td>{row.actorName || '—'}</td>
             <td>{row.recipientName || '—'}</td><td>{row.reason || '—'}</td>

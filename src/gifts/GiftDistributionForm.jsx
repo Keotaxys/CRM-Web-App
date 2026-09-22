@@ -58,7 +58,7 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
   const submit = async (event) => {
     event.preventDefault();
     if (submittingRef.current || !branchId) return;
-    if (!['customer', 'campaign'].includes(recipientType) || !recipientId) { setError('ກະລຸນາເລືອກ ລູກຄ້າ ຫຼື Campaign ຢ່າງໃດໜຶ່ງ'); return; }
+    if (!['customer', 'campaign'].includes(recipientType) || !recipientId) { setError('ກະລຸນາເລືອກ ລູກຄ້າ ຫຼື ແຄມເປນ ຢ່າງໃດໜຶ່ງ'); return; }
     const result = validateGiftItemRows(rows, gifts);
     if (result.error) { setError(result.error); return; }
     submittingRef.current = true; setBusy(true); setError('');
@@ -70,7 +70,7 @@ export default function GiftDistributionForm({ identity, effectiveBranchId }) {
   };
 
   return <GlassCard as="section" padded className="gift-distribution-form"><h2>ແຈກເຄື່ອງ</h2><form className="form-stack gift-form" onSubmit={submit}>
-    <CustomSelect id="gift-recipient-type" label="ປະເພດຜູ້ຮັບ" value={recipientType} disabled={busy} onChange={(value) => { setRecipientType(value); setRecipientId(''); }} placeholder="ເລືອກ" options={[{ value: 'customer', label: 'ລູກຄ້າ' }, { value: 'campaign', label: 'Campaign' }]} />
+    <CustomSelect id="gift-recipient-type" label="ປະເພດຜູ້ຮັບ" value={recipientType} disabled={busy} onChange={(value) => { setRecipientType(value); setRecipientId(''); }} placeholder="ເລືອກ" options={[{ value: 'customer', label: 'ລູກຄ້າ' }, { value: 'campaign', label: 'ແຄມເປນ' }]} />
     {recipientType ? <SearchableSelect id="gift-recipient" label="ຜູ້ຮັບ" value={recipientId} options={recipientOptions} placeholder="ເລືອກຜູ້ຮັບ" disabled={busy} onChange={setRecipientId} /> : null}
     <GiftItemRows catalog={gifts} rows={rows} onChange={setRows} onValidationIssue={setError} showStock stocks={stocksByGift} maxRows={25} disabled={busy} />
     <Textarea id="gift-distribution-note" label="ໝາຍເຫດ" value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} />

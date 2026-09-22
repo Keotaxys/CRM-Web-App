@@ -26,7 +26,7 @@ describe('GiftsPage', () => {
 
   it('shows operations tabs to a manager', () => {
     arrange('branch_manager');
-    ['ແຈກເຄື່ອງ', 'ສະຕັອກ', 'ຮັບເຂົ້າ', 'ລາຍງານ', 'Campaign'].forEach((label) => {
+    ['ແຈກເຄື່ອງ', 'ສະຕັອກ', 'ຮັບເຂົ້າ', 'ລາຍງານ', 'ແຄມເປນ'].forEach((label) => {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     });
   });

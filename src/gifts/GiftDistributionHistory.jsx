@@ -69,7 +69,7 @@ export default function GiftDistributionHistory({ identity, effectiveBranchId })
     {!validRange ? <p role="alert">ຊ່ວງວັນທີບໍ່ຖືກຕ້ອງ</p> : current.error ? <p role="alert">{current.error}</p>
       : history.key !== queryKey ? <p role="status">ກຳລັງໂຫຼດ...</p> : !current.rows.length ? <p>ບໍ່ມີລາຍການ</p> : null}
     {currentCatalog.error ? <p role="alert">{giftCallableMessage()}</p> : null}
-    {current.rows.map((item) => <div key={item.id} role="group" aria-label={`Distribution ${item.id}`}>
+    {current.rows.map((item) => <div key={item.id} role="group" aria-label={`ການແຈກ ${item.id}`}>
       <h3>{item.customerNameSnapshot || item.campaignNameSnapshot || item.customerId || item.campaignId}</h3>
       <p>{item.dateKey} · {item.branchId} · {item.id} · {item.status}</p>
       <ul>{item.items.map((line) => <li key={line.giftId}>{line.giftNameSnapshot || line.giftId}: {line.totalUnits}</li>)}</ul>
