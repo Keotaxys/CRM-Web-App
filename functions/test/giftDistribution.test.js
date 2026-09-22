@@ -96,6 +96,35 @@ test('Campaign distribution and Admin explicit branch distribution succeed', asy
   }
 });
 
+test('own-branch legacy Customers without recordState support distribution and correction', async () => {
+  const state = fixture();
+  state.documents.set('customers/legacy', { name: 'Legacy Customer', branchId: '010' });
+  await record(state.services, staff, { ...input, customerId: 'legacy' }, now);
+  assert.equal(state.documents.get(`giftDistributions/${id}`).customerNameSnapshot, 'Legacy Customer');
+  await amend(state.services, staff, {
+    ...change, recipientType: 'customer', customerId: 'legacy', campaignId: null,
+  }, now);
+  assert.equal(state.documents.get('branchGiftStocks/010_umbrella').currentUnits, 15);
+});
+
+test('legacy Customer support still denies archived, trashed, foreign-branch and mismatched profiles', async () => {
+  for (const customer of [
+    { branchId: '010', recordState: 'archived' },
+    { branchId: '010', recordState: 'trashed' },
+    { branchId: '019' },
+  ]) {
+    const state = fixture();
+    state.documents.set('customers/legacy', { name: 'Legacy Customer', ...customer });
+    await unchanged(state, () => record(state.services, staff,
+      { ...input, customerId: 'legacy' }, now), 'failed-precondition');
+  }
+  const state = fixture();
+  state.documents.set('customers/legacy', { name: 'Legacy Customer', branchId: '010' });
+  state.documents.set('users/staff-a', { ...staff, branchId: '019' });
+  await unchanged(state, () => record(state.services, staff,
+    { ...input, customerId: 'legacy' }, now), 'permission-denied');
+});
+
 test('invalid recipients, quantities, dates and server fields fail without writes', async () => {
   const cases = [
     { campaignId: 'campaign-a' }, { customerId: undefined }, { recipientType: 'other' },
@@ -145,7 +174,7 @@ test('all operations reject anonymous, pending, disabled and mismatched canonica
   }
 });
 
-test('same-day amendment applies net deltas and records one complete revision', async () => {
+test('same-day recipient amendment records reversal, replacement and one complete revision', async () => {
   const state = fixture();
   await record(state.services, staff, input, now);
   const result = await amend(state.services, staff, change, now);
@@ -163,10 +192,12 @@ test('same-day amendment applies net deltas and records one complete revision', 
   assert.equal(revision.previousNote, 'VIP visit');
   assert.equal(revision.nextNote, 'Event');
   assert.equal(revision.changedBy, 'staff-a');
-  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella`).deltaUnits, -2);
-  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_shirt`).deltaUnits, 10);
-  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella`).customerNameSnapshot, null);
-  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella`).campaignNameSnapshot, 'Campaign A');
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella_1_reverse`).deltaUnits, 3);
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_shirt_1_reverse`).deltaUnits, 10);
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella_1_reverse`).customerNameSnapshot, 'Customer A');
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella_2_replace`).deltaUnits, -5);
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella_2_replace`).customerNameSnapshot, null);
+  assert.equal(state.documents.get(`giftStockMovements/${mutationId}_umbrella_2_replace`).campaignNameSnapshot, 'Campaign A');
 });
 
 test('Staff cannot amend or cancel another owner or after the Laos midnight boundary', async () => {
@@ -192,7 +223,7 @@ test('Manager and Admin later corrections retain original ownership and actual m
     assert.equal(distribution.updatedBy, actor.uid);
     assert.equal(distribution.dateKey, '2026-09-14');
     for (const operationId of [mutationId, cancellationId]) {
-      const movement = state.documents.get(`giftStockMovements/${operationId}_umbrella`);
+      const movement = state.documents.get(`giftStockMovements/${operationId}_umbrella${operationId === mutationId ? '_2_replace' : ''}`);
       assert.equal(movement.actorUid, actor.uid);
       assert.equal(movement.distributionOwnerUid, 'staff-a');
       assert.equal(movement.dateKey, '2026-09-15');
@@ -285,6 +316,25 @@ test('cancellation restores historical quantities even when gift and recipient w
   await cancel(state.services, staff, cancellation, now);
   assert.equal(state.documents.get('branchGiftStocks/010_shirt').currentUnits, 20);
   assert.equal(state.documents.get(`giftStockMovements/${cancellationId}_shirt`).deltaUnits, 10);
+});
+
+test('corrections retain stored pack and name snapshots for a previously distributed inactive gift', async () => {
+  const state = fixture();
+  await record(state.services, staff, input, now);
+  state.documents.set('giftItems/shirt', { name: 'Renamed retired shirt', active: false, unitsPerPack: 100 });
+  await amend(state.services, staff, {
+    ...change, recipientType: 'customer', customerId: 'customer-a', campaignId: null,
+    items: [{ giftId: 'shirt', packs: 1, looseUnits: 2 }],
+  }, now);
+  assert.deepEqual(state.documents.get(`giftDistributions/${id}`).items, [{
+    giftId: 'shirt', giftNameSnapshot: 'Shirt', packs: 1, looseUnits: 2,
+    unitsPerPackSnapshot: 10, totalUnits: 12,
+  }]);
+  assert.equal(state.documents.get('branchGiftStocks/010_shirt').currentUnits, 8);
+  await unchanged(state, () => amend(state.services, staff, {
+    ...change, mutationId: cancellationId, expectedVersion: 2,
+    items: [{ giftId: 'inactive', packs: 0, looseUnits: 1 }],
+  }, now), 'failed-precondition');
 });
 
 test('concurrent distributions cannot overspend the same stock', async () => {

@@ -179,6 +179,7 @@ function movementWrite(change, actor, context) {
     giftId: change.item.giftId,
     giftNameSnapshot: change.item.giftNameSnapshot,
     deltaUnits: change.item.deltaUnits,
+    ...(change.item.movementLeg ? { movementLeg: change.item.movementLeg } : {}),
     balanceBeforeUnits: change.before,
     balanceAfterUnits: change.after,
     dateKey: context.dateKey,
@@ -217,12 +218,15 @@ export async function applyGiftDeltas(transaction, db, {
     `branchGiftStocks/${giftStockId(branchId, item.giftId)}`,
   ));
   const snapshots = await Promise.all(stockRefs.map((ref) => transaction.get(ref)));
+  // A recipient correction can reverse and replace the same gift. Read first,
+  // calculate each ledger balance in order, then write the final Stock once.
+  const finalChanges = new Map();
   const changes = deltas.map((item, index) => {
     if (!Number.isSafeInteger(item?.deltaUnits) || item.deltaUnits === 0) {
       throw operationError('invalid-argument', 'Gift delta must be a nonzero safe integer');
     }
     const previous = snapshots[index].exists ? snapshots[index].data() : {};
-    const before = previous.currentUnits ?? 0;
+    const before = finalChanges.get(item.giftId)?.after ?? previous.currentUnits ?? 0;
     const version = previous.version ?? 0;
     const lowStockThresholdUnits = previous.lowStockThresholdUnits ?? 0;
     if (!Number.isSafeInteger(before) || before < 0
@@ -234,7 +238,7 @@ export async function applyGiftDeltas(transaction, db, {
     if (!Number.isSafeInteger(after) || after < 0) {
       throw operationError('failed-precondition', 'Insufficient gift stock');
     }
-    return {
+    const change = {
       item,
       ref: stockRefs[index],
       before,
@@ -242,6 +246,8 @@ export async function applyGiftDeltas(transaction, db, {
       version,
       lowStockThresholdUnits,
     };
+    finalChanges.set(item.giftId, change);
+    return change;
   });
   const context = {
     operationId,
@@ -258,11 +264,15 @@ export async function applyGiftDeltas(transaction, db, {
     payloadDigest,
     operationResult,
   };
-  for (const change of changes) {
+  for (const change of finalChanges.values()) {
     transaction.set(change.ref, stockWrite(change, actor, branchId), { merge: true });
+  }
+  for (const change of changes) {
+    const movementId = giftMovementId(operationId, change.item.giftId)
+      + (change.item.movementLeg ? `_${change.item.movementLeg}` : '');
     transaction.create(
-      db.doc(`giftStockMovements/${giftMovementId(operationId, change.item.giftId)}`),
-      movementWrite(change, actor, context),
+      db.doc(`giftStockMovements/${movementId}`),
+      movementWrite(change, actor, { ...context, ...change.item.recipient }),
     );
   }
 }

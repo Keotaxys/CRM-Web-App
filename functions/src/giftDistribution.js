@@ -82,7 +82,7 @@ function contentRequest(data) {
   return { ...recipient, items, note: textRequest(data.note ?? '', 'Note') };
 }
 
-async function loadContent(transaction, db, request, branchId) {
+async function loadContent(transaction, db, request, branchId, previousItems = []) {
   const customer = request.recipientType === 'customer';
   const [recipientSnapshot, ...gifts] = await Promise.all([
     transaction.get(db.doc(customer ? `customers/${request.customerId}`
@@ -91,11 +91,19 @@ async function loadContent(transaction, db, request, branchId) {
   ]);
   const recipient = recipientSnapshot.exists ? recipientSnapshot.data() : null;
   if (!recipient || recipient.branchId !== branchId
-    || (customer ? recipient.recordState !== 'active' : recipient.active !== true)) {
+    || (customer ? (recipient.recordState || 'active') !== 'active' : recipient.active !== true)) {
     fail('failed-precondition', 'Active recipient in the distribution branch required');
   }
-  const normalized = normalizeGiftLines(request.items,
-    new Map(gifts.map((snapshot) => [snapshot.id, snapshot.exists ? snapshot.data() : null])));
+  const catalog = new Map(gifts.map((snapshot) => [snapshot.id, snapshot.exists ? snapshot.data() : null]));
+  // Corrections may retain a retired gift using its trusted stored conversion.
+  // New distributions and newly added gift rows still require an active item.
+  for (const item of previousItems) {
+    if (!catalog.get(item.giftId)?.active) {
+      catalog.set(item.giftId, { active: true, name: item.giftNameSnapshot,
+        unitsPerPack: item.unitsPerPackSnapshot });
+    }
+  }
+  const normalized = normalizeGiftLines(request.items, catalog);
   return {
     ...normalized,
     ...recipientRequest(request),
@@ -243,8 +251,15 @@ async function mutateDistribution({ db }, actor, data, now, operation) {
     }
     const previousItems = storedItems(previous);
     const cancelling = operation === 'cancel';
-    const next = cancelling ? previous : await loadContent(transaction, db, request, previous.branchId);
-    const deltas = amendmentDeltas(previousItems, cancelling ? [] : next.items);
+    const next = cancelling ? previous : await loadContent(transaction, db, request, previous.branchId, previousItems);
+    const recipientChanged = !cancelling && (previous.customerId !== next.customerId
+      || previous.campaignId !== next.campaignId || previous.recipientType !== next.recipientType);
+    const deltas = recipientChanged ? [
+      ...previousItems.map((item) => ({ ...item, deltaUnits: item.totalUnits,
+        recipient: recipientSnapshot(previous), movementLeg: '1_reverse' })),
+      ...next.items.map((item) => ({ ...item, deltaUnits: -item.totalUnits,
+        recipient: recipientSnapshot(next), movementLeg: '2_replace' })),
+    ] : amendmentDeltas(previousItems, cancelling ? [] : next.items);
     const status = cancelling ? 'cancelled' : 'active';
     const nextVersion = previous.version + 1;
     const ownerUid = previous.distributionOwnerUid ?? previous.createdBy;
