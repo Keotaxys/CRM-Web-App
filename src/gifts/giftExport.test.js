@@ -96,4 +96,26 @@ describe('gift export', () => {
     expect(() => giftWorkbookFilename({ startKey: '=bad', endKey: '2026-09-30' }))
       .toThrow(/date/i);
   });
+
+  it('exports inactive zero-stock history without a low-stock count or status', () => {
+    const report = buildGiftReport({ gifts: [{ ...gifts[0], active: false }],
+      stocks: [{ ...stocks[0], currentUnits: 0 }], movements: [movement('distribute', -20)] });
+    const workbook = buildGiftWorkbook(ExcelJS, report, { startKey: '2026-09-13', endKey: '2026-09-13' });
+    expect(workbook.getWorksheet('ສະຫຼຸບ').getCell('B7').value).toBe(0);
+    expect(workbook.getWorksheet('Stock ປັດຈຸບັນ').getCell('F2').value).toBe('ປົກກະຕິ');
+    expect(workbook.getWorksheet('ລາຍການເຄື່ອນໄຫວ').getCell('E2').value).toBe(-20);
+  });
+
+  it('fits the longest cell up to 40 and keeps long formula-like text wrapped and sanitized', () => {
+    const report = buildGiftReport({ gifts, stocks, movements: [movement('distribute', -1, {
+      giftNameSnapshot: 'A moderately long gift name', reason: `=${'long reason '.repeat(8)}`,
+    })] });
+    const workbook = buildGiftWorkbook(ExcelJS, report, { startKey: '2026-09-13', endKey: '2026-09-13' });
+    const sheet = workbook.getWorksheet('ລາຍການເຄື່ອນໄຫວ');
+    expect(sheet.getColumn(4).width).toBe(29);
+    expect(sheet.getColumn(12).width).toBe(40);
+    expect(sheet.getCell('L2').value).toBe(`'=${'long reason '.repeat(8)}`);
+    expect(sheet.getCell('L2').alignment.wrapText).toBe(true);
+    expect(sheet.getCell('L1').alignment.wrapText).toBe(true);
+  });
 });

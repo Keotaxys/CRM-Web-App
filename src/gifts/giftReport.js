@@ -207,7 +207,7 @@ export function buildGiftReport({ movements, stocks, gifts, filters = {} } = {})
     if (!stockMatches(stock, filters)) continue;
     const currentUnits = safeInteger(stock.currentUnits, 'Gift stock', { minimum: 0 });
     const threshold = safeInteger(stock.lowStockThresholdUnits ?? 0, 'Low-stock threshold', { minimum: 0 });
-    const lowStock = currentUnits <= threshold;
+    const lowStock = catalogById.get(stock.giftId)?.active === true && currentUnits <= threshold;
     selectedStocks.push({ ...stock, currentUnits, lowStockThresholdUnits: threshold, lowStock });
 
     const giftId = stock.giftId ?? '';

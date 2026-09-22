@@ -17,7 +17,8 @@ function fitColumns(sheet) {
   sheet.columns.forEach((column) => {
     const lengths = column.values.filter((value) => value != null)
       .map((value) => String(value).length + 2);
-    column.width = Math.max(12, Math.min(40, ...lengths));
+    column.width = Math.min(40, Math.max(12, ...lengths));
+    column.eachCell((cell) => { cell.alignment = { ...cell.alignment, wrapText: true }; });
   });
 }
 

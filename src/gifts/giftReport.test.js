@@ -131,7 +131,7 @@ describe('buildGiftReport', () => {
 
   it('groups by snapshot identifiers, attributes corrections to the owner, and sorts ties stably', () => {
     const report = buildGiftReport({
-      gifts: [...gifts, { id: 'bag', name: 'Bag', sortOrder: 20 }],
+      gifts: [...gifts, { id: 'bag', name: 'Bag', sortOrder: 20, active: true }],
       stocks: [
         ...stocks,
         { branchId: '019', giftId: 'bag', currentUnits: 2, lowStockThresholdUnits: 2 },
@@ -187,6 +187,21 @@ describe('buildGiftReport', () => {
       .toThrow(/movements/i);
     expect(() => buildGiftReport({ movements: [movement('receive', 1, { dateKey: '2026-02-30' })], stocks, gifts, filters: {} }))
       .toThrow(/date/i);
+  });
+
+  it('retains inactive gift history and balances without counting low stock', () => {
+    const report = buildGiftReport({
+      gifts: [...gifts, { id: 'retired', name: 'Retired gift', active: false }],
+      stocks: [...stocks, { branchId: '010', giftId: 'retired', currentUnits: 0, lowStockThresholdUnits: 5 }],
+      movements: [movement('distribute', -3, { giftId: 'retired', giftNameSnapshot: 'Historical gift' })],
+    });
+    expect(report.lowStockCount).toBe(0);
+    expect(report.branches[0].lowStockCount).toBe(0);
+    expect(report.gifts.find((gift) => gift.giftId === 'retired')).toMatchObject({
+      giftName: 'Historical gift', currentUnits: 0, distributedUnits: 3, lowStockCount: 0,
+    });
+    expect(report.stocks.find((stock) => stock.giftId === 'retired').lowStock).toBe(false);
+    expect(report.movements[0].giftName).toBe('Historical gift');
   });
 
   it('fails closed when any normalized total exceeds the safe-integer range', () => {

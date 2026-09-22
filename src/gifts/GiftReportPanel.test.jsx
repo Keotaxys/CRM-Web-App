@@ -28,8 +28,8 @@ vi.mock('../components/ui/DateField', () => ({
 }));
 
 const gifts = [
-  { id: 'umbrella', name: 'Umbrella', sortOrder: 1, unitsPerPack: 10 },
-  { id: 'bag', name: 'Bag', sortOrder: 2, unitsPerPack: 5 },
+  { id: 'umbrella', name: 'Umbrella', active: true, sortOrder: 1, unitsPerPack: 10 },
+  { id: 'bag', name: 'Bag', active: true, sortOrder: 2, unitsPerPack: 5 },
 ];
 const stocks = [
   { branchId: '010', giftId: 'umbrella', currentUnits: 20, lowStockThresholdUnits: 5 },
