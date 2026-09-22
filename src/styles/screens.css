@@ -23,6 +23,19 @@
   flex-wrap: wrap;
 }
 
+.gift-correction-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gift-distribution-history [role="group"] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding-block: var(--space-3);
+}
+
 .gift-actions > * {
   min-width: 0;
   max-width: 100%;

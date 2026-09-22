@@ -1,15 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import GiftsPage from './GiftsPage';
+import { MemoryRouter } from 'react-router-dom';
 
 const authMock = vi.hoisted(() => ({ identity: null }));
 vi.mock('../auth/useAuth', () => ({ useAuth: () => authMock.identity }));
 vi.mock('../components/Navbar', () => ({ default: ({ title }) => <header>{title}</header> }));
 vi.mock('./GiftDistributionForm', () => ({ default: () => <div>FORM</div> }));
+vi.mock('./GiftDistributionHistory', () => ({ default: () => null }));
 
 function arrange(role, branchId = '010') {
   authMock.identity = { user: { uid: 'u1' }, claims: { role, branchId, accountStatus: 'approved' } };
-  render(<GiftsPage />);
+  render(<MemoryRouter><GiftsPage /></MemoryRouter>);
 }
 
 describe('GiftsPage', () => {

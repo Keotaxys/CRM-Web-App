@@ -71,6 +71,18 @@ describe('GiftCorrectionSheet', () => {
     expect(screen.getByRole('status')).toHaveTextContent('ກຳລັງໂຫຼດ');
     expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
   });
+  it('amends a retired gift from stored snapshots and allows cancellation without catalog metadata', async () => {
+    const stored = { ...distribution, items: [{ ...distribution.items[0], giftNameSnapshot: 'Original Umbrella', unitsPerPackSnapshot: 10 }] };
+    render(<GiftCorrectionSheet distribution={stored} gifts={[]} />);
+    expect(screen.getByText('Original Umbrella')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '2' } });
+    expect(screen.getByText('ຈຳນວນເກົ່າ: 12 · ຈຳນວນໃໝ່: 22')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'ຍົກເລີກລາຍການ' }));
+    await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'Returned');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການຍົກເລີກ' }));
+    expect(serviceMocks.cancelGiftDistribution).toHaveBeenCalledWith(expect.objectContaining({ expectedVersion: 2 }));
+  });
   it('shows the stored old total and recalculates the new total after a quantity edit', () => {
     render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);
     expect(screen.getByText('ຈຳນວນເກົ່າ: 12 · ຈຳນວນໃໝ່: 12')).toBeInTheDocument();
