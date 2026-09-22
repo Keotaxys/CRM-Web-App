@@ -73,7 +73,7 @@ describe('GiftCorrectionSheet', () => {
   });
   it('amends a retired gift from stored snapshots and allows cancellation without catalog metadata', async () => {
     const stored = { ...distribution, items: [{ ...distribution.items[0], giftNameSnapshot: 'Original Umbrella', unitsPerPackSnapshot: 10 }] };
-    render(<GiftCorrectionSheet distribution={stored} gifts={[]} />);
+    render(<GiftCorrectionSheet distribution={stored} gifts={[]} catalogReady />);
     expect(screen.getByText('Original Umbrella')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('ຈຳນວນຫໍ່ umbrella'), { target: { value: '2' } });
     expect(screen.getByText('ຈຳນວນເກົ່າ: 12 · ຈຳນວນໃໝ່: 22')).toBeInTheDocument();
@@ -82,6 +82,26 @@ describe('GiftCorrectionSheet', () => {
     await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'Returned');
     await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການຍົກເລີກ' }));
     expect(serviceMocks.cancelGiftDistribution).toHaveBeenCalledWith(expect.objectContaining({ expectedVersion: 2 }));
+  });
+  it('blocks amendments while current catalog state is unresolved but keeps snapshot cancellation available', async () => {
+    const stored = { ...distribution, items: [{ ...distribution.items[0], giftNameSnapshot: 'Original Umbrella', unitsPerPackSnapshot: 10 }] };
+    render(<GiftCorrectionSheet distribution={stored} gifts={[]} catalogReady={false} />);
+    expect(screen.getByRole('status')).toHaveTextContent('ກຳລັງໂຫຼດ');
+    expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'ຍົກເລີກລາຍການ' }));
+    await user.type(screen.getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'Returned while catalog unavailable');
+    await user.click(screen.getByRole('button', { name: 'ຢືນຢັນການຍົກເລີກ' }));
+    expect(serviceMocks.cancelGiftDistribution).toHaveBeenCalledWith(expect.objectContaining({ reason: 'Returned while catalog unavailable' }));
+    expect(serviceMocks.amendGiftDistribution).not.toHaveBeenCalled();
+  });
+  it('recalculates with the current active pack size after catalog resolution', () => {
+    const stored = { ...distribution, items: [{ ...distribution.items[0], giftNameSnapshot: 'Original Umbrella', unitsPerPackSnapshot: 10 }] };
+    const { rerender } = render(<GiftCorrectionSheet distribution={stored} gifts={[]} catalogReady={false} />);
+    expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
+    rerender(<GiftCorrectionSheet distribution={stored} gifts={[{ ...gifts[0], unitsPerPack: 100 }]} catalogReady />);
+    expect(screen.getByText('ຈຳນວນເກົ່າ: 12 · ຈຳນວນໃໝ່: 102')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeEnabled();
   });
   it('shows the stored old total and recalculates the new total after a quantity edit', () => {
     render(<GiftCorrectionSheet distribution={distribution} gifts={gifts} />);

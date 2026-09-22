@@ -61,6 +61,20 @@ describe('Gifts page history and correction destination', () => {
     expect(service.cancelGiftDistribution).toHaveBeenCalledWith(expect.objectContaining({ distributionId: 'distribution-a', branchId: '010', expectedVersion: 2, reason: 'Returned' }));
   });
 
+  it('does not enable amendments from stored pack sizes before the current catalog resolves', async () => {
+    service.subscribeActiveGiftItems.mockImplementation(() => vi.fn());
+    const user = userEvent.setup(); arrange();
+    await user.click(screen.getByRole('button', { name: 'ແກ້ໄຂ distribution-a' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('status')).toHaveTextContent('ກຳລັງໂຫຼດ');
+    expect(within(dialog).getByRole('button', { name: 'ຢືນຢັນການແກ້ໄຂ' })).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: 'ຍົກເລີກລາຍການ' }));
+    await user.type(within(dialog).getByLabelText('ເຫດຜົນການແກ້ໄຂ'), 'Catalog unavailable');
+    await user.click(within(dialog).getByRole('button', { name: 'ຢືນຢັນການຍົກເລີກ' }));
+    expect(service.cancelGiftDistribution).toHaveBeenCalledWith(expect.objectContaining({ reason: 'Catalog unavailable' }));
+    expect(service.amendGiftDistribution).not.toHaveBeenCalled();
+  });
+
   it('limits Staff corrections to owner, own branch and same Laos day', async () => {
     historyRows([distribution, { ...distribution, id: 'other-owner', createdBy: 'u2' },
       { ...distribution, id: 'foreign', branchId: '019' },

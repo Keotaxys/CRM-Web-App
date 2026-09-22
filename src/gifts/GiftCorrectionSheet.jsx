@@ -23,22 +23,25 @@ function correctionDraftTotal(rows, giftMap) {
   }
 }
 
-export default function GiftCorrectionSheet({ distribution, gifts = [], onClose, onSuccess, onReload }) {
+export default function GiftCorrectionSheet({ distribution, gifts = [], catalogReady, onClose, onSuccess, onReload }) {
+  const resolvedCatalogReady = catalogReady ?? gifts.length > 0;
   const giftMap = useMemo(() => {
     const catalog = Object.fromEntries(gifts.filter((gift) => gift.active !== false).map((gift) => [gift.id, gift]));
-    for (const item of distribution.items ?? []) {
-      if (!catalog[item.giftId] && Number.isSafeInteger(item.unitsPerPackSnapshot) && item.unitsPerPackSnapshot > 0) {
-        catalog[item.giftId] = { name: item.giftNameSnapshot, unitsPerPack: item.unitsPerPackSnapshot };
+    if (resolvedCatalogReady) {
+      for (const item of distribution.items ?? []) {
+        if (!catalog[item.giftId] && Number.isSafeInteger(item.unitsPerPackSnapshot) && item.unitsPerPackSnapshot > 0) {
+          catalog[item.giftId] = { name: item.giftNameSnapshot, unitsPerPack: item.unitsPerPackSnapshot };
+        }
       }
     }
     return catalog;
-  }, [distribution.items, gifts]);
+  }, [resolvedCatalogReady, distribution.items, gifts]);
   const [mode, setMode] = useState('amend');
   const [rows, setRows] = useState(() => (distribution.items ?? []).map((item) => ({ ...item, packs: String(item.packs), looseUnits: String(item.looseUnits) })));
   const [reason, setReason] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [stale, setStale] = useState(false);
   const mutationIdRef = useRef(makeUuid()); const submittingRef = useRef(false); const attemptedRef = useRef(false);
-  const metadataReady = (distribution.items ?? []).every((item) => Boolean(giftMap[item.giftId]));
+  const metadataReady = resolvedCatalogReady && (distribution.items ?? []).every((item) => Boolean(giftMap[item.giftId]));
   const draftTotal = metadataReady ? correctionDraftTotal(rows, giftMap) : null;
   const draftTotalsReady = draftTotal !== null;
   const confirmationReady = !stale && (mode === 'cancel' || (metadataReady && draftTotalsReady));
